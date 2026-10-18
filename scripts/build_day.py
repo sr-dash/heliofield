@@ -73,7 +73,9 @@ def gong_file(day: date) -> str | None:
     folder = f"{GONG}/{day:%Y%m}/mrzqs{day:%y%m%d}/"
     try:
         html = _get(folder).decode("latin-1")
-    except Exception:
+    except Exception as e:
+        # A missing day is a 404; anything else is worth seeing in the log.
+        print(f"  {folder}: {type(e).__name__}: {e}")
         return None
     # Match map filenames only; the listing also carries unrelated links.
     names = sorted(set(re.findall(r'href="(mrzqs\d{6}t\d{4}c\d{4}_\d{3}\.fits\.gz)"', html)))
@@ -349,6 +351,11 @@ def build(day: date, force: bool = False) -> bool:
 
 def write_index():
     days = sorted(p.name for p in DATA.iterdir() if (p / "meta.json").exists())
+    path = DATA / "index.json"
+    # Rewrite only when the date list changes, so a run that built nothing
+    # leaves nothing to commit.
+    if path.exists() and json.loads(path.read_text()).get("dates") == days:
+        return
     (DATA / "index.json").write_text(json.dumps(dict(
         dates=days, updated=datetime.now(timezone.utc).isoformat(timespec="seconds"))))
 
@@ -379,15 +386,17 @@ def main():
     ap.add_argument("--prune", action="store_true")
     a = ap.parse_args()
     warnings.filterwarnings("ignore")
-    day, ok = a.date, True
+    day, built = a.date, 0
     while True:
-        ok = build(day, a.force) and ok
+        built += build(day, a.force)
         if not a.to or day >= a.to:
             break
         day += timedelta(days=1)
     if a.prune:
         prune()
     write_index()
+    if not built:
+        raise SystemExit("no day was built")
 
 
 if __name__ == "__main__":
