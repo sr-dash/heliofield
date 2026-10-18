@@ -30,6 +30,7 @@ import argparse
 import json
 import re
 import shutil
+import time
 import urllib.request
 import warnings
 from datetime import date, datetime, timedelta, timezone
@@ -68,9 +69,15 @@ PLANETS = {"mercury", "venus", "mars"}
 
 
 # --------------------------------------------------------------------- input
-def _get(url: str, timeout: int = 60) -> bytes:
-    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout) as r:
-        return r.read()
+def _get(url: str, timeout: int = 60, tries: int = 1) -> bytes:
+    for attempt in range(tries):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout) as r:
+                return r.read()
+        except Exception:
+            if attempt == tries - 1:
+                raise
+            time.sleep(10 * (attempt + 1))
 
 
 def gong_file(day: date) -> str | None:
@@ -111,7 +118,8 @@ def load_hmi(day: date):
     import sunpy.map
     from astropy.io import fits
     try:
-        raw = _get(HMI, 180)
+        # JSOC answers cloud runners but drops the odd connection; retry.
+        raw = _get(HMI, 120, tries=4)
     except Exception as e:
         print(f"  {HMI}: {type(e).__name__}: {e}")
         return None
