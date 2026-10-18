@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HelioField</title>
+<meta name="description" content="The Sun's coronal magnetic field in 3D, updated daily: GONG magnetograms, PFSS field lines, source surface, heliospheric current sheet and the spacecraft fleet.">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="view"></div>
+
+<header class="bar">
+  <div class="brand"><strong>HelioField</strong><span>coronal magnetic field in 3D</span></div>
+  <div class="date">
+    <button id="prev" title="Previous day" aria-label="Previous day">‹</button>
+    <select id="day" aria-label="Date"></select>
+    <button id="next" title="Next day" aria-label="Next day">›</button>
+  </div>
+  <button id="panelToggle" class="only-narrow" aria-expanded="false">Layers</button>
+</header>
+
+<aside id="panel">
+  <section>
+    <h2>Sun</h2>
+    <label><input type="checkbox" id="lyrPhoto" checked> <span>Photospheric B<sub>r</sub></span></label>
+    <label><input type="checkbox" id="lyrClosed" checked> <span>Closed field lines</span></label>
+    <label><input type="checkbox" id="lyrOpen" checked> <span>Open field lines</span></label>
+    <label><input type="checkbox" id="lyrSS" checked> <span>Source surface B<sub>r</sub></span></label>
+    <label class="slider"><span>Source-surface opacity</span><input type="range" id="ssAlpha" min="0" max="1" step="0.05" value="0.25"></label>
+    <label><input type="checkbox" id="lyrPIL" checked> <span>Neutral line (HCS base)</span></label>
+  </section>
+  <section>
+    <h2>Heliosphere</h2>
+    <label><input type="checkbox" id="lyrHCS" checked> <span>Current sheet</span></label>
+    <label><input type="checkbox" id="lyrFleet" checked> <span>Planets and spacecraft</span></label>
+    <label><input type="checkbox" id="lyrSpiral" checked> <span>Parker spirals to footpoints</span></label>
+    <label class="slider"><span>Solar wind <output id="vOut">400</output> km/s</span><input type="range" id="vsw" min="300" max="800" step="100" value="400"></label>
+    <label class="slider"><span>HCS extent <output id="rOut">1.2</output> au</span><input type="range" id="rmax" min="0.1" max="1.8" step="0.1" value="1.2"></label>
+    <div class="seg" role="group" aria-label="Distance scale">
+      <button id="scaleLog" class="on">Log distance</button><button id="scaleTrue">True distance</button>
+    </div>
+  </section>
+  <section>
+    <h2>View</h2>
+    <div class="seg">
+      <button id="viewEarth">From Earth</button><button id="viewNorth">From north</button><button id="viewFleet">Whole fleet</button>
+    </div>
+  </section>
+  <section id="info"></section>
+  <section id="feet"></section>
+  <footer>
+    Magnetograms: NSO/GONG zero-point-corrected synoptic maps.
+    Model: PFSS (sunkit-magex), source surface 2.5 R<sub>☉</sub>.
+    Positions: <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a> (JPL Horizons).
+    Spirals are ballistic at constant wind speed.
+  </footer>
+</aside>
+
+<div id="legend">
+  <span><i class="sw neg"></i><span>B<sub>r</sub> &lt; 0</span></span>
+  <span><i class="sw pos"></i><span>B<sub>r</sub> &gt; 0</span></span>
+  <span><i class="ln closed"></i><span>closed</span></span>
+  <span><i class="ln op"></i><span>open +</span></span>
+  <span><i class="ln on"></i><span>open −</span></span>
+  <span><i class="ln hcs"></i><span>HCS</span></span>
+</div>
+<div id="status" role="status"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

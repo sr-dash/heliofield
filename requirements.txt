@@ -1,0 +1,8 @@
+numpy==2.2.6
+scipy==1.16.2
+astropy==7.1.1
+sunpy[map]==7.0.3
+sunkit-magex==1.1.0
+streamtracer==2.6.0
+scikit-image==0.26.0
+pillow==11.3.0

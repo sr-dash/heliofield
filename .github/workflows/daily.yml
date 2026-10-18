@@ -1,0 +1,69 @@
+# Daily coronal-field product.
+#
+# Builds today's and yesterday's PFSS product from the last GONG mrzqs map of
+# each day (yesterday is rebuilt in case its last maps arrived late), thins
+# history to one day per Carrington rotation beyond 120 days, and commits.
+# A run takes about a minute and under 1.5 GB of memory.
+
+name: Daily field
+
+on:
+  schedule:
+    - cron: "40 23 * * *"
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "Backfill from this date (YYYY-MM-DD); empty builds yesterday and today"
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: daily-field
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Build products
+        run: |
+          today=$(date -u +%F)
+          from="${{ inputs.from }}"
+          [ -z "$from" ] && from=$(date -u -d yesterday +%F)
+          python scripts/build_day.py --date "$from" --to "$today" --force --prune
+
+      - name: Commit and push
+        id: commit
+        run: |
+          git config user.name "Soumyaranjan Dash"
+          git config user.email "sdash@nso.edu"
+          git add -A data
+          if git diff --cached --quiet; then
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "Daily field product $(date -u +%F)"
+          git push
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Rebuild the site
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST "repos/${{ github.repository }}/pages/builds" --silent \
+            || echo "::warning::Could not request a Pages build; it will publish on the next push."
