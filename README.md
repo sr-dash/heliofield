@@ -7,7 +7,7 @@ the spacecraft positions.
 
 What the page shows, for each day:
 
-- the photospheric radial field (GONG zero-point-corrected synoptic map) on the Sun
+- the photospheric radial field (GONG zero-point-corrected synoptic map, or SDO/HMI when GONG is unreachable) on the Sun
 - PFSS field lines, closed and open, with open lines coloured by polarity
 - the source surface (2.5 R☉) coloured by B<sub>r</sub>, and its neutral line
 - the heliospheric current sheet: the neutral line carried outward and wound
@@ -53,6 +53,17 @@ sampled evenly. Connectivity is ballistic: a body at (r, φ) maps to the source
 surface at φ + Ω(r − R<sub>ss</sub>)/v, with Ω the Carrington sidereal rate,
 for v = 300–800 km/s.
 
+Input: the last GONG mrzqs map of the day. GONG's server does not answer
+GitHub's cloud runners, so when it cannot be reached within 15 s the build uses
+the SDO/HMI daily synoptic frame from JSOC
+(`hmi.Mrdailysynframe_small_720s_nrt`), provided its record date is that day.
+JSOC keeps only the latest frame at that path, so the fallback serves the
+nightly build; backfills need GONG. The frame's header is rebuilt (its CUNIT2
+is `sin(deg)`, and CRVAL1 is Carrington time with longitude increasing along
+x) and it is averaged 2×2 onto GONG's 180×360 grid. `meta.source` records which
+was used and the page shows it as a badge beside the date. On 2026-10-17 the two
+agree in longitude to within a pixel (r = 0.72 between the maps).
+
 GONG maps do not start at Carrington longitude 0 (CRVAL1 moves with the map);
 `to_equirect` rolls the columns using the map's own WCS, and the flux-weighted
 seeds are offset the same way.
@@ -62,5 +73,5 @@ keeps every day for 120 days, then one per Carrington rotation.
 
 ## Credits
 
-Magnetograms: NSO/GONG. Ephemerides: JPL Horizons via HelioFleet.
+Magnetograms: NSO/GONG and SDO/HMI (JSOC). Ephemerides: JPL Horizons via HelioFleet.
 PFSS: sunkit-magex (SunPy project).

@@ -161,6 +161,9 @@ async function loadDay(day) {
   info();
   $("status").textContent = "";
   $("day").value = day;
+  // Which magnetogram fed this day: GONG normally, HMI when GONG was unreachable.
+  $("src").textContent = meta.source.short || "GONG";
+  $("src").title = meta.source.name;
   syncUrl();
 }
 
@@ -311,7 +314,7 @@ function info() {
     <dt>Earth L<sub>0</sub>, B<sub>0</sub></dt><dd>${m.L0.toFixed(1)}°, ${m.B0.toFixed(1)}°</dd>
     <dt>Open flux</dt><dd>${(m.open_flux_Mx / 1e22).toFixed(2)} × 10<sup>22</sup> Mx</dd>
     <dt>Field lines</dt><dd>${m.lines.count}</dd>
-    <dt>Magnetogram</dt><dd><a href="${src.url}" title="${src.file}">GONG</a></dd>
+    <dt>Magnetogram</dt><dd><a href="${src.url}" title="${src.file}">${src.name}</a></dd>
   </dl>`;
 }
 function feet() {

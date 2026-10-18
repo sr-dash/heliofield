@@ -7,7 +7,10 @@
 
 For each date this fetches the last GONG zero-point-corrected synoptic map
 (mrzqs) of that day, extrapolates it with a PFSS model (sunkit-magex), and
-writes data/<date>/:
+writes data/<date>/. GONG's server does not answer cloud runners, so when it
+cannot be reached the SDO/HMI daily synoptic frame from JSOC is used instead,
+provided its record date is that day (JSOC keeps only the latest frame at
+that path, so the fallback serves the nightly build, not backfills).
 
     meta.json   map provenance, scales, open flux, HCS polylines, fleet
     br.png      photospheric Br, 360x180 equirectangular, 8-bit, +-BR_SCALE G
@@ -39,6 +42,8 @@ DATA = ROOT / "data"
 CACHE = ROOT / "cache"
 
 GONG = "https://gong2.nso.edu/oQR/zqs"
+GONG_TIMEOUT = 15    # s; GONG blocks cloud IPs, so fail fast and fall back
+HMI = "https://jsoc1.stanford.edu/data/hmi/synoptic/hmi.Mrdailysynframe_small_720s_nrt.fits"
 FLEET_URL = "https://sr-dash.github.io/heliofleet/data"
 UA = {"User-Agent": "heliofield/0.1 (+https://github.com/sr-dash/heliofield)"}
 
@@ -72,7 +77,7 @@ def gong_file(day: date) -> str | None:
     """URL of the last mrzqs map of `day`, or None if the day has none."""
     folder = f"{GONG}/{day:%Y%m}/mrzqs{day:%y%m%d}/"
     try:
-        html = _get(folder).decode("latin-1")
+        html = _get(folder, GONG_TIMEOUT).decode("latin-1")
     except Exception as e:
         # A missing day is a 404; anything else is worth seeing in the log.
         print(f"  {folder}: {type(e).__name__}: {e}")
@@ -87,11 +92,66 @@ def load_map(url: str):
     CACHE.mkdir(exist_ok=True)
     path = CACHE / url.rsplit("/", 1)[1]
     if not path.exists():
-        path.write_bytes(_get(url))
+        path.write_bytes(_get(url, GONG_TIMEOUT * 4))
     m = sunpy.map.Map(str(path))
     # GONG zqs rows are uniform in sin(latitude); sunpy needs the CUNIT fix
     # it applies itself, nothing else. Remove the monopole PFSS cannot carry.
     return sunpy.map.Map(m.data - np.nanmean(m.data), m.meta)
+
+
+def load_hmi(day: date):
+    """The HMI daily synoptic frame as a GONG-like 180x360 map, or None if
+    JSOC's current frame is not from `day`.
+
+    sunpy cannot read this file as it stands: CUNIT2 is 'sin(deg)', and CRVAL1
+    is Carrington time (360*CR - lon) with CDELT1 = -0.5, so longitude
+    actually increases along x. The header is rebuilt from those facts, and
+    the map is averaged 2x2 onto GONG's grid so the solve costs the same.
+    """
+    import sunpy.map
+    from astropy.io import fits
+    try:
+        raw = _get(HMI, 180)
+    except Exception as e:
+        print(f"  {HMI}: {type(e).__name__}: {e}")
+        return None
+    CACHE.mkdir(exist_ok=True)
+    (CACHE / "hmi_daily.fits").write_bytes(raw)
+    with fits.open(CACHE / "hmi_daily.fits") as f:
+        h, d = f[0].header, f[0].data.astype(float)
+    trec = h["T_REC"]                               # 2026.10.17_15:24:00.000_TAI
+    if trec[:10].replace(".", "-") != day.isoformat():
+        print(f"  HMI frame is {trec}, not {day}")
+        return None
+    ny, nx = d.shape
+    lon0 = (360 * h["CAR_ROT"] - (h["CRVAL1"] + (1 - h["CRPIX1"]) * h["CDELT1"])) % 360
+    d = np.nanmean(d.reshape(ny // 2, 2, nx // 2, 2), axis=(1, 3))
+    d = np.nan_to_num(d - np.nanmean(d))
+    obs = datetime.strptime(trec[:19], "%Y.%m.%d_%H:%M:%S") - timedelta(seconds=37)  # TAI -> UTC
+    meta = {
+        "ctype1": "CRLN-CEA", "ctype2": "CRLT-CEA", "cunit1": "deg", "cunit2": "deg",
+        # Reference at the map centre, as GONG does: wcslib returns NaN for
+        # longitudes more than 180 deg from the reference pixel.
+        "crpix1": (nx // 2 + 1) / 2, "crval1": (lon0 + 0.25 + (nx // 2 - 1) / 2 * 720 / nx) % 360,
+        "cdelt1": 360 / (nx // 2),
+        "crpix2": (ny // 2 + 1) / 2, "crval2": 0.0,
+        "cdelt2": 180 / np.pi * 2 / (ny // 2),       # CEA: y = (180/pi) sin(lat)
+        "pv2_1": 1.0, "date-obs": obs.isoformat(), "bunit": "G",
+        "telescop": "SDO", "instrume": "HMI", "naxis": 2,
+        "naxis1": nx // 2, "naxis2": ny // 2, "rsun_ref": 695700000.0,
+    }
+    src = dict(name="SDO/HMI daily synoptic frame", short="HMI",
+               file=f"hmi.Mrdailysynframe_small_720s_nrt[{trec}]", url=HMI)
+    return sunpy.map.Map(d, meta), src
+
+
+def get_input(day: date, allow_hmi: bool = True):
+    """(map, source) for `day`: GONG first, then the HMI daily frame."""
+    url = gong_file(day)
+    if url:
+        return load_map(url), dict(name="GONG mrzqs", short="GONG",
+                                   file=url.rsplit("/", 1)[1], url=url)
+    return load_hmi(day) if allow_hmi else None
 
 
 # ------------------------------------------------------------------ products
@@ -280,13 +340,16 @@ def build(day: date, force: bool = False) -> bool:
     if (dest / "meta.json").exists() and not force:
         print(f"{day}: exists")
         return True
-    url = gong_file(day)
-    if url is None:
-        print(f"{day}: no GONG map")
+    # A GONG product is never replaced by the HMI fallback on a forced rebuild.
+    old = dest / "meta.json"
+    keep_gong = old.exists() and json.loads(old.read_text())["source"].get("short", "GONG") == "GONG"
+    got = get_input(day, allow_hmi=not keep_gong)
+    if got is None:
+        print(f"{day}: no magnetogram")
         return False
-    print(f"{day}: {url.rsplit('/', 1)[1]}")
+    m, src = got
+    print(f"{day}: {src['file']}")
 
-    m = load_map(url)
     out = pfss.pfss(pfss.Input(m, NR, RSS))
     tracer = tracing.PerformanceTracer()
 
@@ -326,7 +389,7 @@ def build(day: date, force: bool = False) -> bool:
     meta = dict(
         date=day.isoformat(),
         obstime=m.date.isot[:19] + "Z",
-        source=dict(name="GONG mrzqs", file=url.rsplit("/", 1)[1], url=url),
+        source=src,
         carrington_rotation=int(sun.carrington_rotation_number(m.date)),
         L0=round(float(sun.L0(m.date).to_value("deg")), 3),
         B0=round(float(sun.B0(m.date).to_value("deg")), 3),
@@ -386,17 +449,21 @@ def main():
     ap.add_argument("--prune", action="store_true")
     a = ap.parse_args()
     warnings.filterwarnings("ignore")
-    day, built = a.date, 0
+    day = a.date
     while True:
-        built += build(day, a.force)
+        build(day, a.force)
         if not a.to or day >= a.to:
             break
         day += timedelta(days=1)
     if a.prune:
         prune()
     write_index()
-    if not built:
-        raise SystemExit("no day was built")
+    # Fail (and so alert) only when the site is going stale, not on every
+    # night that one of the two sources is late.
+    days = sorted(p.name for p in DATA.iterdir() if (p / "meta.json").exists())
+    age = (datetime.now(timezone.utc).date() - date.fromisoformat(days[-1])).days if days else 99
+    if age > 2:
+        raise SystemExit(f"newest product is {age} days old")
 
 
 if __name__ == "__main__":

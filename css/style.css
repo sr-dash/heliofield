@@ -37,6 +37,11 @@ button, select {
 }
 button:hover, select:hover { background: rgba(255,255,255,.12); }
 select { min-width: 9.5em; }
+.src {
+  align-self: center; font-size: 11px; font-weight: 600; letter-spacing: .05em;
+  padding: 2px 7px; border-radius: 10px; color: var(--accent);
+  border: 1px solid var(--accent); cursor: help;
+}
 select option { background: #121722; }
 
 #panel {
@@ -94,8 +99,12 @@ a { color: var(--accent); }
 @media (max-width: 760px) {
   .only-narrow { display: inline-block; }
   .brand span { display: none; }
-  .date { margin-right: 0; }
-  .bar { gap: 8px; }
+  .date { margin-right: 0; gap: 3px; }
+  .bar { gap: 6px; padding: 8px 10px; }
+  .brand strong { font-size: 14px; }
+  .bar button, .bar select { padding: 4px 6px; }
+  select { min-width: 0; }
+  .src { padding: 2px 5px; }
   #panel {
     top: auto; left: 8px; right: 8px; width: auto; max-height: 55vh;
     transform: translateY(calc(100% + 12px)); transition: transform .2s;
