@@ -22,13 +22,13 @@ const state = {
 };
 
 // ---------------------------------------------------------------- renderer
-const view = $("view");
+const stage = $("view");
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-view.appendChild(renderer.domElement);
+stage.appendChild(renderer.domElement);
 const labels = new CSS2DRenderer();
 labels.domElement.style.cssText = "position:absolute;top:0;left:0;pointer-events:none";
-view.appendChild(labels.domElement);
+stage.appendChild(labels.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color("#05070d");
@@ -165,6 +165,7 @@ async function loadDay(day) {
   $("src").textContent = meta.source.short || "GONG";
   $("src").title = meta.source.name;
   syncUrl();
+  postState();
 }
 
 function buildSun(brTex, ssTex) {
@@ -279,42 +280,62 @@ function buildHelio() {
 }
 
 // ------------------------------------------------------------- panel
-const layerIds = { photo: "lyrPhoto", closed: "lyrClosed", open: "lyrOpen", ss: "lyrSS",
+const root = document.documentElement;
+const EMBED = root.classList.contains("embed");
+const params = new URLSearchParams(location.search);
+const DEFAULTS = { v: 400, rmax: 1.2, ss: 0.25 };
+const LAYERS = { photo: "lyrPhoto", closed: "lyrClosed", open: "lyrOpen", ss: "lyrSS",
   pil: "lyrPIL", hcs: "lyrHCS", fleet: "lyrFleet", spiral: "lyrSpiral" };
+
 function applyVisibility() {
-  for (const [g, id] of Object.entries(layerIds)) G[g].visible = $(id).checked;
+  for (const [g, id] of Object.entries(LAYERS)) G[g].visible = $(id).checked;
   if (G.photo.userData.dark) G.photo.userData.dark.visible = !G.photo.visible;
   // CSS2D labels ignore their parent's visibility, so toggle them by hand.
   G.fleet.traverse((o) => { if (o.isCSS2DObject) o.element.style.display = G.fleet.visible ? "" : "none"; });
 }
-for (const id of Object.values(layerIds)) $(id).addEventListener("change", applyVisibility);
-$("ssAlpha").addEventListener("input", (e) => {
-  G.ss.children.forEach((m) => { m.material.uniforms.alpha.value = +e.target.value; });
-});
-$("vsw").addEventListener("input", (e) => {
-  state.vsw = +e.target.value; $("vOut").textContent = state.vsw; buildHelio(); syncUrl();
-});
-$("rmax").addEventListener("input", (e) => {
-  state.rmaxAu = +e.target.value; $("rOut").textContent = state.rmaxAu.toFixed(1); buildHelio();
-});
+function setLayers(list) {
+  const on = new Set(String(list).split(",").map((s) => s.trim()));
+  for (const [g, id] of Object.entries(LAYERS)) $(id).checked = on.has(g);
+  applyVisibility();
+}
+for (const id of Object.values(LAYERS)) $(id).addEventListener("change", () => { applyVisibility(); syncUrl(); });
+
+function setAlpha(a) {
+  $("ssAlpha").value = a;
+  G.ss.children.forEach((m) => { m.material.uniforms.alpha.value = +a; });
+}
+$("ssAlpha").addEventListener("input", (e) => { setAlpha(e.target.value); syncUrl(); });
+
+function setV(v) {
+  state.vsw = v; $("vsw").value = v; $("vOut").textContent = v;
+  if (state.meta) buildHelio();
+}
+$("vsw").addEventListener("input", (e) => { setV(+e.target.value); syncUrl(); postState(); });
+function setRmax(r) {
+  state.rmaxAu = r; $("rmax").value = r; $("rOut").textContent = r.toFixed(1);
+  if (state.meta) buildHelio();
+}
+$("rmax").addEventListener("input", (e) => { setRmax(+e.target.value); syncUrl(); });
 function setScale(log) {
   state.logScale = log;
   $("scaleLog").classList.toggle("on", log);
   $("scaleTrue").classList.toggle("on", !log);
-  buildHelio();
+  $("scaleLog").setAttribute("aria-pressed", log);
+  $("scaleTrue").setAttribute("aria-pressed", !log);
+  if (state.meta) buildHelio();
 }
-$("scaleLog").onclick = () => setScale(true);
-$("scaleTrue").onclick = () => setScale(false);
+$("scaleLog").onclick = () => { setScale(true); syncUrl(); };
+$("scaleTrue").onclick = () => { setScale(false); syncUrl(); };
 
 function info() {
   const m = state.meta, src = m.source;
-  $("info").innerHTML = `<h2>This map</h2><dl>
+  $("info").innerHTML = `<dl>
     <dt>Map time</dt><dd>${m.obstime.replace("T", " ").replace("Z", " UTC")}</dd>
+    <dt>Magnetogram</dt><dd><a href="${src.url}" title="${src.file}">${src.name}</a></dd>
     <dt>Carrington rotation</dt><dd>${m.carrington_rotation}</dd>
     <dt>Earth L<sub>0</sub>, B<sub>0</sub></dt><dd>${m.L0.toFixed(1)}°, ${m.B0.toFixed(1)}°</dd>
     <dt>Open flux</dt><dd>${(m.open_flux_Mx / 1e22).toFixed(2)} × 10<sup>22</sup> Mx</dd>
     <dt>Field lines</dt><dd>${m.lines.count}</dd>
-    <dt>Magnetogram</dt><dd><a href="${src.url}" title="${src.file}">${src.name}</a></dd>
   </dl>`;
 }
 function feet() {
@@ -325,13 +346,27 @@ function feet() {
     return `<tr><td><span class="dot" style="background:${COLORS[b.key] || "#fff"}"></span>${b.name}</td>
       <td>${b.r.toFixed(2)}</td><td>${f ? f[0].toFixed(0) + "°" : "–"}</td><td>${f ? f[1].toFixed(0) + "°" : "–"}</td></tr>`;
   }).join("");
-  $("feet").innerHTML = `<h2>Magnetic footpoints at ${v} km/s</h2>
+  $("feet").innerHTML = `<p class="note">Carrington longitude and latitude where each body's field line
+    meets the photosphere, for ${v} km/s wind.</p>
     <table><tr><th></th><th>r [au]</th><th>Lon</th><th>Lat</th></tr>${rows}</table>`;
 }
 
+// Folding the panel. The choice is remembered on wide screens; links can
+// force it with ?panel=0|1, and embeds start folded.
+const narrow = matchMedia("(max-width: 760px)");
+function setPanel(open) {
+  root.classList.toggle("panel-closed", !open);
+  $("panelToggle").setAttribute("aria-expanded", open);
+  if (!EMBED && !narrow.matches) try { localStorage.setItem("hf.panel", open ? "open" : "closed"); } catch (e) {}
+}
+$("panelToggle").setAttribute("aria-expanded", !root.classList.contains("panel-closed"));
+$("panelToggle").onclick = () => setPanel(root.classList.contains("panel-closed"));
+$("panelClose").onclick = () => { setPanel(false); $("panelToggle").focus(); };
+
 // ------------------------------------------------------------- views
-let tween = null;
-function flyTo(pos) {
+let tween = null, view = null;
+function flyTo(pos, instant) {
+  if (instant) { camera.position.copy(pos); controls.target.set(0, 0, 0); return; }
   const from = camera.position.clone(), t0 = performance.now();
   tween = (now) => {
     const t = Math.min((now - t0) / 700, 1), e = t * t * (3 - 2 * t);
@@ -344,47 +379,151 @@ const dir = (lon, lat, d) => new THREE.Vector3(
   d * Math.cos(lat * DEG) * Math.cos(lon * DEG), d * Math.cos(lat * DEG) * Math.sin(lon * DEG), d * Math.sin(lat * DEG));
 // Back off on portrait screens so the source surface still fits across.
 const near = () => 9 / Math.min(1, camera.aspect * 1.6);
-$("viewEarth").onclick = () => flyTo(dir(state.meta.L0, state.meta.B0, near()));
-$("viewNorth").onclick = () => flyTo(dir(state.meta.L0 + 180, 89.5, 11));
-$("viewFleet").onclick = () => {
-  const far = Math.max(...Object.values(state.meta.fleet).map((b) => mapR(b.r * AU_RS)));
-  flyTo(dir(state.meta.L0 + 200, 55, far / Math.tan(17.5 * DEG) * 1.15));
+const VIEWS = {
+  earth: () => dir(state.meta.L0, state.meta.B0, near()),
+  north: () => dir(state.meta.L0 + 180, 89.5, near() * 1.2),
+  fleet: () => {
+    const far = Math.max(...Object.values(state.meta.fleet).map((b) => mapR(b.r * AU_RS)));
+    return dir(state.meta.L0 + 200, 55, far / Math.tan(17.5 * DEG) * 1.15);
+  },
+};
+// Named views follow the date (Earth moves); anything else is a fixed
+// Carrington camera, which a shared link reproduces with ?cam=lon,lat,dist.
+function setView(name, instant) {
+  if (!VIEWS[name] || !state.meta) return;
+  view = name;
+  flyTo(VIEWS[name](), instant);
+  syncUrl();
+}
+$("viewEarth").onclick = () => setView("earth");
+$("viewNorth").onclick = () => setView("north");
+$("viewFleet").onclick = () => setView("fleet");
+controls.addEventListener("start", () => { view = null; tween = null; });
+controls.addEventListener("end", () => syncUrl());
+function camParam() {
+  const p = camera.position, r = p.length();
+  return [((Math.atan2(p.y, p.x) / DEG) + 360) % 360, Math.asin(p.z / r) / DEG, r].map((x) => x.toFixed(1)).join(",");
+}
+
+function setSpin(on) { $("spin").checked = on; controls.autoRotate = on; }
+controls.autoRotateSpeed = 0.5;
+$("spin").addEventListener("change", (e) => { setSpin(e.target.checked); syncUrl(); });
+
+// ------------------------------------------------------------- URL state
+// Everything a viewer can set is in the URL, so any state can be linked or
+// embedded. Defaults are left out to keep links short.
+function stateParams() {
+  const p = new URLSearchParams({ date: state.day });
+  if (state.vsw !== DEFAULTS.v) p.set("v", state.vsw);
+  const on = Object.keys(LAYERS).filter((g) => $(LAYERS[g]).checked);
+  if (on.length !== Object.keys(LAYERS).length) p.set("layers", on.join(","));
+  if (state.rmaxAu !== DEFAULTS.rmax) p.set("rmax", state.rmaxAu);
+  if (!state.logScale) p.set("scale", "true");
+  if (+$("ssAlpha").value !== DEFAULTS.ss) p.set("ss", $("ssAlpha").value);
+  if (view) p.set("view", view); else p.set("cam", camParam());
+  if (controls.autoRotate) p.set("rotate", "1");
+  return p;
+}
+const base = () => location.origin + location.pathname.replace(/index\.html$/, "");
+function syncUrl() {
+  if (!state.day) return;
+  const p = stateParams();
+  $("embedOpen").href = base() + "?" + p;
+  for (const k of ["embed", "controls", "panel"]) if (params.has(k)) p.set(k, params.get(k));
+  history.replaceState(null, "", "?" + p);
+}
+
+async function share(text, btn) {
+  const out = $("shareOut");
+  out.hidden = false; out.value = text; out.select();
+  try { await navigator.clipboard.writeText(text); } catch (e) { return; }
+  const label = btn.textContent;
+  btn.textContent = "Copied";
+  setTimeout(() => { btn.textContent = label; }, 1400);
+}
+$("copyLink").onclick = (e) => share(base() + "?" + stateParams(), e.target);
+$("copyEmbed").onclick = (e) => {
+  const p = stateParams(); p.set("embed", "1");
+  share(`<iframe src="${base()}?${p}" title="HelioField: the Sun's coronal magnetic field in 3D" ` +
+    `width="100%" height="560" style="border:0;border-radius:12px" loading="lazy" allowfullscreen></iframe>`, e.target);
 };
 
 // ------------------------------------------------------------- dates
-const params = new URLSearchParams(location.search);
-function syncUrl() {
-  const p = new URLSearchParams({ date: state.day });
-  if (state.vsw !== 400) p.set("v", state.vsw);
-  history.replaceState(null, "", "?" + p);
+// A requested date snaps to the latest product on or before it, so a host
+// page can pass any date (or "latest") without knowing which days exist.
+function pickDate(want) {
+  const d = state.dates;
+  if (!want || want === "latest") return d[d.length - 1];
+  want = String(want).slice(0, 10);
+  let best = d[0];
+  for (const x of d) if (x <= want) best = x;
+  return best;
 }
-function step(d) {
-  const i = state.dates.indexOf(state.day) + d;
-  if (i >= 0 && i < state.dates.length) loadDay(state.dates[i]);
+async function goDay(day) {
+  await loadDay(day);
+  if (view) setView(view, true);
+}
+function step(k) {
+  const i = state.dates.indexOf(state.day) + k;
+  if (i >= 0 && i < state.dates.length) goDay(state.dates[i]);
 }
 $("prev").onclick = () => step(-1);
 $("next").onclick = () => step(1);
-$("day").onchange = (e) => loadDay(e.target.value);
+$("day").onchange = (e) => goDay(e.target.value);
 addEventListener("keydown", (e) => {
-  if (e.target.closest?.("input,select")) return;
-  if (e.key === "ArrowLeft") step(-1);
-  if (e.key === "ArrowRight") step(1);
+  if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.("input,select,textarea")) return;
+  const k = e.key.toLowerCase();
+  if (k === "arrowleft") step(-1);
+  else if (k === "arrowright") step(1);
+  else if (k === "l") setPanel(root.classList.contains("panel-closed"));
+  else if (k === "e") setView("earth");
+  else if (k === "n") setView("north");
+  else if (k === "f") setView("fleet");
+  else if (k === "r") { setSpin(!controls.autoRotate); syncUrl(); }
 });
-$("panelToggle").onclick = (e) => {
-  const open = $("panel").classList.toggle("open");
-  e.target.setAttribute("aria-expanded", open);
-};
 
+// ------------------------------------------------------------- embedding
+// A host page can drive an embedded copy:
+//   frame.contentWindow.postMessage({ type: "heliofield:set", date: "2026-10-17", v: 500, view: "earth" }, "*")
+// and hears { type: "heliofield:state", date, v, source } after every change.
+function postState() {
+  if (window.parent === window || !state.meta) return;
+  window.parent.postMessage({ type: "heliofield:state", date: state.day, v: state.vsw,
+    source: state.meta.source.short || "GONG", obstime: state.meta.obstime }, "*");
+}
+addEventListener("message", async (e) => {
+  const d = e.data;
+  if (!d || d.type !== "heliofield:set" || !state.dates.length) return;
+  if ([300, 400, 500, 600, 700, 800].includes(+d.v)) setV(+d.v);
+  if (d.layers) setLayers(d.layers);
+  if (d.view) view = d.view;
+  if (d.date) await goDay(pickDate(d.date));   // reports its own state
+  else postState();
+  if (d.view) setView(d.view);
+  syncUrl();
+});
+
+// ------------------------------------------------------------- start
 async function start() {
   try {
     const idx = await fetch("data/index.json").then((r) => r.json());
     state.dates = idx.dates;
     $("day").innerHTML = idx.dates.slice().reverse().map((d) => `<option>${d}</option>`).join("");
     const v = +params.get("v");
-    if ([300, 400, 500, 600, 700, 800].includes(v)) { state.vsw = v; $("vsw").value = v; $("vOut").textContent = v; }
-    const want = params.get("date");
-    await loadDay(state.dates.includes(want) ? want : state.dates[state.dates.length - 1]);
-    camera.position.copy(dir(state.meta.L0 - 35, state.meta.B0 + 20, near()));
+    if ([300, 400, 500, 600, 700, 800].includes(v)) setV(v);
+    if (params.has("layers")) setLayers(params.get("layers"));
+    const r = +params.get("rmax");
+    if (r >= 0.1 && r <= 1.8) setRmax(r);
+    if (params.get("scale") === "true") setScale(false);
+    const a = params.get("ss");
+    if (a !== null && +a >= 0 && +a <= 1) $("ssAlpha").value = a;
+    setSpin(params.get("rotate") === "1");
+    await loadDay(pickDate(params.get("date")));
+    const cam = (params.get("cam") || "").split(",").map(Number);
+    if (VIEWS[params.get("view")]) setView(params.get("view"), true);
+    else if (cam.length === 3 && cam.every(Number.isFinite) && cam[2] > 1.2) flyTo(dir(...cam), true);
+    else flyTo(dir(state.meta.L0 - 35, state.meta.B0 + 20, near()), true);
+    syncUrl();
   } catch (err) {
     $("status").textContent = "Could not load data: " + err.message;
   }

@@ -21,7 +21,35 @@ What the page shows, for each day:
 python3 -m http.server 8811
 ```
 
-Then open <http://localhost:8811/>. URL state: `?date=2026-10-17&v=500`.
+Then open <http://localhost:8811/>. How to use the viewer, and how everything
+is computed, is on the guide page: [`guide.html`](https://sr-dash.github.io/heliofield/guide.html).
+
+The URL holds the full state (`date`, `v`, `layers`, `view` or `cam`, `rmax`,
+`scale`, `ss`, `rotate`, `panel`), so any view can be linked.
+
+## Embedding
+
+Add `embed=1` to any link for the scene alone, with a slim date bar and a link to
+the full site; `controls=0` hides the bar too. **Share → Copy embed code** in the
+panel writes the code for the current view:
+
+```html
+<iframe src="https://sr-dash.github.io/heliofield/?date=latest&view=earth&embed=1"
+        title="HelioField: the Sun's coronal magnetic field in 3D"
+        width="100%" height="560" style="border:0;border-radius:12px"
+        loading="lazy" allowfullscreen></iframe>
+```
+
+A host page can drive the frame without reloading it, and hears back after each
+change. A date without a product snaps to the latest one on or before it:
+
+```js
+frame.contentWindow.postMessage(
+  { type: "heliofield:set", date: "2026-10-17", v: 500, view: "earth" }, "*");
+addEventListener("message", (e) => {
+  if (e.data?.type === "heliofield:state") console.log(e.data.date, e.data.source);
+});
+```
 
 ## Data
 

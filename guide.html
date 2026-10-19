@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HelioField Guide</title>
+<meta name="description" content="How to use HelioField, and how its coronal magnetic field, current sheet and spacecraft connectivity are computed.">
+<link rel="stylesheet" href="css/guide.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>HelioField guide</h1>
+  <p>Using the viewer, and how its field is computed.</p>
+  <a class="back" href="./">← Back to the viewer</a>
+</header>
+
+<nav class="toc" aria-label="Contents">
+  <h2>Using the viewer</h2>
+  <a href="#navigate">Moving around</a>
+  <a href="#dates">Dates and sources</a>
+  <a href="#layers-sun">Sun layers</a>
+  <a href="#layers-helio">Heliosphere layers</a>
+  <a href="#panel">The panel</a>
+  <a href="#embed">Links and embedding</a>
+  <h2>Methods</h2>
+  <a href="#methods">Overview</a>
+  <a href="#data">Magnetograms</a>
+  <a href="#pfss">PFSS model</a>
+  <a href="#fieldlines">Field lines</a>
+  <a href="#hcs">Current sheet</a>
+  <a href="#connectivity">Spacecraft connectivity</a>
+  <a href="#coords">Coordinates and scale</a>
+  <a href="#limits">Limitations</a>
+  <a href="#products">Data products</a>
+  <a href="#refs">References</a>
+</nav>
+
+<main>
+<h2 class="part">Using the viewer</h2>
+
+<section id="navigate">
+  <h3>Moving around</h3>
+  <table>
+    <tr><th>Action</th><th>Mouse</th><th>Touch</th></tr>
+    <tr><td>Rotate</td><td>Drag</td><td>Drag with one finger</td></tr>
+    <tr><td>Zoom</td><td>Scroll wheel</td><td>Pinch</td></tr>
+    <tr><td>Pan</td><td>Right-drag, or Shift-drag</td><td>Drag with two fingers</td></tr>
+  </table>
+  <p>The Sun's rotation axis always points up the screen. Three preset views sit in the panel's <b>View</b> section:</p>
+  <ul>
+    <li><b>From Earth</b> looks at the Sun along the Sun–Earth line, as a ground telescope would see it.</li>
+    <li><b>From north</b> looks down on the solar north pole, with Earth towards the top of the screen.</li>
+    <li><b>Whole fleet</b> zooms out until every planet and spacecraft is in view.</li>
+  </ul>
+  <p>A preset view follows Earth as you change dates. Once you drag the scene, the view stays where you left it.</p>
+  <h4>Keyboard</h4>
+  <table>
+    <tr><th>Key</th><th>Does</th></tr>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Previous or next day</td></tr>
+    <tr><td><kbd>L</kbd></td><td>Show or hide the panel</td></tr>
+    <tr><td><kbd>E</kbd> <kbd>N</kbd> <kbd>F</kbd></td><td>From Earth, from north, whole fleet</td></tr>
+    <tr><td><kbd>R</kbd></td><td>Start or stop slow rotation</td></tr>
+  </table>
+</section>
+
+<section id="dates">
+  <h3>Dates and sources</h3>
+  <p>Each day has one product, built from the last magnetogram of that day (UTC). Step through days with the arrows beside the date, or pick one from the list.</p>
+  <p>The badge beside the date names the magnetogram behind that day.</p>
+  <ul>
+    <li><b>GONG</b> is the normal source: the NSO Global Oscillation Network Group's zero-point-corrected synoptic map.</li>
+    <li><b>HMI</b> marks a day built from the SDO/HMI daily synoptic frame. That happens when GONG could not be reached at build time.</li>
+  </ul>
+  <p>History is kept day by day for about four months. Older history keeps one day per Carrington rotation.</p>
+</section>
+
+<section id="layers-sun">
+  <h3>Sun layers</h3>
+  <table>
+    <tr><th>Layer</th><th>What it shows</th></tr>
+    <tr><td>Photospheric B<sub>r</sub></td><td>The radial magnetic field at the solar surface. <span class="sw pos"></span> red is outward, <span class="sw neg"></span> blue is inward. The colours saturate at ±20 G, so weak quiet-Sun field is visible as well as active regions.</td></tr>
+    <tr><td>Closed field lines</td><td>Lines that leave the surface and return to it. They outline active-region loops and the large helmet streamers.</td></tr>
+    <tr><td>Open field lines</td><td>Lines that reach the source surface and are carried into the solar wind. They are coloured by the polarity of their footpoint, and they root in coronal holes.</td></tr>
+    <tr><td>Source surface B<sub>r</sub></td><td>The radial field on the outer boundary of the model, at 2.5 solar radii. Use the opacity slider to see through it. Its scale is set per day, because this field is far weaker than at the surface.</td></tr>
+    <tr><td>Neutral line</td><td>Where the source-surface field changes sign. This is the base of the heliospheric current sheet.</td></tr>
+  </table>
+</section>
+
+<section id="layers-helio">
+  <h3>Heliosphere layers</h3>
+  <table>
+    <tr><th>Layer</th><th>What it shows</th></tr>
+    <tr><td>Current sheet</td><td>The heliospheric current sheet: the neutral line carried outward by the solar wind and wound into a spiral by solar rotation. <b>Out to</b> sets how far it is drawn.</td></tr>
+    <tr><td>Planets and spacecraft</td><td>Positions at the time of the map. The seven Sun–Earth L1 monitors share one marker beside Earth.</td></tr>
+    <tr><td>Connection to the Sun</td><td>For each spacecraft, the Parker spiral back to the source surface and the model field line from there to the photosphere. The end of that line is the spacecraft's magnetic footpoint.</td></tr>
+  </table>
+  <p><b>Solar wind</b> sets the speed used for the current sheet and the spirals. A faster wind gives a more open spiral and moves footpoints less far from the spacecraft's own longitude.</p>
+  <p><b>Log distance</b> keeps the corona at true size and compresses the heliosphere, so the Sun and the fleet fit on one screen. <b>True distance</b> shows real proportions. At true distance the Sun is a speck seen from the fleet.</p>
+</section>
+
+<section id="panel">
+  <h3>The panel</h3>
+  <p>The panel on the right holds the layers, views and details for the day. Close it with <b>×</b> or <kbd>L</kbd>, and reopen it with <b>Layers</b> in the top bar. On wide screens your choice is remembered. On phones the panel is a sheet that slides up from the bottom.</p>
+  <p>Each section folds, so you can keep open only what you use. The <b>?</b> on a section links to its part of this guide.</p>
+  <ul>
+    <li><b>This map</b> lists the map time, the magnetogram file, the Carrington rotation, Earth's heliographic longitude and latitude, and the open magnetic flux.</li>
+    <li><b>Footpoints</b> lists where each spacecraft's field line meets the photosphere, at the chosen wind speed.</li>
+    <li><b>Share</b> copies a link or an embed code for exactly what you are looking at.</li>
+  </ul>
+</section>
+
+<section id="embed">
+  <h3>Links and embedding</h3>
+  <p>The address bar always holds the full state of the page, so any view can be bookmarked or shared. Parameters left out take their defaults.</p>
+  <table>
+    <tr><th>Parameter</th><th>Values</th><th>Default</th></tr>
+    <tr><td><code>date</code></td><td><code>YYYY-MM-DD</code> or <code>latest</code>. A date without a product opens the latest product on or before it.</td><td>latest</td></tr>
+    <tr><td><code>v</code></td><td>Solar wind speed: 300, 400 … 800 km/s</td><td>400</td></tr>
+    <tr><td><code>layers</code></td><td>Comma list of layers to show: <code>photo, closed, open, ss, pil, hcs, fleet, spiral</code></td><td>all</td></tr>
+    <tr><td><code>view</code></td><td><code>earth</code>, <code>north</code> or <code>fleet</code></td><td>oblique</td></tr>
+    <tr><td><code>cam</code></td><td>A fixed camera: Carrington longitude, latitude (degrees) and distance (R<sub>☉</sub>)</td><td>none</td></tr>
+    <tr><td><code>rmax</code></td><td>Current-sheet extent, 0.1–1.8 au</td><td>1.2</td></tr>
+    <tr><td><code>scale</code></td><td><code>true</code> for true distances</td><td>log</td></tr>
+    <tr><td><code>ss</code></td><td>Source-surface opacity, 0–1</td><td>0.25</td></tr>
+    <tr><td><code>rotate</code></td><td><code>1</code> to rotate slowly</td><td>off</td></tr>
+    <tr><td><code>panel</code></td><td><code>0</code> or <code>1</code> to start with the panel closed or open</td><td>last choice</td></tr>
+    <tr><td><code>embed</code></td><td><code>1</code> for the embedded layout</td><td>off</td></tr>
+    <tr><td><code>controls</code></td><td><code>0</code> hides the date bar in an embed</td><td>shown</td></tr>
+  </table>
+
+  <h4>Embedding in another page</h4>
+  <p>With <code>embed=1</code> the page shows the scene alone. A slim bar keeps the date controls, a Layers button and a link to the full site. The panel's <b>Share → Copy embed code</b> writes the code for the current view:</p>
+<pre><code>&lt;iframe src="https://sr-dash.github.io/heliofield/?date=latest&amp;view=earth&amp;embed=1"
+        title="HelioField: the Sun's coronal magnetic field in 3D"
+        width="100%" height="560" style="border:0;border-radius:12px"
+        loading="lazy" allowfullscreen&gt;&lt;/iframe&gt;</code></pre>
+  <p>Some useful embeds:</p>
+  <ul>
+    <li>The Sun alone, turning: <code>?view=earth&amp;layers=photo,closed,open,pil&amp;rotate=1&amp;embed=1&amp;controls=0</code></li>
+    <li>Magnetic connectivity of the fleet: <code>?view=fleet&amp;layers=photo,open,hcs,fleet,spiral&amp;embed=1</code></li>
+    <li>The current sheet at true scale: <code>?view=fleet&amp;layers=photo,hcs,fleet&amp;scale=true&amp;embed=1</code></li>
+  </ul>
+
+  <h4 id="api">Driving an embed from the host page</h4>
+  <p>A page that embeds HelioField can change its date, wind speed, layers and view without reloading the frame. It does this with <code>postMessage</code>:</p>
+<pre><code>const frame = document.querySelector("iframe");
+frame.contentWindow.postMessage(
+  { type: "heliofield:set", date: "2026-10-17", v: 500, view: "earth" }, "*");
+
+// HelioField answers after every change:
+addEventListener("message", (e) =&gt; {
+  if (e.data?.type === "heliofield:state") console.log(e.data.date, e.data.source);
+});</code></pre>
+  <p>Every field of the <code>set</code> message is optional. <code>layers</code> takes the same comma list as the URL. The reply carries <code>date</code>, <code>v</code>, <code>source</code> (GONG or HMI) and <code>obstime</code>, the map's time. A host showing a different instant, such as <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, can pass its own date and let HelioField pick the nearest product.</p>
+</section>
+
+<h2 class="part" id="methods">Methods</h2>
+
+<section>
+  <h3>Overview</h3>
+  <p>Each day a job takes one full-Sun magnetogram and extrapolates it into a model of the coronal magnetic field. It traces field lines through that model and finds where the field changes sign at the model's outer boundary. It also places the planets and spacecraft in the same frame and follows each one's field line back to the Sun. The browser only draws the result. Everything heavy is computed ahead of time.</p>
+  <div class="callout">Magnetogram → PFSS extrapolation → traced field lines and neutral line → spacecraft connectivity → static files read by this page.</div>
+</section>
+
+<section id="data">
+  <h3>Magnetograms</h3>
+  <p>The model's lower boundary is a synoptic map of the photospheric radial field. A synoptic map is assembled from many days of observations as the Sun rotates, so it covers every longitude. Its newest part is the longitude facing Earth. The data get older towards the east. The longitudes just behind the east limb were last seen nearly a full rotation, about four weeks, earlier.</p>
+  <h4>GONG</h4>
+  <p>The normal source is the GONG zero-point-corrected synoptic map (<code>mrzqs</code>). GONG updates it hourly. The build uses the last map of the day. These maps are 360 × 180 pixels, uniform in Carrington longitude and in the sine of latitude. The zero-point correction removes a small offset that would otherwise bias the open flux.</p>
+  <h4>SDO/HMI fallback</h4>
+  <p>The automated build runs on a cloud server that GONG's archive does not answer. When GONG cannot be reached, the build uses the SDO/HMI daily-updated synoptic frame from JSOC instead. It does so only when that frame is from the day being built. The HMI frame is averaged 2 × 2 onto the same grid as GONG, so both sources go through an identical model. The two agree in longitude to within a pixel, but their field strengths differ in detail. A day's source is shown by the badge beside the date.</p>
+  <h4>Preparation</h4>
+  <p>Before extrapolation, the map's mean is removed. A potential field cannot carry net magnetic monopole, and a synoptic map rarely balances exactly.</p>
+</section>
+
+<section id="pfss">
+  <h3>PFSS model</h3>
+  <p>The coronal field comes from the potential-field source-surface (PFSS) model. It assumes there are no electric currents between the photosphere and a spherical source surface. With no currents the field is the gradient of a scalar potential, and that potential satisfies Laplace's equation:</p>
+  <div class="eq">∇ × <b>B</b> = 0 &nbsp;⇒&nbsp; <b>B</b> = −∇Φ, &nbsp;&nbsp; ∇²Φ = 0 &nbsp; for &nbsp;R<sub>☉</sub> ≤ <i>r</i> ≤ R<sub>ss</sub></div>
+  <p>Two boundary conditions close the problem:</p>
+  <ul>
+    <li>At the photosphere, the radial field matches the magnetogram: <span class="math"><i>B<sub>r</sub></i>(R<sub>☉</sub>, θ, φ) = <i>B</i><sub>obs</sub>(θ, φ)</span>.</li>
+    <li>At the source surface, the field is purely radial: <span class="math">Φ(R<sub>ss</sub>, θ, φ) = 0</span>. This mimics the solar wind, which drags the field out radially beyond a few solar radii.</li>
+  </ul>
+  <p>The source surface sits at R<sub>ss</sub> = 2.5 R<sub>☉</sub>, the conventional value. Field lines that reach it are open. All others close back on the Sun.</p>
+  <p>The equation is solved with <a href="https://github.com/sunpy/sunkit-magex">sunkit-magex</a>, the SunPy-affiliated successor to pfsspy. It uses a finite-difference scheme on a grid uniform in ln <i>r</i>, cos θ and φ. The horizontal grid matches the magnetogram, and there are 40 radial shells. One day's solve and trace takes about ten seconds.</p>
+  <h4>Open flux</h4>
+  <p>The open flux is the unsigned radial flux through the source surface:</p>
+  <div class="eq">Φ<sub>open</sub> = R<sub>ss</sub><sup>2</sup> ∮ |<i>B<sub>r</sub></i>(R<sub>ss</sub>, θ, φ)| dΩ</div>
+  <p>It is a standard summary of how much field the Sun opens into the heliosphere. PFSS with GONG or HMI input commonly underestimates the open flux measured in situ near 1 au. Treat it as a relative measure from day to day, not an absolute one.</p>
+</section>
+
+<section id="fieldlines">
+  <h3>Field lines</h3>
+  <p>About 740 field lines are traced each day. Their starting points are chosen to show all of the corona fairly:</p>
+  <ul>
+    <li>A set spread evenly over the Sun at 1.05 R<sub>☉</sub>, so that quiet regions are sampled.</li>
+    <li>A set drawn with probability weighted by |<i>B<sub>r</sub></i>|<sup>1.5</sup>, so that active regions get detail.</li>
+    <li>A set spread evenly just inside the source surface, so that open field is shown wherever it reaches the boundary. Starting only from strong field would return almost nothing from coronal holes.</li>
+  </ul>
+  <p>Each line is traced in both directions until it leaves the domain. A line is open if one end reaches the source surface. Its colour comes from the sign of the field at its photospheric end. Lines are resampled evenly along their length before they are stored.</p>
+</section>
+
+<section id="hcs">
+  <h3>Heliospheric current sheet</h3>
+  <p>The heliospheric current sheet separates solar wind carrying outward field from wind carrying inward field. In PFSS its base is the neutral line, where <i>B<sub>r</sub></i> = 0 on the source surface. The neutral line is found by contouring the source-surface field.</p>
+  <p>Beyond the source surface the sheet is drawn kinematically. Plasma leaving a point on the neutral line travels radially at the chosen speed <i>v</i> while the Sun turns beneath it. In the frame rotating with the Sun, that point's longitude falls behind with distance:</p>
+  <div class="eq">φ(<i>r</i>) = φ<sub>0</sub> − Ω (<i>r</i> − R<sub>ss</sub>) / <i>v</i>, &nbsp;&nbsp; Ω = 2π / 25.38 days</div>
+  <p>Here Ω is the Carrington sidereal rotation rate, and latitude stays constant along each strand. This is Parker's spiral, applied to every point of the neutral line. It is a picture of the sheet's shape. It is not a model of how the sheet warps, interacts or evolves in the solar wind.</p>
+</section>
+
+<section id="connectivity">
+  <h3>Spacecraft connectivity</h3>
+  <p>A spacecraft's magnetic footpoint is found in two steps.</p>
+  <ol>
+    <li><b>Ballistic mapping to the source surface.</b> The spacecraft at distance <i>r</i><sub>sc</sub> and longitude φ<sub>sc</sub> is joined to the source surface along a Parker spiral at the chosen wind speed: <span class="math">φ<sub>ss</sub> = φ<sub>sc</sub> + Ω (<i>r</i><sub>sc</sub> − R<sub>ss</sub>) / <i>v</i></span>, at the spacecraft's latitude.</li>
+    <li><b>PFSS mapping to the photosphere.</b> From just inside that point, the model field line is traced down to the solar surface. Its end is the footpoint listed in the panel.</li>
+  </ol>
+  <p>Footpoints are computed for wind speeds of 300 to 800 km/s in steps of 100. The uncertainty of a footpoint is large. The wind speed is rarely known to better than 100 km/s. For a spacecraft near 1 au, that alone shifts the footpoint by about 20 degrees of longitude in slow wind, and by about 5 degrees in fast wind. Close to the neutral line, a small shift can move the footpoint into the other polarity.</p>
+  <p>Spacecraft positions come from <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, which takes them from JPL Horizons. They are converted to the Carrington frame for the time of the magnetogram.</p>
+</section>
+
+<section id="coords">
+  <h3>Coordinates and scale</h3>
+  <p>The whole scene is in the Carrington frame. It is fixed to the rotating Sun, with <i>z</i> along the solar rotation axis and <i>x</i> at Carrington longitude 0. The field therefore stays still from day to day, and the planets and spacecraft move around it. Earth's position in this frame is given by L<sub>0</sub> and B<sub>0</sub>, its heliographic longitude and latitude.</p>
+  <p>In log-distance mode, distances out to the source surface are true. Beyond it, they are compressed:</p>
+  <div class="eq"><i>r</i>′ = R<sub>ss</sub> [1 + 2 ln(<i>r</i> / R<sub>ss</sub>)] &nbsp; for &nbsp;<i>r</i> &gt; R<sub>ss</sub></div>
+  <p>This puts 1 au at about 25 R<sub>☉</sub>. Spirals and the current sheet are computed at true distance and compressed afterwards, so their longitudes are unchanged.</p>
+</section>
+
+<section id="limits">
+  <h3>Limitations</h3>
+  <ul>
+    <li><b>No currents.</b> PFSS cannot represent sheared or twisted fields, such as those in filament channels or before eruptions. Active-region loops are less twisted than in reality.</li>
+    <li><b>A fixed spherical source surface.</b> The real boundary between closed and open field is neither spherical nor at one height. Its height changes the open flux and the shape of the neutral line.</li>
+    <li><b>Old data away from Earth.</b> A synoptic map shows some longitudes as they were up to about four weeks earlier. New active regions there are missing until they rotate into view.</li>
+    <li><b>Poorly observed poles.</b> The polar fields are seen at a grazing angle. They strongly influence the open field, and so the current sheet.</li>
+    <li><b>Constant, radial solar wind.</b> The spirals and current sheet ignore acceleration, stream interactions and transients such as coronal mass ejections.</li>
+    <li><b>The HMI fallback lags.</b> The HMI frame is typically several hours old when it is published.</li>
+  </ul>
+</section>
+
+<section id="products">
+  <h3>Data products</h3>
+  <p>Every day's product is a set of small static files, open to anyone. They are about 340 kB per day, under <code>data/&lt;date&gt;/</code>. The list of days is in <code>data/index.json</code>.</p>
+  <table>
+    <tr><th>File</th><th>Content</th></tr>
+    <tr><td><code>meta.json</code></td><td>Map provenance and time, Carrington rotation, L<sub>0</sub> and B<sub>0</sub>, model settings, open flux, neutral-line polylines, body positions, and footpoints for each wind speed.</td></tr>
+    <tr><td><code>br.png</code></td><td>Photospheric B<sub>r</sub>, 360 × 180, equirectangular, 8-bit grey, ±20 G, north up. Column <i>j</i> is centred on Carrington longitude <i>j</i> + 0.5°.</td></tr>
+    <tr><td><code>ss.png</code></td><td>Source-surface B<sub>r</sub> on the same grid, scaled to ±<code>ss_scale</code> G from <code>meta.json</code>.</td></tr>
+    <tr><td><code>lines.bin</code></td><td>Every polyline as little-endian 16-bit integer Carrington <i>x</i>, <i>y</i>, <i>z</i> in units of 10<sup>−4</sup> R<sub>☉</sub>. Line lengths are in <code>meta.counts</code>: field lines first, then one per connectivity entry.</td></tr>
+  </table>
+  <p>The code that builds them is in the <a href="https://github.com/sr-dash/heliofield">repository</a>.</p>
+</section>
+
+<section id="refs">
+  <h3>References</h3>
+  <ol class="refs">
+    <li>Altschuler, M. D. &amp; Newkirk, G. 1969, Magnetic fields and the structure of the solar corona, <i>Solar Physics</i>, 9, 131.</li>
+    <li>Schatten, K. H., Wilcox, J. M. &amp; Ness, N. F. 1969, A model of interplanetary and coronal magnetic fields, <i>Solar Physics</i>, 6, 442.</li>
+    <li>Parker, E. N. 1958, Dynamics of the interplanetary gas and magnetic fields, <i>The Astrophysical Journal</i>, 128, 664.</li>
+    <li>Nolte, J. T. &amp; Roelof, E. C. 1973, Large-scale structure of the interplanetary medium, I, <i>Solar Physics</i>, 33, 241.</li>
+    <li>Stansby, D., Yeates, A. &amp; Badman, S. T. 2020, pfsspy: a Python package for potential field source surface modelling, <i>Journal of Open Source Software</i>, 5, 2732.</li>
+    <li>Harvey, J. W. et al. 1996, The Global Oscillation Network Group (GONG) project, <i>Science</i>, 272, 1284.</li>
+    <li>Scherrer, P. H. et al. 2012, The Helioseismic and Magnetic Imager (HMI) investigation for the Solar Dynamics Observatory (SDO), <i>Solar Physics</i>, 275, 207.</li>
+  </ol>
+  <p class="muted">Magnetograms courtesy of NSO/GONG and of NASA/SDO and the HMI science team. PFSS by sunkit-magex (SunPy project). Ephemerides from JPL Horizons via HelioFleet.</p>
+</section>
+</main>
+
+<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> · <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a></footer>
+</div>
+</body>
+</html>

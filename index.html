@@ -5,6 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HelioField</title>
 <meta name="description" content="The Sun's coronal magnetic field in 3D, updated daily: GONG magnetograms, PFSS field lines, source surface, heliospheric current sheet and the spacecraft fleet.">
+<script>
+  // Set before first paint so neither the embed layout nor a folded panel flashes.
+  (() => {
+    const q = new URLSearchParams(location.search), h = document.documentElement;
+    const embed = q.get("embed") === "1";
+    if (embed) h.classList.add("embed");
+    if (q.get("controls") === "0") h.classList.add("no-controls");
+    let folded = q.get("panel") === "0" || (embed && q.get("panel") !== "1");
+    // Phones start with the scene, not the sheet; elsewhere the last choice wins.
+    if (!embed && !q.has("panel")) {
+      folded = matchMedia("(max-width: 760px)").matches;
+      if (!folded) try { folded = localStorage.getItem("hf.panel") === "closed"; } catch (e) {}
+    }
+    if (folded) h.classList.add("panel-closed");
+  })();
+</script>
 <link rel="stylesheet" href="css/style.css">
 <script type="importmap">
 { "imports": {
@@ -19,49 +35,72 @@
 <header class="bar">
   <div class="brand"><strong>HelioField</strong><span>coronal magnetic field in 3D</span></div>
   <div class="date">
-    <button id="prev" title="Previous day" aria-label="Previous day">‹</button>
+    <button id="prev" title="Previous day (←)" aria-label="Previous day">‹</button>
     <select id="day" aria-label="Date"></select>
-    <button id="next" title="Next day" aria-label="Next day">›</button>
+    <button id="next" title="Next day (→)" aria-label="Next day">›</button>
     <span id="src" class="src"></span>
   </div>
-  <button id="panelToggle" class="only-narrow" aria-expanded="false">Layers</button>
+  <a class="guide-link" href="guide.html">Guide</a>
+  <a class="embed-open" id="embedOpen" href="./" target="_blank" rel="noopener">HelioField ↗</a>
+  <button id="panelToggle" class="panel-toggle" aria-controls="panel" aria-expanded="true" title="Show or hide the panel (L)">Layers</button>
 </header>
 
-<aside id="panel">
-  <section>
-    <h2>Sun</h2>
+<aside id="panel" aria-label="Layers and view">
+  <div class="panel-head">
+    <span>Layers &amp; view</span>
+    <button id="panelClose" class="icon" aria-label="Hide panel" title="Hide panel (L)">×</button>
+  </div>
+
+  <details open>
+    <summary>Sun <a class="help" href="guide.html#layers-sun" title="What these layers show">?</a></summary>
     <label><input type="checkbox" id="lyrPhoto" checked> <span>Photospheric B<sub>r</sub></span></label>
     <label><input type="checkbox" id="lyrClosed" checked> <span>Closed field lines</span></label>
     <label><input type="checkbox" id="lyrOpen" checked> <span>Open field lines</span></label>
     <label><input type="checkbox" id="lyrSS" checked> <span>Source surface B<sub>r</sub></span></label>
-    <label class="slider"><span>Source-surface opacity</span><input type="range" id="ssAlpha" min="0" max="1" step="0.05" value="0.25"></label>
-    <label><input type="checkbox" id="lyrPIL" checked> <span>Neutral line (HCS base)</span></label>
-  </section>
-  <section>
-    <h2>Heliosphere</h2>
+    <label class="slider sub"><span>Opacity</span><input type="range" id="ssAlpha" min="0" max="1" step="0.05" value="0.25"></label>
+    <label><input type="checkbox" id="lyrPIL" checked> <span>Neutral line</span></label>
+  </details>
+
+  <details open>
+    <summary>Heliosphere <a class="help" href="guide.html#layers-helio" title="What these layers show">?</a></summary>
     <label><input type="checkbox" id="lyrHCS" checked> <span>Current sheet</span></label>
+    <label class="slider sub"><span>Out to <output id="rOut">1.2</output> au</span><input type="range" id="rmax" min="0.1" max="1.8" step="0.1" value="1.2"></label>
     <label><input type="checkbox" id="lyrFleet" checked> <span>Planets and spacecraft</span></label>
-    <label><input type="checkbox" id="lyrSpiral" checked> <span>Parker spirals to footpoints</span></label>
+    <label><input type="checkbox" id="lyrSpiral" checked> <span>Connection to the Sun</span></label>
     <label class="slider"><span>Solar wind <output id="vOut">400</output> km/s</span><input type="range" id="vsw" min="300" max="800" step="100" value="400"></label>
-    <label class="slider"><span>HCS extent <output id="rOut">1.2</output> au</span><input type="range" id="rmax" min="0.1" max="1.8" step="0.1" value="1.2"></label>
     <div class="seg" role="group" aria-label="Distance scale">
-      <button id="scaleLog" class="on">Log distance</button><button id="scaleTrue">True distance</button>
+      <button id="scaleLog" class="on" aria-pressed="true">Log distance</button><button id="scaleTrue" aria-pressed="false">True distance</button>
     </div>
-  </section>
-  <section>
-    <h2>View</h2>
+  </details>
+
+  <details open>
+    <summary>View <a class="help" href="guide.html#navigate" title="How to move around">?</a></summary>
     <div class="seg">
-      <button id="viewEarth">From Earth</button><button id="viewNorth">From north</button><button id="viewFleet">Whole fleet</button>
+      <button id="viewEarth" title="From Earth (E)">From Earth</button><button id="viewNorth" title="From north (N)">From north</button><button id="viewFleet" title="Whole fleet (F)">Whole fleet</button>
     </div>
-  </section>
-  <section id="info"></section>
-  <section id="feet"></section>
-  <footer>
-    Magnetograms: NSO/GONG zero-point-corrected synoptic maps, or the SDO/HMI daily synoptic frame (JSOC) on days GONG could not be reached; the badge by the date says which.
-    Model: PFSS (sunkit-magex), source surface 2.5 R<sub>☉</sub>.
-    Positions: <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a> (JPL Horizons).
-    Spirals are ballistic at constant wind speed.
-  </footer>
+    <label><input type="checkbox" id="spin"> <span>Rotate slowly</span></label>
+  </details>
+
+  <details>
+    <summary>This map <a class="help" href="guide.html#data" title="Where the data come from">?</a></summary>
+    <div id="info"></div>
+  </details>
+
+  <details>
+    <summary>Footpoints <a class="help" href="guide.html#connectivity" title="How footpoints are found">?</a></summary>
+    <div id="feet"></div>
+  </details>
+
+  <details>
+    <summary>Share <a class="help" href="guide.html#embed" title="Links and embedding">?</a></summary>
+    <p class="note">Opens on this date, with these layers, wind speed and view.</p>
+    <div class="seg">
+      <button id="copyLink">Copy link</button><button id="copyEmbed">Copy embed code</button>
+    </div>
+    <textarea id="shareOut" readonly rows="4" aria-label="Link or embed code" hidden></textarea>
+  </details>
+
+  <p class="panel-foot"><a href="guide.html">How to use</a> · <a href="guide.html#methods">Methods and data</a></p>
 </aside>
 
 <div id="legend">
