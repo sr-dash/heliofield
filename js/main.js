@@ -550,7 +550,10 @@ $("viewEarth").onclick = () => setView("earth");
 $("viewNorth").onclick = () => setView("north");
 $("viewFleet").onclick = () => setView("fleet");
 controls.addEventListener("start", () => { view = null; tween = null; });
-controls.addEventListener("end", () => syncUrl());
+// Record the camera once it has settled: with damping the view keeps gliding
+// after the pointer is released, so the release moment is not where it stops.
+let settle = null;
+controls.addEventListener("change", () => { clearTimeout(settle); settle = setTimeout(syncUrl, 250); });
 function camParam() {
   const p = camera.position, r = p.length();
   return [((Math.atan2(p.y, p.x) / DEG) + 360) % 360, Math.asin(p.z / r) / DEG, r].map((x) => x.toFixed(1)).join(",");
@@ -602,8 +605,26 @@ $("copyEmbed").onclick = (e) => {
 };
 
 // ------------------------------------------------------------- snapshots
+// Where the saved view looks from: the camera's Carrington longitude and
+// latitude seen from Sun centre and its Stonyhurst longitude (angle from the
+// Earth view). A distance is given only at true scale: in log-distance mode
+// the camera is not on the compressed scale, only the objects are.
+const VIEW_NAMES = { earth: "From Earth", north: "From north", fleet: "Whole fleet" };
+function viewCaption() {
+  const p = camera.position, d = p.length(), m = state.product.meta;
+  const lon = ((Math.atan2(p.y, p.x) / DEG) + 360) % 360, lat = Math.asin(p.z / d) / DEG;
+  const ston = ((lon - m.L0 + 540) % 360) - 180;
+  const dist = state.logScale ? "log distance scale"
+    : `${d < 100 ? `${d.toFixed(1)} R☉` : `${(d / AU_RS).toFixed(2)} au`} from Sun centre`;
+  const sgn = (x) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(1) + "°";
+  return `View: ${VIEW_NAMES[view] || "Custom view"} · from Carrington longitude ${lon.toFixed(1)}°, latitude ${sgn(lat)} `
+    + `(Stonyhurst longitude ${sgn(ston)}) · ${dist}`;
+}
 function snapshotCanvas() {
+  // Bring the camera and the label layer up to date first: right after a
+  // load or a jump, no animation frame may have placed the labels yet.
   controls.update();
+  labels.render(scene, camera);
   const m = state.product.meta, th = T(), cs = getComputedStyle(root);
   const legend = [
     { label: "Br > 0", color: lutColor(LUT_DATA, 1), kind: "swatch" },
@@ -615,8 +636,9 @@ function snapshotCanvas() {
     renderer, scene, camera, stage, legend,
     title: `HelioField · ${state.day}`,
     lines: [
-      `${m.source.name}${state.product.computed ? ` (CR ${m.map_cr})` : ""} · PFSS, source surface ${state.rss} R☉ · solar wind ${state.vsw} km/s`,
-      `Carrington frame · Earth L0 ${m.L0.toFixed(1)}°, B0 ${m.B0.toFixed(1)}° · open flux ${(m.open_flux_Mx / 1e22).toFixed(2)} × 10²² Mx`,
+      `${m.source.name}${state.product.computed ? ` (CR ${m.map_cr})` : ""} · PFSS, source surface ${state.rss} R☉ · solar wind ${state.vsw} km/s · open flux ${(m.open_flux_Mx / 1e22).toFixed(2)} × 10²² Mx`,
+      viewCaption(),
+      `Earth: L0 ${m.L0.toFixed(1)}°, B0 ${m.B0.toFixed(1)}° (Carrington longitude and latitude of the Sun–Earth line)`,
     ],
     ink: { bg: th.bg, text: cs.getPropertyValue("--text").trim(), muted: cs.getPropertyValue("--muted").trim(),
       labelBg: cs.getPropertyValue("--label-bg").trim() },
