@@ -366,8 +366,13 @@ const LAYERS = { photo: "lyrPhoto", closed: "lyrClosed", open: "lyrOpen", ss: "l
 function applyVisibility() {
   for (const [g, id] of Object.entries(LAYERS)) G[g].visible = $(id).checked;
   if (G.photo.userData.dark) G.photo.userData.dark.visible = !G.photo.visible;
-  // CSS2D labels ignore their parent's visibility, so toggle them by hand.
-  G.fleet.traverse((o) => { if (o.isCSS2DObject) o.element.style.display = G.fleet.visible ? "" : "none"; });
+  // Spirals start at the spacecraft, so they go when the fleet goes; their
+  // own switch is a sub-option, disabled meanwhile.
+  G.spiral.visible = G.fleet.visible && $("lyrSpiral").checked;
+  $("lyrSpiral").disabled = !G.fleet.visible;
+  // The label renderer reads each label's own visible flag every frame and
+  // ignores its parents', so the flag has to be set on the labels themselves.
+  G.fleet.traverse((o) => { if (o.isCSS2DObject) o.visible = G.fleet.visible; });
 }
 function setLayers(list) {
   const on = new Set(String(list).split(",").map((s) => s.trim()));
