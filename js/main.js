@@ -68,7 +68,7 @@ addEventListener("resize", resize);
 resize();
 
 const G = {};
-for (const k of ["photo", "closed", "open", "ext", "ss", "pil", "hcs", "fleet", "spiral", "cloud"]) {
+for (const k of ["photo", "foot", "closed", "open", "ext", "ss", "pil", "hcs", "fleet", "spiral", "cloud"]) {
   G[k] = new THREE.Group();
   scene.add(G[k]);
 }
@@ -110,6 +110,27 @@ const brShader = (tex, alpha) => new THREE.ShaderMaterial({
       float s = texture2D(map, vec2(fract(lon / 6.2831853), lat / 3.1415927 + 0.5)).r;
       vec3 c = texture2D(lut, vec2(s, 0.5)).rgb;
       gl_FragColor = vec4(c * mix(0.55, 1.0, sqrt(vMu)), alpha);
+    }`,
+});
+// Open-field footprints: a three-class texture (0 closed, 128 open inward,
+// 255 open outward). Open cells take the open-line colours; closed cells get
+// a light veil of the occluder colour so the holes stand out. Colours go in
+// as raw sRGB, as the B_r lookup does, so they match the lines exactly.
+const rgb = (hex) => new THREE.Vector3(...[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255));
+const footShader = (tex, th) => new THREE.ShaderMaterial({
+  uniforms: { map: { value: tex }, pos: { value: rgb(th.pos) }, neg: { value: rgb(th.neg) }, veil: { value: rgb(th.occluder) } },
+  transparent: true, depthWrite: false,
+  vertexShader: `
+    varying vec3 vPos;
+    void main() { vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `
+    uniform sampler2D map; uniform vec3 pos; uniform vec3 neg; uniform vec3 veil;
+    varying vec3 vPos;
+    void main() {
+      float lon = atan(vPos.y, vPos.x);
+      float lat = asin(clamp(vPos.z / length(vPos), -1.0, 1.0));
+      float s = texture2D(map, vec2(fract(lon / 6.2831853), lat / 3.1415927 + 0.5)).r;
+      gl_FragColor = s > 0.75 ? vec4(pos, 0.9) : s > 0.25 ? vec4(neg, 0.9) : vec4(veil, 0.45);
     }`,
 });
 const texLoader = new THREE.TextureLoader();
@@ -201,7 +222,36 @@ async function fetchDaily(day) {
 }
 
 function disposeProduct(p) {
-  p?.brTex?.dispose(); p?.ssTex?.dispose();
+  p?.brTex?.dispose(); p?.ssTex?.dispose(); p?.foot?.tex?.dispose();
+}
+
+// Footprints load on demand: the day's own map when the server made one,
+// otherwise the rotation map covering the date (as for a computed date).
+async function loadFoot(p) {
+  if (p.foot) return p.foot;
+  const nearest = (t) => { t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
+  if (!p.computed) {
+    try { return (p.foot = { tex: nearest(await loadTex(`data/${p.day}/open.png`)), cr: null }); } catch (e) { /* none for this day */ }
+  }
+  const cr = p.computed ? p.meta.map_cr : rotationFor(await historyIndex(), p.day).rot.cr;
+  return (p.foot = { tex: nearest(await loadTex(`data/history/open/${cr}.png`)), cr });
+}
+async function buildFoot() {
+  clear(G.foot);
+  const p = state.product;
+  if (!p || !$("lyrFoot").checked) return;
+  try {
+    const f = await loadFoot(p);
+    if (state.product !== p) return;
+    clear(G.foot);
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1.002, 128, 64), footShader(f.tex, T()));
+    mesh.renderOrder = 1;
+    G.foot.add(mesh);
+  } catch (e) {
+    $("status").textContent = "No open-field map for this date yet.";
+    setTimeout(() => { $("status").textContent = ""; }, 4000);
+  }
+  if (state.product === p) info();
 }
 
 function showProduct(p) {
@@ -218,7 +268,7 @@ function showProduct(p) {
 
 function buildSun() {
   const p = state.product, m = p.meta, nf = m.lines.count, kind = m.lines.kind, th = T();
-  for (const k of ["photo", "closed", "open", "ss", "pil"]) clear(G[k]);
+  for (const k of ["photo", "foot", "closed", "open", "ss", "pil"]) clear(G[k]);
   G.photo.add(new THREE.Mesh(new THREE.SphereGeometry(1, 128, 64), brShader(p.brTex, 1)));
   // Without the photosphere, keep an occluding Sun so lines behind it hide.
   if (G.photo.userData.dark) scene.remove(G.photo.userData.dark);
@@ -227,6 +277,7 @@ function buildSun() {
   scene.add(G.photo.userData.dark);
 
   buildLines();
+  buildFoot();
 
   const ss = new THREE.Mesh(new THREE.SphereGeometry(state.rss, 96, 48), brShader(p.ssTex, +$("ssAlpha").value));
   ss.renderOrder = 2;
@@ -482,7 +533,7 @@ $("themeToggle").onclick = () => setTheme(currentTheme() === "dark" ? "light" : 
 
 // ------------------------------------------------------------- panel
 const DEFAULTS = { v: 400, rmax: 1.2, ss: 0.25, lines: 250 };
-const LAYERS = { photo: "lyrPhoto", closed: "lyrClosed", open: "lyrOpen", ext: "lyrExt", ss: "lyrSS",
+const LAYERS = { photo: "lyrPhoto", foot: "lyrFoot", closed: "lyrClosed", open: "lyrOpen", ext: "lyrExt", ss: "lyrSS",
   pil: "lyrPIL", hcs: "lyrHCS", fleet: "lyrFleet", spiral: "lyrSpiral", cloud: "lyrCloud" };
 // Layers shown on a first visit; links list layers only when they differ.
 const DEFAULT_ON = ["photo", "closed", "open", "pil", "fleet", "spiral"];
@@ -507,10 +558,11 @@ function applyVisibility() {
 function setLayers(list) {
   const on = new Set(String(list).split(",").map((s) => s.trim()));
   for (const [g, id] of Object.entries(LAYERS)) $(id).checked = on.has(g);
-  if (state.product) { buildExt(); buildCloud(); } else applyVisibility();
+  if (state.product) { buildExt(); buildCloud(); buildFoot(); } else applyVisibility();
 }
 for (const id of Object.values(LAYERS)) $(id).addEventListener("change", () => { applyVisibility(); syncUrl(); });
 $("lyrExt").addEventListener("change", () => { if (state.product) buildExt(); });
+$("lyrFoot").addEventListener("change", () => { if (state.product) buildFoot(); });
 $("lyrCloud").addEventListener("change", () => { if (state.product) buildCloud(); });
 function setConnMode(mode) {
   state.connMode = mode === "sc" ? "sc" : "fixed";
@@ -574,6 +626,8 @@ function info() {
     ["Carrington rotation", m.carrington_rotation],
     ["Earth L<sub>0</sub>, B<sub>0</sub>", `${m.L0.toFixed(1)}°, ${m.B0.toFixed(1)}°`],
     ["Open flux", `${flux} × 10<sup>22</sup> Mx`],
+    ...(state.product.foot && $("lyrFoot").checked
+      ? [["Footprints from", state.product.foot.cr ? `rotation map CR ${state.product.foot.cr}` : "this map"]] : []),
     ["Field lines", m.lines.count],
     ["Computed", state.product.computed ? "in your browser" : "daily, on the server"],
   );

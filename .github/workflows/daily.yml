@@ -51,6 +51,13 @@ jobs:
       - name: Update the history archive
         run: python scripts/build_history.py
 
+      # Open-field footprints for the new products and any new rotation, and
+      # the per-rotation series (only rotations not yet in the file are solved).
+      - name: Footprints and series
+        run: |
+          python scripts/build_open_field.py --recent 2
+          python scripts/build_series.py
+
       - name: Commit and push
         id: commit
         run: |
