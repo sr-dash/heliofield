@@ -2,7 +2,7 @@
 // date inside the same rotation only re-traces spacecraft connectivity.
 import { solve, connectOnly } from "./pfss.js";
 
-let last = null;   // { key, G }
+let last = null;   // { key, models }
 
 function flatten(polys) {
   const counts = new Int32Array(polys.length);
@@ -20,9 +20,9 @@ self.onmessage = async (e) => {
   try {
     // Only when the page still shows this rotation's field.
     if (reuse && last && last.key === key) {
-      const { connect, conn } = connectOnly(last.G, fleet);
+      const { connect, conn, ensemble } = connectOnly(last.models, fleet);
       const { xyz, counts } = flatten(conn);
-      self.postMessage({ id, type: "connect", connect, xyz, counts }, [xyz.buffer, counts.buffer]);
+      self.postMessage({ id, type: "connect", connect, ensemble, xyz, counts }, [xyz.buffer, counts.buffer]);
       return;
     }
     last = null;                       // release the previous rotation's field first
@@ -33,7 +33,7 @@ self.onmessage = async (e) => {
     const q = new Int16Array(raw), br = new Float32Array(q.length);
     for (let i = 0; i < q.length; i++) br[i] = q[i] * scale;
     const out = solve(br, shape[0], shape[1], { fleet, progress });
-    last = { key, G: out.G };
+    last = { key, models: out.models };
     const { xyz, counts } = flatten(out.polys);
     self.postMessage({ id, type: "done", meta: out.meta, xyz, counts, brTex: out.brTex, ssTex: out.ssTex },
       [xyz.buffer, counts.buffer, out.brTex.buffer, out.ssTex.buffer]);

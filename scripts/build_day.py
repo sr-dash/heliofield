@@ -12,7 +12,8 @@ cannot be reached the SDO/HMI daily synoptic frame from JSOC is used instead,
 provided its record date is that day (JSOC keeps only the latest frame at
 that path, so the fallback serves the nightly build, not backfills).
 
-    meta.json   map provenance, scales, open flux, HCS polylines, fleet
+    meta.json   map provenance, scales, open flux, HCS polylines, fleet,
+                footpoints with source diagnostics (connect, ensemble)
     br.png      photospheric Br, 360x180 equirectangular, 8-bit, +-BR_SCALE G
     ss.png      source-surface Br, same grid, +-ss_scale G (in meta)
     lines.bin   every polyline as int16 Carrington xyz in units of 1e-4 R_sun
@@ -22,7 +23,8 @@ never transforms coordinates. Spacecraft come from HelioFleet's published
 ephemerides and are converted here, once, for the map time.
 
 The whole run fits a small CI runner: a 180x360 map on nr=40 shells is
-~70 MB of field and solves and traces in well under a minute.
+~70 MB of field, and the three source surfaces solve and trace in well
+under a minute.
 """
 from __future__ import annotations
 
@@ -52,7 +54,10 @@ RSS = 2.5            # source-surface radius [R_sun]
 NR = 40              # radial shells
 BR_SCALE = 20.0      # photospheric display range [G]
 QSCALE = 1e4         # int16 quantisation: 1 unit = 1e-4 R_sun (max 3.27 R_sun)
-VSW = [300, 400, 500, 600, 700, 800]   # wind speeds for connectivity [km/s]
+VSW = [300, 400, 500, 600, 700, 800]   # wind speeds offered by the page [km/s]
+VGRID = list(range(200, 901, 25))      # speeds actually mapped: slider +-100 km/s
+RSS_ENS = [2.0, 3.0]                   # extra source surfaces for the footpoint spread
+CH_STEP = 1.0                          # open/closed map resolution for DCHB [deg]
 OMEGA = 2 * np.pi / (25.38 * 86400)    # Carrington sidereal rate [rad/s]
 RSUN_KM = 695700.0
 AU_KM = 149597870.7
@@ -302,9 +307,61 @@ def fleet_positions(obstime):
     return out
 
 
-def connectivity(out, tracer, fleet):
+def wsa_speed(fs: float, dchb: float) -> float:
+    """WSA-type wind speed [km/s] from the expansion factor and the distance
+    to the coronal-hole boundary [deg], in the form of Arge et al. (2003,
+    2004). The coefficients are illustrative, not tuned to any data set; the
+    page and js/pfss.js use the same ones."""
+    return 285 + 625 / (1 + fs) ** (2 / 9) * (1 - 0.8 * np.exp(-(dchb / 2.0) ** 2)) ** 3
+
+
+def unit(lon, lat) -> np.ndarray:
+    lo, la = np.radians(lon), np.radians(lat)
+    return np.stack([np.cos(la) * np.cos(lo), np.cos(la) * np.sin(lo), np.sin(la)], axis=-1)
+
+
+def ch_boundary(out, tracer, rss: float) -> np.ndarray:
+    """Coronal-hole boundary as unit vectors: the midpoints between
+    neighbouring cells of a CH_STEP-degree photospheric grid where one cell's
+    field line is open and the other's closed. Longitude wraps."""
+    import astropy.units as u
+    from astropy.coordinates import SkyCoord
+    lat = np.arange(-90 + CH_STEP / 2, 90, CH_STEP)
+    lon = np.arange(CH_STEP / 2, 360, CH_STEP)
+    LO, LA = np.meshgrid(lon, lat)
+    s = SkyCoord(LO.ravel() * u.deg, LA.ravel() * u.deg, np.full(LO.size, 1.001 * RSUN_KM) * u.km,
+                 frame=out.coordinate_frame)
+    op = np.array([fl.is_open for fl in tracer.trace(s, out)]).reshape(LO.shape)
+    pts = []
+    d = op != np.roll(op, -1, axis=1)                    # east neighbour, wrapping
+    pts.append(unit(LO[d] + CH_STEP / 2, LA[d]))
+    d = op[:-1] != op[1:]                                # north neighbour
+    pts.append(unit(LO[:-1][d], LA[:-1][d] + CH_STEP / 2))
+    print(f"  Rss {rss}: open fraction {op.mean():.3f}")
+    return np.concatenate(pts)
+
+
+def b_mag(out, lon, lat, r) -> np.ndarray:
+    """|B| [G] at Carrington lon, lat [deg] and radius r [R_sun]."""
+    import astropy.units as u
+    from astropy.coordinates import SkyCoord
+    c = SkyCoord(np.asarray(lon) * u.deg, np.asarray(lat) * u.deg,
+                 np.full(np.size(lon), r * RSUN_KM) * u.km, frame=out.coordinate_frame)
+    return np.linalg.norm(out.get_bvec(c).to_value("G"), axis=-1)
+
+
+def connectivity(out, tracer, fleet, rss: float = RSS, lines: bool = True):
     """Ballistic Parker-spiral footpoint on the source surface for each body
-    and wind speed, then the PFSS line from there down to the photosphere."""
+    and wind speed in VGRID, then the PFSS line from there down to the
+    photosphere, with the source diagnostics at its foot:
+
+        f_s  = (|B_phot| / |B_ss|) (R_sun / R_ss)^2   expansion factor
+        dchb = angle from the footpoint to the nearest coronal-hole boundary
+        vwsa = wsa_speed(f_s, dchb)
+
+    Returns the jobs (body, v, ss lon, ss lat) and, per job, (polyline or
+    None, foot, fs, dchb, vwsa); a line that does not reach the photosphere
+    has foot None and no diagnostics."""
     import astropy.units as u
     from astropy.coordinates import SkyCoord
     jobs, coords = [], []
@@ -312,30 +369,41 @@ def connectivity(out, tracer, fleet):
         if b["planet"]:
             continue
         r_rs = b["r"] * AU_KM / RSUN_KM
-        for v in VSW:
-            dlon = np.degrees(OMEGA * (r_rs - RSS) * RSUN_KM / v)
+        for v in VGRID:
+            dlon = np.degrees(OMEGA * (r_rs - rss) * RSUN_KM / v)
             lon = (b["lon"] + dlon) % 360
             lat = float(np.clip(b["lat"], -89, 89))
             jobs.append((key, v, round(lon, 3), round(lat, 3)))
             coords.append((lon, lat))
     if not coords:
         return [], []
+    bound = ch_boundary(out, tracer, rss)
     lon, lat = np.array(coords).T
-    s = SkyCoord(lon * u.deg, lat * u.deg, np.full(len(lon), RSS * 0.995 * 696000) * u.km,
+    s = SkyCoord(lon * u.deg, lat * u.deg, np.full(len(lon), rss * 0.995 * 696000) * u.km,
                  frame=out.coordinate_frame)
     fls = tracer.trace(s, out)
-    lines = []
-    for fl in fls:
+    b_ss = b_mag(out, lon, lat, rss)
+    res, feet = [], []
+    for k, fl in enumerate(fls):
         xyz = cart(fl)
         if len(xyz) and np.linalg.norm(xyz[0]) > np.linalg.norm(xyz[-1]):
             xyz = xyz[::-1]                     # photosphere -> source surface
         foot = None
-        if len(xyz):
+        if len(xyz) and np.linalg.norm(xyz[0]) < 1.05:      # the tracer stops ~0.01 above r = 1
             x, y, z = xyz[0]
             foot = [round(float(np.degrees(np.arctan2(y, x)) % 360), 2),
                     round(float(np.degrees(np.arcsin(z / np.linalg.norm(xyz[0])))), 2)]
-        lines.append((resample(xyz, 0.02, 120) if len(xyz) > 2 else xyz, foot))
-    return jobs, lines
+            feet.append((k, foot))
+        line = (resample(xyz, 0.03, 80) if len(xyz) > 2 else xyz) if lines else None
+        res.append([line, foot, None, None, None])
+    if feet:
+        idx = [k for k, _ in feet]
+        fl_lon, fl_lat = np.array([f for _, f in feet]).T
+        fs = b_mag(out, fl_lon, fl_lat, 1.0) / b_ss[idx] / rss ** 2
+        d = np.degrees(np.arccos(np.clip((unit(fl_lon, fl_lat) @ bound.T).max(axis=1), -1, 1)))
+        for k, f, dd in zip(idx, fs, d):
+            res[k][2:] = [round(float(f), 2), round(float(dd), 2), round(float(wsa_speed(f, dd)), 1)]
+    return jobs, res
 
 
 # ---------------------------------------------------------------------- main
@@ -379,6 +447,12 @@ def build(day: date, force: bool = False) -> bool:
 
     fleet = fleet_positions(m.date)
     jobs, conn = connectivity(out, tracer, fleet)
+    # The same mapping for other source-surface heights, footpoints and
+    # diagnostics only, for the footpoint spread.
+    ens = []
+    for rss in RSS_ENS:
+        _, res = connectivity(pfss.pfss(pfss.Input(m, NR, rss)), tracer, fleet, rss, lines=False)
+        ens.append(res)
 
     # One binary: field lines first, then connectivity lines.
     counts = [len(p) for p in polys] + [len(c[0]) for c in conn]
@@ -410,9 +484,14 @@ def build(day: date, force: bool = False) -> bool:
         counts=counts,
         hcs=hcs,
         vsw=VSW,
+        vgrid=VGRID,
         fleet=fleet,
-        connect=[dict(body=k, v=v, ss=[lo, la], foot=c[1])
+        connect=[dict(body=k, v=v, ss=[lo, la], foot=c[1], fs=c[2], dchb=c[3], vwsa=c[4])
                  for (k, v, lo, la), c in zip(jobs, conn)],
+        # Per extra source surface, one [lon, lat, fs, dchb, vwsa] (or null)
+        # per connect entry, in the same order.
+        ensemble=dict(rss=RSS_ENS, foot=[[(r[1] + r[2:]) if r[1] else None for r in res] for res in ens]),
+        wsa=dict(form="285 + 625/(1+fs)^(2/9) * (1 - 0.8 exp(-(dchb/2)^2))^3", ch_step_deg=CH_STEP),
     )
     (dest / "meta.json").write_text(json.dumps(meta, separators=(",", ":")))
     print(f"  {len(polys)} lines, {len(conn)} connections, "

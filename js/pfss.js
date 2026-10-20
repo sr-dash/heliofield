@@ -317,16 +317,82 @@ function textureFromEquirect(F, scale) {
   return out;
 }
 
+// Speeds mapped for connectivity (the slider's 300-800 km/s +-100) and the
+// extra source surfaces for the footpoint spread; the daily build uses the
+// same, so both paths produce the same product.
+export const VGRID = Array.from({ length: 29 }, (_, i) => 200 + 25 * i);
+export const RSS_ENS = [2.0, 3.0];
+const CH_STEP = 1;   // open/closed map resolution for DCHB [deg]
+
+// WSA-type wind speed [km/s] from the expansion factor and the distance to
+// the coronal-hole boundary [deg], in the form of Arge et al. (2003, 2004).
+// Illustrative coefficients, not tuned; scripts/build_day.py uses the same.
+export const wsaSpeed = (fs, dchb) => 285 + 625 / Math.pow(1 + fs, 2 / 9) * Math.pow(1 - 0.8 * Math.exp(-((dchb / 2) ** 2)), 3);
+
+// Whether the field line from (lon, lat) just above the photosphere reaches
+// the source surface: traced one way, outward along the local B_r, by RK2.
+function isOpen(G, lon, lat, v) {
+  let [x, y, z] = cart(1.001, lon, lat);
+  sample(G, x, y, z, v);
+  const s = (v[0] * x + v[1] * y + v[2] * z) >= 0 ? 1 : -1;
+  for (let k = 0; k < 3000; k++) {
+    const h = 0.012 * Math.hypot(x, y, z);
+    sample(G, x, y, z, v); let n = Math.hypot(v[0], v[1], v[2]) || 1;
+    const mx = x + 0.5 * h * s * v[0] / n, my = y + 0.5 * h * s * v[1] / n, mz = z + 0.5 * h * s * v[2] / n;
+    sample(G, mx, my, mz, v); n = Math.hypot(v[0], v[1], v[2]) || 1;
+    x += h * s * v[0] / n; y += h * s * v[1] / n; z += h * s * v[2] / n;
+    const r = Math.hypot(x, y, z);
+    if (r >= G.rss) return true;
+    if (r < 1) return false;
+  }
+  return false;
+}
+
+// Coronal-hole boundary as unit vectors: midpoints between neighbouring
+// cells of a 1-degree photospheric grid where one cell is open and the other
+// closed (longitude wraps). Also returns the open fraction.
+export function chBoundary(G) {
+  const nlat = 180 / CH_STEP, nlon = 360 / CH_STEP, op = new Uint8Array(nlat * nlon), v = [0, 0, 0];
+  let nOpen = 0;
+  for (let i = 0; i < nlat; i++) for (let j = 0; j < nlon; j++) {
+    nOpen += op[i * nlon + j] = isOpen(G, (j + 0.5) * CH_STEP, -90 + (i + 0.5) * CH_STEP, v) ? 1 : 0;
+  }
+  const pts = [];
+  for (let i = 0; i < nlat; i++) for (let j = 0; j < nlon; j++) {
+    const lon = (j + 0.5) * CH_STEP, lat = -90 + (i + 0.5) * CH_STEP;
+    if (op[i * nlon + j] !== op[i * nlon + (j + 1) % nlon]) pts.push(...cart(1, lon + CH_STEP / 2, lat));
+    if (i + 1 < nlat && op[i * nlon + j] !== op[(i + 1) * nlon + j]) pts.push(...cart(1, lon, lat + CH_STEP / 2));
+  }
+  return { bound: Float64Array.from(pts), openFraction: nOpen / (nlat * nlon) };
+}
+
+// Angle [deg] from (lon, lat) to the nearest boundary point.
+function dchb(bound, lon, lat) {
+  const u = cart(1, lon, lat);
+  let best = -1;
+  for (let k = 0; k < bound.length; k += 3) best = Math.max(best, u[0] * bound[k] + u[1] * bound[k + 1] + u[2] * bound[k + 2]);
+  return Math.acos(Math.min(1, best)) / DEG;
+}
+
+const bMag = (G, p, v) => { sample(G, p[0], p[1], p[2], v); return Math.hypot(v[0], v[1], v[2]); };
+
+// A field grid and its coronal-hole boundary for one source surface.
+export function model(coef, rss, progress = () => {}) {
+  const G = fieldGrid(coef, { rss, progress });
+  return { G, rss, ...chBoundary(G) };
+}
+
 // Everything the viewer draws, in the same shape as a daily product.
 // fleet: { key: { name, planet, lon, lat, r } } at the requested time.
+// Returns the solved models too ([main, ...RSS_ENS]) for connectOnly.
 export function solve(br, ny, nx, { rss = 2.5, L = 40, vsw = [300, 400, 500, 600, 700, 800], fleet = {}, progress = () => {} } = {}) {
   const t0 = Date.now();
   progress("harmonics", 0);
   const coef = analyse(br, ny, nx, L);
   progress("field", 0.05);
-  const G = fieldGrid(coef, { rss, progress: (f) => progress("field", 0.05 + 0.55 * f) });
+  const G = fieldGrid(coef, { rss, progress: (f) => progress("field", 0.05 + 0.3 * f) });
 
-  progress("lines", 0.6);
+  progress("lines", 0.35);
   const polys = [], kind = [], v = [0, 0, 0], sd = seeds(br, ny, nx, rss);
   sd.forEach((p, i) => {
     const t = trace(G, p);
@@ -338,10 +404,10 @@ export function solve(br, ny, nx, { rss = 2.5, L = 40, vsw = [300, 400, 500, 600
       kind.push(open ? (brFoot > 0 ? 1 : -1) : 0);
       polys.push(resample(t.pts));
     }
-    if (i % 40 === 0) progress("lines", 0.6 + 0.3 * i / sd.length);
+    if (i % 40 === 0) progress("lines", 0.35 + 0.15 * i / sd.length);
   });
 
-  progress("surface", 0.9);
+  progress("surface", 0.5);
   const ss = surfaceBr(coef, rss, rss);
   const abs = Array.from(ss, Math.abs).sort((a, b) => a - b);
   const ssScale = abs[Math.floor(0.995 * (abs.length - 1))] || 1;
@@ -352,7 +418,17 @@ export function solve(br, ny, nx, { rss = 2.5, L = 40, vsw = [300, 400, 500, 600
   }
   const hcs = zeroContour(ss, 180, 360);
 
-  const { connect, conn } = connectOnly(G, fleet, rss, vsw);
+  // Coronal holes for this and the other source surfaces, for the footpoint
+  // diagnostics and their spread.
+  progress("holes", 0.55);
+  const models = [{ G, rss, ...chBoundary(G) }];
+  RSS_ENS.forEach((r, k) => {
+    progress("holes", 0.65 + 0.15 * k);
+    models.push(model(coef, r));
+  });
+
+  progress("connect", 0.95);
+  const { connect, conn, ensemble } = connectOnly(models, fleet);
   progress("done", 1);
   return {
     polys: polys.concat(conn),
@@ -360,35 +436,53 @@ export function solve(br, ny, nx, { rss = 2.5, L = 40, vsw = [300, 400, 500, 600
       model: { name: "PFSS", code: "HelioField in-browser solver", rss, lmax: L },
       br_scale: 20, ss_scale: +ssScale.toFixed(4), open_flux_Mx: +flux.toExponential(4),
       lines: { count: polys.length, kind }, counts: polys.concat(conn).map((p) => p.length),
-      hcs, vsw, fleet, connect, seconds: (Date.now() - t0) / 1000,
+      hcs, vsw, vgrid: VGRID, fleet, connect, ensemble, seconds: (Date.now() - t0) / 1000,
     },
     brTex: textureFromSinLat(br, ny, nx, 20),
     ssTex: textureFromEquirect(ss, ssScale),
-    G, coef,
+    models, coef,
   };
 }
 
 // Connectivity: each body joined to the source surface along a ballistic
-// Parker spiral, then the PFSS line from there down to the photosphere. Also
-// used alone for a new date inside an already solved rotation.
-export function connectOnly(G, fleet, rss = 2.5, vsw = [300, 400, 500, 600, 700, 800]) {
-  const connect = [], conn = [];
+// Parker spiral at every speed in VGRID, then the PFSS line from there down
+// to the photosphere, with the source diagnostics at its foot:
+//   fs   = (|B_phot| / |B_ss|) (R_sun / R_ss)^2   expansion factor
+//   dchb = angle to the nearest coronal-hole boundary [deg]
+//   vwsa = wsaSpeed(fs, dchb)
+// models[0] gives the drawn lines and `connect`; the others only footpoints
+// and diagnostics, in `ensemble`. Also used alone for a new date inside an
+// already solved rotation.
+export function connectOnly(models, fleet) {
+  const v = [0, 0, 0];
+  const one = (m, b, vs, lines) => {
+    const rRs = b.r * AU_RS;
+    const lon = (b.lon + (OMEGA * (rRs - m.rss) * RSUN_KM / vs) / DEG) % 360, lat = Math.max(-89, Math.min(89, b.lat));
+    const t = trace(m.G, cart(m.rss * 0.995, lon, lat));
+    let pts = t.pts;
+    if (pts.length && Math.hypot(...pts[0]) > Math.hypot(...pts[pts.length - 1])) pts = pts.slice().reverse();
+    const c = { ss: [+lon.toFixed(3), +lat.toFixed(3)], foot: null, fs: null, dchb: null, vwsa: null };
+    if (pts.length && t.ends.includes("sun")) {
+      const f = pts[0], rr = Math.hypot(...f);
+      const flon = ((Math.atan2(f[1], f[0]) / DEG) + 360) % 360, flat = Math.asin(f[2] / rr) / DEG;
+      const fs = bMag(m.G, cart(1, flon, flat), v) / bMag(m.G, cart(m.rss, lon, lat), v) / (m.rss * m.rss);
+      const d = dchb(m.bound, flon, flat);
+      Object.assign(c, { foot: [+flon.toFixed(2), +flat.toFixed(2)], fs: +fs.toFixed(2), dchb: +d.toFixed(2), vwsa: +wsaSpeed(fs, d).toFixed(1) });
+    }
+    return { c, line: lines ? (pts.length > 2 ? resample(pts, 0.03, 80) : pts) : null };
+  };
+  const connect = [], conn = [], foot = models.slice(1).map(() => []);
   for (const [key, b] of Object.entries(fleet)) {
     if (b.planet || b.lon == null) continue;
-    const rRs = b.r * AU_RS;
-    for (const vs of vsw) {
-      const lon = (b.lon + (OMEGA * (rRs - rss) * RSUN_KM / vs) / DEG) % 360, lat = Math.max(-89, Math.min(89, b.lat));
-      const t = trace(G, cart(rss * 0.995, lon, lat));
-      let pts = t.pts;
-      if (pts.length && Math.hypot(...pts[0]) > Math.hypot(...pts[pts.length - 1])) pts = pts.slice().reverse();
-      let foot = null;
-      if (pts.length && t.ends.includes("sun")) {
-        const f = pts[0], rr = Math.hypot(...f);
-        foot = [+(((Math.atan2(f[1], f[0]) / DEG) + 360) % 360).toFixed(2), +(Math.asin(f[2] / rr) / DEG).toFixed(2)];
-      }
-      connect.push({ body: key, v: vs, ss: [+lon.toFixed(3), +lat.toFixed(3)], foot });
-      conn.push(pts.length > 2 ? resample(pts, 0.02, 120) : pts);
+    for (const vs of VGRID) {
+      const { c, line } = one(models[0], b, vs, true);
+      connect.push({ body: key, v: vs, ...c });
+      conn.push(line);
+      models.slice(1).forEach((m, k) => {
+        const e = one(m, b, vs, false).c;
+        foot[k].push(e.foot ? [...e.foot, e.fs, e.dchb, e.vwsa] : null);
+      });
     }
   }
-  return { connect, conn };
+  return { connect, conn, ensemble: { rss: models.slice(1).map((m) => m.rss), foot } };
 }

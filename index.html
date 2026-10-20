@@ -208,7 +208,11 @@
     <label><input type="checkbox" id="lyrHCS"> <span>Current sheet</span></label>
     <label><input type="checkbox" id="lyrFleet" checked> <span>Planets and spacecraft</span></label>
     <label class="sub"><input type="checkbox" id="lyrSpiral" checked> <span>Connection to the Sun</span></label>
+    <label class="sub"><input type="checkbox" id="lyrCloud"> <span>Footpoint spread (±100 km/s, R<sub>ss</sub> 2–3)</span></label>
     <label class="slider"><span>Solar wind <output id="vOut">400</output> km/s</span><input type="range" id="vsw" min="300" max="800" step="100" value="400"></label>
+    <div class="seg" role="group" aria-label="Wind speed for the connections" id="connMode">
+      <button id="connFixed" class="on" aria-pressed="true" title="Every body connects at the slider speed">Fixed speed</button><button id="connSC" aria-pressed="false" title="Each body connects at the WSA-type speed of its own footpoint, iterated from the slider speed">Self-consistent</button>
+    </div>
     <div class="seg" role="group" aria-label="Distance scale">
       <button id="scaleLog" class="on" aria-pressed="true">Log distance</button><button id="scaleTrue" aria-pressed="false">True distance</button>
     </div>

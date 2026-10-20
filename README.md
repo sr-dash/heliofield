@@ -27,7 +27,7 @@ python3 -m http.server 8811
 Then open <http://localhost:8811/>. How to use the viewer, and how everything
 is computed, is on the guide page: [`guide.html`](https://sr-dash.github.io/heliofield/guide.html).
 
-The URL holds the full state (`date`, `v`, `layers`, `lines`, `ext`, `view` or
+The URL holds the full state (`date`, `v`, `conn`, `layers`, `lines`, `ext`, `view` or
 `cam`, `rmax`, `scale`, `ss`, `rotate`, `panel`, `theme`), so any view can be linked.
 
 ## Any date since 2010
@@ -38,11 +38,29 @@ down where only that exists), stored as gzipped int16 on the 180 × 360 sin-lati
 grid (about 85 kB each, 18 MB in all), and the daily Carrington positions of Earth,
 the planets and the spacecraft. A date without a daily product is solved in a Web
 Worker by `js/pfss.js`: spherical harmonics to degree 40, a 36 × 90 × 180 field grid,
-RK4 tracing, the source-surface neutral line and connectivity, in about a second.
+RK4 tracing, the source-surface neutral line, connectivity and the source
+diagnostics below, in a few seconds.
 On the GONG map of 2026-10-17 it matches the sunkit-magex pipeline to a
 source-surface correlation of 0.9998, a neutral line within 0.6°, open flux within
 2%, and footpoints within about 1°. The page asks before computing, because the
 current field is cleared first.
+
+## Solar-wind sources at the footpoints
+
+Each connection is mapped at 200–900 km/s in 25 km/s steps, and each footpoint
+gets the flux-tube expansion factor f<sub>s</sub> = (|B<sub>phot</sub>| / |B<sub>ss</sub>|)(R☉/R<sub>ss</sub>)²,
+the angular distance to the nearest coronal-hole boundary (DCHB, from open/closed
+tracing on a 1° grid), and a WSA-type speed in the form of Arge et al. (2003, 2004),
+v = 285 + 625 / (1 + f<sub>s</sub>)<sup>2/9</sup> × [1 − 0.8 exp(−(DCHB/2°)²)]³ km/s,
+with illustrative, untuned coefficients. They are listed in the Footpoints panel.
+**Self-consistent** connectivity (`conn=sc`) iterates the ballistic mapping with
+that speed instead of the slider's. The **footpoint spread** layer (`cloud`) shows
+the footpoints for ±100 km/s on source surfaces at 2.0, 2.5 and 3.0 R☉. Both
+`build_day.py` and `js/pfss.js` compute all of it; on the 2026-10-17 GONG map they
+agree on DCHB to a median 0.23° and on speed to a median 4 km/s (within 50 km/s for
+84% of 341 connections); f<sub>s</sub> agrees in median but scatters by a factor of
+two, because the browser field stops at harmonic degree 40. Details and
+limitations are in the guide.
 
 ## Open field into the heliosphere
 
@@ -95,11 +113,11 @@ python scripts/build_day.py --date 2026-10-01 --to 2026-10-17
 python scripts/build_day.py --prune                         # thin old history
 ```
 
-Each day writes `data/<date>/` (about 340 kB):
+Each day writes `data/<date>/` (about 470 kB):
 
 | File | Content |
 |---|---|
-| `meta.json` | map provenance, Carrington rotation, L0/B0, open flux, HCS polylines, fleet positions, footpoints |
+| `meta.json` | map provenance, Carrington rotation, L0/B0, open flux, HCS polylines, fleet positions, footpoints with `fs`, `dchb`, `vwsa` per speed in `vgrid` (`connect`), and the same for other source surfaces (`ensemble`) |
 | `br.png` | photospheric B<sub>r</sub>, 360×180 equirectangular, 8-bit, ±20 G, north up, column *j* at Carrington longitude *j*+0.5° |
 | `ss.png` | source-surface B<sub>r</sub>, same grid, ±`ss_scale` G |
 | `lines.bin` | every polyline as little-endian int16 Carrington *xyz* in units of 10⁻⁴ R☉; lengths in `meta.counts` (field lines first, then one per `meta.connect` entry) |

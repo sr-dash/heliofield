@@ -28,6 +28,7 @@ const EMBED = root.classList.contains("embed");
 const state = {
   dates: [], day: null, product: null,
   vsw: 400, rmaxAu: 1.2, logScale: true, rss: 2.5, nLines: 250, extMode: "spiral",
+  connMode: "fixed",
 };
 const T = () => THEMES[currentTheme()];
 
@@ -67,7 +68,7 @@ addEventListener("resize", resize);
 resize();
 
 const G = {};
-for (const k of ["photo", "closed", "open", "ext", "ss", "pil", "hcs", "fleet", "spiral"]) {
+for (const k of ["photo", "closed", "open", "ext", "ss", "pil", "hcs", "fleet", "spiral", "cloud"]) {
   G[k] = new THREE.Group();
   scene.add(G[k]);
 }
@@ -297,6 +298,90 @@ function fleetEntries() {
   return out;
 }
 
+// ------------------------------------------------------------- sources
+// Each body's connection is mapped at every speed of meta.vgrid (25 km/s
+// steps) on the model source surface (meta.connect, with drawn lines) and on
+// the other source surfaces of meta.ensemble (footpoints only). Products
+// made before the diagnostics have only the slider speeds and no ensemble.
+function sources(m) {
+  if (m._src) return m._src;
+  const vgrid = m.vgrid || m.vsw, nv = vgrid.length, out = {};
+  m.connect.forEach((c, i) => {
+    const vi = vgrid.indexOf(c.v);
+    if (vi < 0) return;
+    const b = (out[c.body] ??= { idx: [], rows: [[]] });
+    b.idx[vi] = i;
+    b.rows[0][vi] = c.foot ? { foot: c.foot, fs: c.fs, dchb: c.dchb, vwsa: c.vwsa } : null;
+    (m.ensemble?.foot || []).forEach((list, k) => {
+      const e = list[i];
+      (b.rows[k + 1] ??= [])[vi] = e ? { foot: e.slice(0, 2), fs: e[2], dchb: e[3], vwsa: e[4] } : null;
+    });
+  });
+  m._src = { vgrid, nv, body: out, diag: m.connect.some((c) => c.vwsa != null) };
+  return m._src;
+}
+const snap = (vgrid, v) => vgrid.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a));
+
+// The speed a body's connection is drawn at. Fixed: the slider. Self-
+// consistent: start at the slider speed, map to the footpoint, take the WSA
+// speed there, and repeat until the speed (to the 25 km/s grid) stops
+// changing. A cycle between two footpoints is reported as unconverged and
+// settles on the member whose own WSA speed is closest to it.
+function speedFor(key) {
+  const S = sources(state.product.meta), b = S.body[key], v0 = state.vsw;
+  if (state.connMode !== "sc" || !S.diag || !b) return { v: v0, ok: true };
+  let v = v0;
+  const seen = [];
+  for (let k = 0; k < 30; k++) {
+    const e = b.rows[0][S.vgrid.indexOf(v)];
+    if (!e) return { v, ok: false };
+    const next = snap(S.vgrid, e.vwsa);
+    if (next === v) return { v, ok: true };
+    const j = seen.indexOf(next);
+    if (j >= 0) {
+      const cyc = seen.slice(j).concat(v);
+      const best = cyc.reduce((a, c) => {
+        const d = (x) => Math.abs(b.rows[0][S.vgrid.indexOf(x)].vwsa - x);
+        return d(c) < d(a) ? c : a;
+      });
+      return { v: best, ok: false };
+    }
+    seen.push(v);
+    v = next;
+  }
+  return { v, ok: false };
+}
+
+// Footpoints over wind speed v +- 100 km/s and every source surface.
+function spread(key, v) {
+  const S = sources(state.product.meta), b = S.body[key], out = [];
+  if (!b) return out;
+  b.rows.forEach((row) => S.vgrid.forEach((vv, i) => { if (Math.abs(vv - v) <= 100 && row[i]) out.push(row[i]); }));
+  return out;
+}
+
+function buildCloud() {
+  clear(G.cloud);
+  const p = state.product;
+  if (!p || !$("lyrCloud").checked) return;
+  for (const b of fleetEntries()) {
+    if (b.planet) continue;
+    const key = b.ref || b.key, pts = spread(key, speedFor(key).v);
+    if (!pts.length) continue;
+    const pos = pts.flatMap((e) => { const q = sph(1.004, e.foot[0], e.foot[1]); return [q.x, q.y, q.z]; });
+    // Each dot sits on a slightly larger one in the background colour, so it
+    // stays visible over surface field of a similar hue.
+    for (const [color, size, order] of [[T().bg, 11, 4], [fleetColor(b.key), 8, 5]]) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      const pt = new THREE.Points(g, new THREE.PointsMaterial({ map: DOT, color, size,
+        sizeAttenuation: false, transparent: true, alphaTest: 0.3, depthWrite: false }));
+      pt.renderOrder = order;
+      G.cloud.add(pt);
+    }
+  }
+}
+
 function buildHelio() {
   for (const k of ["hcs", "fleet", "spiral"]) clear(G[k]);
   const p = state.product, m = p.meta, v = state.vsw, th = T();
@@ -348,12 +433,13 @@ function buildHelio() {
     }
     if (b.planet) continue;
 
-    const ci = m.connect.findIndex((c) => c.body === (b.ref || b.key) && c.v === v);
+    const vb = speedFor(b.ref || b.key).v;
+    const ci = m.connect.findIndex((c) => c.body === (b.ref || b.key) && c.v === vb);
     if (ci < 0) continue;
     const c = m.connect[ci], pts = [];
     for (let j = 0; j <= 160; j++) {
       const r = state.rss * Math.pow(rRs / state.rss, j / 160);
-      pts.push(sph(r, c.ss[0] - (OMEGA * (r - state.rss) * RSUN_KM / v) / DEG, c.ss[1]));
+      pts.push(sph(r, c.ss[0] - (OMEGA * (r - state.rss) * RSUN_KM / vb) / DEG, c.ss[1]));
     }
     G.spiral.add(line(pts, color, 0.95));
     const cor = p.polys[nf + ci];
@@ -368,6 +454,7 @@ function buildHelio() {
     o.sprite.add(new CSS2DObject(el));
   }
   buildExt();
+  buildCloud();
   feet();
 }
 
@@ -396,7 +483,7 @@ $("themeToggle").onclick = () => setTheme(currentTheme() === "dark" ? "light" : 
 // ------------------------------------------------------------- panel
 const DEFAULTS = { v: 400, rmax: 1.2, ss: 0.25, lines: 250 };
 const LAYERS = { photo: "lyrPhoto", closed: "lyrClosed", open: "lyrOpen", ext: "lyrExt", ss: "lyrSS",
-  pil: "lyrPIL", hcs: "lyrHCS", fleet: "lyrFleet", spiral: "lyrSpiral" };
+  pil: "lyrPIL", hcs: "lyrHCS", fleet: "lyrFleet", spiral: "lyrSpiral", cloud: "lyrCloud" };
 // Layers shown on a first visit; links list layers only when they differ.
 const DEFAULT_ON = ["photo", "closed", "open", "pil", "fleet", "spiral"];
 
@@ -407,6 +494,8 @@ function applyVisibility() {
   // own switch is a sub-option, disabled meanwhile.
   G.spiral.visible = G.fleet.visible && $("lyrSpiral").checked;
   $("lyrSpiral").disabled = !G.fleet.visible;
+  G.cloud.visible = G.fleet.visible && $("lyrCloud").checked;
+  $("lyrCloud").disabled = !G.fleet.visible;
   // Extensions belong to the open lines in the same way.
   G.ext.visible = G.open.visible && $("lyrExt").checked;
   $("lyrExt").disabled = !G.open.visible;
@@ -418,10 +507,20 @@ function applyVisibility() {
 function setLayers(list) {
   const on = new Set(String(list).split(",").map((s) => s.trim()));
   for (const [g, id] of Object.entries(LAYERS)) $(id).checked = on.has(g);
-  if (state.product) buildExt(); else applyVisibility();
+  if (state.product) { buildExt(); buildCloud(); } else applyVisibility();
 }
 for (const id of Object.values(LAYERS)) $(id).addEventListener("change", () => { applyVisibility(); syncUrl(); });
 $("lyrExt").addEventListener("change", () => { if (state.product) buildExt(); });
+$("lyrCloud").addEventListener("change", () => { if (state.product) buildCloud(); });
+function setConnMode(mode) {
+  state.connMode = mode === "sc" ? "sc" : "fixed";
+  for (const [id, on] of [["connFixed", state.connMode === "fixed"], ["connSC", state.connMode === "sc"]]) {
+    $(id).classList.toggle("on", on); $(id).setAttribute("aria-pressed", on);
+  }
+  if (state.product) buildHelio();
+}
+$("connFixed").onclick = () => { setConnMode("fixed"); syncUrl(); postState(); };
+$("connSC").onclick = () => { setConnMode("sc"); syncUrl(); postState(); };
 function setExtMode(mode) {
   state.extMode = mode === "radial" ? "radial" : "spiral";
   for (const [id, on] of [["extSpiral", state.extMode === "spiral"], ["extRadial", state.extMode === "radial"]]) {
@@ -482,16 +581,36 @@ function info() {
     + (state.product.computed && !m.exact ? `<p class="note warn">No rotation map covers this date, so the nearest one (CR ${m.map_cr}) is used.</p>` : "");
 }
 function feet() {
-  const m = state.product.meta, v = state.vsw;
+  const m = state.product.meta, S = sources(m), sc = state.connMode === "sc";
+  const num = (x, d = 0) => (x == null ? "–" : x.toFixed(d));
+  const fsTxt = (x) => (x == null ? "–" : x < 10 ? x.toFixed(1) : x.toFixed(0));
   const rows = fleetEntries().filter((b) => !b.planet).map((b) => {
-    const c = m.connect.find((c) => c.body === (b.ref || b.key) && c.v === v);
-    const f = c?.foot;
-    return `<tr><td><span class="dot" style="background:${fleetColor(b.key)}"></span>${b.name}</td>
-      <td>${b.r.toFixed(2)}</td><td>${f ? f[0].toFixed(0) + "°" : "–"}</td><td>${f ? f[1].toFixed(0) + "°" : "–"}</td></tr>`;
+    const key = b.ref || b.key, sp = speedFor(key), vi = S.vgrid.indexOf(sp.v);
+    const e = S.body[key]?.rows[0][vi], f = e?.foot;
+    // Spread over +-100 km/s and the source surfaces, in the row's tooltip.
+    const ens = S.diag ? spread(key, sp.v) : [];
+    let tip = `${b.name}, ${b.r.toFixed(2)} au, mapped at ${sp.v} km/s`;
+    if (ens.length > 1 && f) {
+      const u = (q) => [Math.cos(q[1] * DEG) * Math.cos(q[0] * DEG), Math.cos(q[1] * DEG) * Math.sin(q[0] * DEG), Math.sin(q[1] * DEG)];
+      const c = u(f), far = Math.max(...ens.map((x) => { const w = u(x.foot); return Math.acos(Math.min(1, c[0] * w[0] + c[1] * w[1] + c[2] * w[2])) / DEG; }));
+      const vs = ens.map((x) => x.vwsa);
+      tip += `. Over ${Math.max(S.vgrid[0], sp.v - 100)}–${Math.min(S.vgrid[S.nv - 1], sp.v + 100)} km/s and source surfaces ${[state.rss, ...(m.ensemble?.rss || [])].sort().join(", ")} R☉: `
+        + `footpoints within ${far.toFixed(0)}°, estimated speed ${Math.min(...vs).toFixed(0)}–${Math.max(...vs).toFixed(0)} km/s`;
+    }
+    const flag = sc && !sp.ok ? "*" : "";
+    return `<tr title="${tip}"><td><span class="dot" style="background:${fleetColor(b.key)}"></span>${b.name}<small>${b.r.toFixed(2)} au${sc ? ` · ${sp.v} km/s` : ""}</small></td>
+      <td>${f ? f[0].toFixed(0) + "°" : "–"}</td><td>${f ? f[1].toFixed(0) + "°" : "–"}</td>
+      <td>${fsTxt(e?.fs)}</td><td>${e?.dchb == null ? "–" : num(e.dchb, 1) + "°"}</td><td>${num(e?.vwsa)}${flag}</td></tr>`;
   }).join("");
+  const how = sc ? `each body's own self-consistent speed, iterated from ${state.vsw} km/s`
+    : `${state.vsw} km/s wind`;
   $("feet").innerHTML = `<p class="note">Carrington longitude and latitude where each body's field line
-    meets the photosphere, for ${v} km/s wind.</p>
-    <table><tr><th></th><th>r [au]</th><th>Lon</th><th>Lat</th></tr>${rows}</table>`;
+    meets the photosphere, for ${how}; the expansion factor <i>f</i><sub>s</sub>, the distance to the
+    coronal-hole boundary, and the WSA-type speed estimate there (illustrative coefficients).
+    Hover a row for the spread.</p>
+    <table><tr><th></th><th>Lon</th><th>Lat</th><th title="Expansion factor">f<sub>s</sub></th><th title="Distance to the coronal-hole boundary">DCHB</th><th title="Estimated wind speed [km/s]">v</th></tr>${rows}</table>`
+    + (S.diag ? "" : `<p class="note">This product was made before the source diagnostics.</p>`)
+    + (sc && /\*/.test(rows) ? `<p class="note">* The iteration did not settle: the footpoint jumps between sources.</p>` : "");
 }
 
 // The menu: a dropdown under the hamburger button. Remembered on wide
@@ -569,6 +688,7 @@ function stateParams() {
   const on = Object.keys(LAYERS).filter((g) => $(LAYERS[g]).checked);
   if (on.length !== DEFAULT_ON.length || on.some((g) => !DEFAULT_ON.includes(g))) p.set("layers", on.join(","));
   if (state.extMode === "radial") p.set("ext", "radial");
+  if (state.connMode === "sc") p.set("conn", "sc");
   if (state.rmaxAu !== DEFAULTS.rmax) p.set("rmax", state.rmaxAu);
   if (!state.logScale) p.set("scale", "true");
   if (+$("ssAlpha").value !== DEFAULTS.ss) p.set("ss", $("ssAlpha").value);
@@ -636,7 +756,7 @@ function snapshotCanvas() {
     renderer, scene, camera, stage, legend,
     title: `HelioField · ${state.day}`,
     lines: [
-      `${m.source.name}${state.product.computed ? ` (CR ${m.map_cr})` : ""} · PFSS, source surface ${state.rss} R☉ · solar wind ${state.vsw} km/s · open flux ${(m.open_flux_Mx / 1e22).toFixed(2)} × 10²² Mx`,
+      `${m.source.name}${state.product.computed ? ` (CR ${m.map_cr})` : ""} · PFSS, source surface ${state.rss} R☉ · ${state.connMode === "sc" ? `self-consistent WSA-type wind (from ${state.vsw} km/s)` : `solar wind ${state.vsw} km/s`} · open flux ${(m.open_flux_Mx / 1e22).toFixed(2)} × 10²² Mx`,
       viewCaption(),
       `Earth: L0 ${m.L0.toFixed(1)}°, B0 ${m.B0.toFixed(1)}° (Carrington longitude and latitude of the Sun–Earth line)`,
     ],
@@ -689,7 +809,8 @@ function confirmCompute(day, rot, exact) {
 }
 
 const STAGES = { download: "Downloading the HMI map", harmonics: "Expanding the map in harmonics",
-  field: "Solving the field", lines: "Tracing field lines", surface: "Finding the current sheet", done: "Drawing" };
+  field: "Solving the field", lines: "Tracing field lines", surface: "Finding the current sheet",
+  holes: "Mapping coronal holes", connect: "Mapping the spacecraft", done: "Drawing" };
 function showProgress(on, day) {
   $("busy").hidden = !on;
   if (on) { $("busyTitle").textContent = `Computing ${day}`; $("busyStage").textContent = "Preparing"; $("busyBar").value = 0; }
@@ -743,8 +864,8 @@ async function openDate(day, { ask = true } = {}) {
       const old = state.product, nf = old.meta.lines.count;
       const conn = unflatten(res.xyz, res.counts);
       const polys = old.polys.slice(0, nf).concat(conn);
-      product = { ...old, day, polys, meta: { ...old.meta, ...sourceMeta, connect: res.connect,
-        counts: polys.map((q) => q.length) } };
+      product = { ...old, day, polys, meta: { ...old.meta, ...sourceMeta, connect: res.connect, ensemble: res.ensemble,
+        counts: polys.map((q) => q.length), _src: undefined } };
     } else {
       product = { day, computed: true, polys: unflatten(res.xyz, res.counts),
         brTex: dataTex(res.brTex), ssTex: dataTex(res.ssTex), meta: { ...res.meta, ...sourceMeta } };
@@ -810,7 +931,7 @@ addEventListener("keydown", (e) => {
 // and hears { type: "heliofield:state", date, v, source, computed } after every change.
 function postState() {
   if (window.parent === window || !state.product) return;
-  window.parent.postMessage({ type: "heliofield:state", date: state.day, v: state.vsw,
+  window.parent.postMessage({ type: "heliofield:state", date: state.day, v: state.vsw, conn: state.connMode,
     source: state.product.meta.source.short || "GONG", computed: !!state.product.computed,
     obstime: state.product.meta.obstime }, "*");
 }
@@ -818,6 +939,7 @@ addEventListener("message", async (e) => {
   const d = e.data;
   if (!d || d.type !== "heliofield:set" || !state.dates.length) return;
   if (VSW.includes(+d.v)) setV(+d.v);
+  if (d.conn) setConnMode(d.conn);
   if (d.layers) setLayers(d.layers);
   if (d.view) view = d.view;
   if (d.date) await openDate(d.date, { ask: false });   // reports its own state
@@ -838,6 +960,7 @@ async function start() {
     const r = +params.get("rmax");
     if (r >= 0.1 && r <= 1.8) setRmax(r);
     if (params.get("ext") === "radial") setExtMode("radial");
+    if (params.get("conn") === "sc") setConnMode("sc");
     if (params.get("scale") === "true") setScale(false);
     const a = params.get("ss");
     if (a !== null && +a >= 0 && +a <= 1) $("ssAlpha").value = a;

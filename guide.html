@@ -89,6 +89,7 @@
   <a href="#hcs">Current sheet</a>
   <a href="#history">Past dates</a>
   <a href="#connectivity">Spacecraft connectivity</a>
+  <a href="#sources">Solar-wind sources</a>
   <a href="#coords">Coordinates and scale</a>
   <a href="#colours">Colours and accessibility</a>
   <a href="#limits">Limitations</a>
@@ -168,8 +169,10 @@
     <tr><td>Current sheet</td><td>Off by default. The heliospheric current sheet: the neutral line carried outward by the solar wind and wound into a spiral by solar rotation. With extended open lines on, it runs along the boundary between gold and cerulean spirals.</td></tr>
     <tr><td>Planets and spacecraft</td><td>Positions at the time of the map. The seven Sun–Earth L1 monitors share one marker beside Earth.</td></tr>
     <tr><td>Connection to the Sun</td><td>For each spacecraft, the Parker spiral back to the source surface and the model field line from there to the photosphere. The end of that line is the spacecraft's magnetic footpoint.</td></tr>
+    <tr><td>Footpoint spread</td><td>Off by default. A cloud of dots in each spacecraft's colour on the Sun: its footpoints for wind speeds up to 100 km/s either side of the one used, on source surfaces at 2.0, 2.5 and 3.0 R<sub>☉</sub>. A tight cloud means a robust connection; a cloud split between two regions means the source is uncertain. See <a href="#sources">solar-wind sources</a>.</td></tr>
   </table>
   <p><b>Solar wind</b> sets the speed used for the current sheet and the spirals. A faster wind gives a more open spiral and moves footpoints less far from the spacecraft's own longitude.</p>
+  <p><b>Fixed speed</b> connects every spacecraft at that speed. <b>Self-consistent</b> lets each spacecraft find its own: starting from the slider speed, the footpoint's estimated wind speed is fed back into the spiral until it stops changing. The current sheet and extended lines keep the slider speed.</p>
   <p><b>Log distance</b> keeps the corona at true size and compresses the heliosphere, so the Sun and the fleet fit on one screen. <b>True distance</b> shows real proportions. At true distance the Sun is a speck seen from the fleet.</p>
 </section>
 
@@ -179,7 +182,7 @@
   <p>Each section folds, so you can keep open only what you use. The <b>?</b> on a section links to its part of this guide.</p>
   <ul>
     <li><b>This map</b> lists the map time, the magnetogram file, the Carrington rotation, Earth's heliographic longitude and latitude, and the open magnetic flux.</li>
-    <li><b>Footpoints</b> lists where each spacecraft's field line meets the photosphere, at the chosen wind speed.</li>
+    <li><b>Footpoints</b> lists where each spacecraft's field line meets the photosphere, at the chosen wind speed or its self-consistent one. For each footpoint it gives the expansion factor <i>f</i><sub>s</sub>, the distance to the nearest coronal-hole boundary (DCHB) and the wind speed estimated from them (<a href="#sources">how</a>). Hover a row for the spread of footpoints and speeds over wind speed and source-surface height. In self-consistent mode, a * marks a spacecraft whose speed did not settle.</li>
     <li><b>Save &amp; share</b> saves a snapshot, or copies a link or an embed code for exactly what you are looking at.</li>
   </ul>
 </section>
@@ -196,8 +199,9 @@
     <tr><th>Parameter</th><th>Values</th><th>Default</th></tr>
     <tr><td><code>date</code></td><td><code>YYYY-MM-DD</code> from 2010-05-01, or <code>latest</code>. A date without a daily product is computed in the browser.</td><td>latest</td></tr>
     <tr><td><code>v</code></td><td>Solar wind speed: 300, 400 … 800 km/s</td><td>400</td></tr>
-    <tr><td><code>layers</code></td><td>Comma list of layers to show: <code>photo, closed, open, ext, ss, pil, hcs, fleet, spiral</code> (<code>ext</code> is the extension of open lines)</td><td><code>photo, closed, open, pil, fleet, spiral</code></td></tr>
+    <tr><td><code>layers</code></td><td>Comma list of layers to show: <code>photo, closed, open, ext, ss, pil, hcs, fleet, spiral, cloud</code> (<code>ext</code> is the extension of open lines, <code>cloud</code> the footpoint spread)</td><td><code>photo, closed, open, pil, fleet, spiral</code></td></tr>
     <tr><td><code>ext</code></td><td><code>radial</code> to extend open lines straight out instead of as Parker spirals</td><td>spiral</td></tr>
+    <tr><td><code>conn</code></td><td><code>sc</code> for self-consistent connection speeds</td><td>fixed</td></tr>
     <tr><td><code>view</code></td><td><code>earth</code>, <code>north</code> or <code>fleet</code></td><td>oblique</td></tr>
     <tr><td><code>cam</code></td><td>A fixed camera: Carrington longitude, latitude (degrees) and distance (R<sub>☉</sub>)</td><td>none</td></tr>
     <tr><td><code>rmax</code></td><td>Current-sheet extent, 0.1–1.8 au</td><td>1.2</td></tr>
@@ -234,7 +238,7 @@ frame.contentWindow.postMessage(
 addEventListener("message", (e) =&gt; {
   if (e.data?.type === "heliofield:state") console.log(e.data.date, e.data.source);
 });</code></pre>
-  <p>Every field of the <code>set</code> message is optional. <code>layers</code> takes the same comma list as the URL. The reply carries <code>date</code>, <code>v</code>, <code>source</code>, <code>computed</code> (true for a date computed in the browser) and <code>obstime</code>. A host showing any date since 2010, such as <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, can pass it directly. Embeds and host messages compute past dates without asking; only the page itself shows the confirmation.</p>
+  <p>Every field of the <code>set</code> message is optional. <code>layers</code> takes the same comma list as the URL, and <code>conn</code> is <code>"sc"</code> or <code>"fixed"</code>. The reply carries <code>date</code>, <code>v</code>, <code>conn</code>, <code>source</code>, <code>computed</code> (true for a date computed in the browser) and <code>obstime</code>. A host showing any date since 2010, such as <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, can pass it directly. Embeds and host messages compute past dates without asking; only the page itself shows the confirmation.</p>
 </section>
 
 <h2 class="part" id="methods">Methods</h2>
@@ -306,8 +310,32 @@ addEventListener("message", (e) =&gt; {
     <li><b>Ballistic mapping to the source surface.</b> The spacecraft at distance <i>r</i><sub>sc</sub> and longitude φ<sub>sc</sub> is joined to the source surface along a Parker spiral at the chosen wind speed: <span class="math">φ<sub>ss</sub> = φ<sub>sc</sub> + Ω (<i>r</i><sub>sc</sub> − R<sub>ss</sub>) / <i>v</i></span>, at the spacecraft's latitude.</li>
     <li><b>PFSS mapping to the photosphere.</b> From just inside that point, the model field line is traced down to the solar surface. Its end is the footpoint listed in the menu.</li>
   </ol>
-  <p>Footpoints are computed for wind speeds of 300 to 800 km/s in steps of 100. The uncertainty of a footpoint is large. The wind speed is rarely known to better than 100 km/s. For a spacecraft near 1 au, that alone shifts the footpoint by about 20 degrees of longitude in slow wind, and by about 5 degrees in fast wind. Close to the neutral line, a small shift can move the footpoint into the other polarity.</p>
+  <p>Footpoints are computed for wind speeds of 200 to 900 km/s in steps of 25, which covers the slider, the spread around it and the self-consistent mode. The uncertainty of a footpoint is large. The wind speed is rarely known to better than 100 km/s. For a spacecraft near 1 au, that alone shifts the footpoint by about 20 degrees of longitude in slow wind, and by about 5 degrees in fast wind. Close to the neutral line, a small shift can move the footpoint into the other polarity.</p>
   <p>Spacecraft positions come from <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, which takes them from JPL Horizons. They are converted to the Carrington frame for the time of the magnetogram.</p>
+</section>
+
+<section id="sources">
+  <h3>Solar-wind sources</h3>
+  <p>A footpoint becomes a testable prediction once it says what kind of wind should arrive. HelioField gives three numbers for each one, in the spirit of the Wang–Sheeley–Arge (WSA) model.</p>
+  <ul>
+    <li><b>Expansion factor.</b> How much the flux tube widens between the photosphere and the source surface, compared with radial expansion. Flux conservation gives it from the field strength at the two ends of the traced line:
+      <div class="eq"><i>f</i><sub>s</sub> = (|<b>B</b><sub>phot</sub>| / |<b>B</b><sub>ss</sub>|) (R<sub>☉</sub> / R<sub>ss</sub>)<sup>2</sup></div>
+      Fast wind comes from the slowly expanding centres of large coronal holes (<i>f</i><sub>s</sub> of a few); slow wind from strongly expanding tubes near their edges (Wang &amp; Sheeley 1990).</li>
+    <li><b>Distance to the coronal-hole boundary (DCHB).</b> The angle on the Sun from the footpoint to the nearest edge of its coronal hole. The holes are mapped by tracing a field line from every cell of a 1° grid just above the photosphere and marking it open or closed. The boundary is the set of midpoints between neighbouring open and closed cells, so DCHB is resolved to about half a degree.</li>
+    <li><b>Estimated speed.</b> The two combine in the form used by Arge et al. (2003, 2004):
+      <div class="eq"><i>v</i> = 285 + 625 / (1 + <i>f</i><sub>s</sub>)<sup>2/9</sup> × [1 − 0.8 exp(−(DCHB / 2°)<sup>2</sup>)]<sup>3</sup> &nbsp;km/s</div>
+      The coefficients are illustrative, not tuned. Operational versions fit them to observed wind for a given magnetogram source and resolution, and add a radial acceleration, so these speeds are a guide to the kind of wind, not a forecast.</li>
+  </ul>
+  <p><b>Self-consistent connection.</b> The ballistic mapping needs a speed, and the footpoint gives one. Starting from the slider speed, HelioField maps each spacecraft to its footpoint, takes the estimated speed there, rounds it to the 25 km/s grid and maps again, until the speed repeats. Near a coronal-hole edge the footpoint can jump between two sources whose speeds point back at each other. The speed then cycles; HelioField keeps the cycle member whose own estimated speed is closest to it, and marks the row with a *. A different starting speed can settle on a different source, which is itself a measure of the uncertainty.</p>
+  <p><b>Footpoint spread.</b> The connection is mapped again for every wind speed within 100 km/s of the one used, on source surfaces at 2.0, 2.5 and 3.0 R<sub>☉</sub>, giving up to 27 footpoints per spacecraft. Wind speed moves the source-surface point in longitude; the source-surface height changes which field is open and where. For past dates the extra surfaces cost little, because the browser solution only re-evaluates the same harmonic coefficients.</p>
+  <p><b>Server and browser agree.</b> On the GONG map of 2026-10-17, over 341 connections mapped by both (12 spacecraft × 29 speeds, source surface 2.5 R<sub>☉</sub>):</p>
+  <ul>
+    <li>Footpoints: median separation 1.1°, within 2° for 83%.</li>
+    <li>DCHB: median difference 0.23°, within 1° for 95%.</li>
+    <li>Estimated speed: median difference 4 km/s, within 50 km/s for 84% and within 100 km/s for 90%. The rest are footpoints that land in different coronal holes.</li>
+    <li>Expansion factor: the same median (browser/server ratio 0.86), but individual values differ by more than a factor of two for about half. <i>f</i><sub>s</sub> depends on the photospheric field at the footpoint, which the browser solution smooths by stopping at harmonic degree 40. Because the speed depends on (1 + <i>f</i><sub>s</sub>)<sup>2/9</sup>, a factor of two in <i>f</i><sub>s</sub> moves it by at most about 15%.</li>
+  </ul>
+  <p>The degree-40 field also opens slightly less of the photosphere (16% against 20%), because it lacks the smallest open regions.</p>
 </section>
 
 <section id="coords">
@@ -325,7 +353,7 @@ addEventListener("message", (e) =&gt; {
     <li><b>One HMI map per Carrington rotation</b> since May 2010 (<code>hmi.Synoptic_Mr_small</code> from JSOC). Each is averaged to the same 180 × 360 grid as GONG, which comes to about 85 kB per rotation. The 2012 rotations exist at JSOC only at full resolution and are averaged down from those. The two paths give identical maps where both exist.</li>
     <li><b>Daily positions</b> of Earth, the planets and the spacecraft at 12:00 UTC, converted to the Carrington frame from HelioFleet's ephemerides. STEREO-B is shown until contact was lost on 1 October 2014.</li>
   </ul>
-  <p>For a chosen date the page takes the rotation whose time span contains noon of that day. It downloads that map and solves the field in a background thread. The same method is used as for daily products, with a spherical-harmonic solution up to degree 40 on a 36 × 90 × 180 grid. It then traces the same seed pattern of field lines, contours the neutral line and maps the spacecraft connections. On a laptop this takes about a second. Moving to another day in the same rotation only re-traces the spacecraft connections.</p>
+  <p>For a chosen date the page takes the rotation whose time span contains noon of that day. It downloads that map and solves the field in a background thread. The same method is used as for daily products, with a spherical-harmonic solution up to degree 40 on a 36 × 90 × 180 grid. It then traces the same seed pattern of field lines, contours the neutral line and maps the spacecraft connections, with coronal holes on three source surfaces for the <a href="#sources">source diagnostics</a>. On a laptop this takes a few seconds. Moving to another day in the same rotation only re-traces the spacecraft connections.</p>
   <p>Checked against the server pipeline on the same GONG map, the browser solution agrees closely:</p>
   <ul>
     <li>Source-surface field: correlation 0.9998, same sign over 99.8% of the surface.</li>
@@ -364,16 +392,17 @@ addEventListener("message", (e) =&gt; {
     <li><b>Poorly observed poles.</b> The polar fields are seen at a grazing angle. They strongly influence the open field, and so the current sheet.</li>
     <li><b>Constant, radial solar wind.</b> The spirals and current sheet ignore acceleration, stream interactions and transients such as coronal mass ejections.</li>
     <li><b>The HMI fallback lags.</b> The HMI frame is typically several hours old when it is published.</li>
+    <li><b>Source diagnostics are indicative.</b> The speed formula's coefficients are illustrative, the wind is assumed to travel at constant speed from the source surface, and the expansion factor depends on the magnetogram and the model's resolution. Footpoints near a coronal-hole edge, where slow wind comes from, are the most sensitive to all of this.</li>
     <li><b>Past dates use rotation maps.</b> They show the field averaged over the rotation, not that day's map, and the browser solution is truncated at harmonic degree 40.</li>
   </ul>
 </section>
 
 <section id="products">
   <h3>Data products</h3>
-  <p>Every day's product is a set of small static files, open to anyone. They are about 340 kB per day, under <code>data/&lt;date&gt;/</code>. The list of days is in <code>data/index.json</code>.</p>
+  <p>Every day's product is a set of small static files, open to anyone. They are about 470 kB per day, under <code>data/&lt;date&gt;/</code>. The list of days is in <code>data/index.json</code>.</p>
   <table>
     <tr><th>File</th><th>Content</th></tr>
-    <tr><td><code>meta.json</code></td><td>Map provenance and time, Carrington rotation, L<sub>0</sub> and B<sub>0</sub>, model settings, open flux, neutral-line polylines, body positions, and footpoints for each wind speed.</td></tr>
+    <tr><td><code>meta.json</code></td><td>Map provenance and time, Carrington rotation, L<sub>0</sub> and B<sub>0</sub>, model settings, open flux, neutral-line polylines, body positions, and footpoints for each wind speed in <code>vgrid</code> (<code>connect</code>, with <code>fs</code>, <code>dchb</code> and <code>vwsa</code>). <code>ensemble</code> holds the same for the other source surfaces, as <code>[lon, lat, fs, dchb, vwsa]</code> per <code>connect</code> entry.</td></tr>
     <tr><td><code>br.png</code></td><td>Photospheric B<sub>r</sub>, 360 × 180, equirectangular, 8-bit grey, ±20 G, north up. Column <i>j</i> is centred on Carrington longitude <i>j</i> + 0.5°.</td></tr>
     <tr><td><code>ss.png</code></td><td>Source-surface B<sub>r</sub> on the same grid, scaled to ±<code>ss_scale</code> G from <code>meta.json</code>.</td></tr>
     <tr><td><code>lines.bin</code></td><td>Every polyline as little-endian 16-bit integer Carrington <i>x</i>, <i>y</i>, <i>z</i> in units of 10<sup>−4</sup> R<sub>☉</sub>. Line lengths are in <code>meta.counts</code>: field lines first, then one per connectivity entry.</td></tr>
@@ -387,6 +416,10 @@ addEventListener("message", (e) =&gt; {
     <li>Altschuler, M. D. &amp; Newkirk, G. 1969, Magnetic fields and the structure of the solar corona, <i>Solar Physics</i>, 9, 131.</li>
     <li>Schatten, K. H., Wilcox, J. M. &amp; Ness, N. F. 1969, A model of interplanetary and coronal magnetic fields, <i>Solar Physics</i>, 6, 442.</li>
     <li>Parker, E. N. 1958, Dynamics of the interplanetary gas and magnetic fields, <i>The Astrophysical Journal</i>, 128, 664.</li>
+    <li>Wang, Y.-M. &amp; Sheeley, N. R. 1990, Solar wind speed and coronal flux-tube expansion, <i>The Astrophysical Journal</i>, 355, 726.</li>
+    <li>Riley, P., Linker, J. A. &amp; Mikić, Z. 2001, An empirically-driven global MHD model of the solar corona and inner heliosphere, <i>Journal of Geophysical Research</i>, 106, 15889.</li>
+    <li>Arge, C. N., Odstrcil, D., Pizzo, V. J. &amp; Mayer, L. R. 2003, Improved method for specifying solar wind speed near the Sun, <i>AIP Conference Proceedings</i>, 679, 190.</li>
+    <li>Arge, C. N., Luhmann, J. G., Odstrcil, D., Schrijver, C. J. &amp; Li, Y. 2004, Stream structure and coronal sources of the solar wind during the May 12th, 1997 CME, <i>Journal of Atmospheric and Solar-Terrestrial Physics</i>, 66, 1295.</li>
     <li>Nolte, J. T. &amp; Roelof, E. C. 1973, Large-scale structure of the interplanetary medium, I, <i>Solar Physics</i>, 33, 241.</li>
     <li>Stansby, D., Yeates, A. &amp; Badman, S. T. 2020, pfsspy: a Python package for potential field source surface modelling, <i>Journal of Open Source Software</i>, 5, 2732.</li>
     <li>Harvey, J. W. et al. 1996, The Global Oscillation Network Group (GONG) project, <i>Science</i>, 272, 1284.</li>
