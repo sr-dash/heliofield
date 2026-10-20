@@ -1,0 +1,30 @@
+# Asset stamps.
+#
+# The pages load css/ and js/ through content-hashed URLs written by
+# scripts/stamp_assets.py, so returning visitors never mix old and new
+# modules. This fails when a change to css/ or js/ was pushed without
+# re-running the script.
+
+name: Asset stamps
+
+on:
+  push:
+    paths: ["css/**", "js/**", "*.html", "scripts/stamp_assets.py", ".github/workflows/assets.yml"]
+  pull_request:
+    paths: ["css/**", "js/**", "*.html", "scripts/stamp_assets.py", ".github/workflows/assets.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python scripts/stamp_assets.py --check
