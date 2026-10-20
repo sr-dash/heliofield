@@ -8,7 +8,15 @@ authors:
     orcid: "https://orcid.org/0000-0003-0103-6569"
     affiliation: "National Solar Observatory"
 version: 1.0.0
-date-released: 2026-10-19
+date-released: 2026-10-20
+doi: 10.5281/zenodo.23487231
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23487231
+    description: "All versions (resolves to the latest release)"
+  - type: doi
+    value: 10.5281/zenodo.23487232
+    description: "Version 1.0.0"
 url: "https://sr-dash.github.io/heliofield/"
 repository-code: "https://github.com/sr-dash/heliofield"
 license: MIT

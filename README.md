@@ -1,5 +1,7 @@
 # HelioField
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23487231.svg)](https://doi.org/10.5281/zenodo.23487231)
+
 The Sun's coronal magnetic field in 3D for any date since May 2010, with the
 heliophysics fleet placed in it. Recent days are computed nightly on the
 server; any other date is computed in the browser from an HMI rotation map. A static site: plain ES modules and three.js, no build step.
@@ -131,6 +133,14 @@ seeds are offset the same way.
 
 `.github/workflows/daily.yml` rebuilds yesterday and today at 23:40 UTC and
 keeps every day for 120 days, then one per Carrington rotation.
+
+## Citing HelioField
+
+If HelioField helps your research, please cite it:
+
+> Dash, S. (2026). *HelioField: the Sun's coronal magnetic field in 3D* (Version 1.0.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23487231
+
+That DOI always resolves to the latest release. Each release also has its own DOI on the [Zenodo record](https://doi.org/10.5281/zenodo.23487231); [10.5281/zenodo.23487232](https://doi.org/10.5281/zenodo.23487232) is version 1.0.0. GitHub's **Cite this repository** button (from [CITATION.cff](CITATION.cff)) and the [guide](https://sr-dash.github.io/heliofield/guide.html#cite) give APA and BibTeX references. Please also cite the data and model the field is built from: NSO/GONG or SDO/HMI, and PFSS (see the guide's references).
 
 ## Contributing, licence and citation
 
