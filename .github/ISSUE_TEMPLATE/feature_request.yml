@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest something that would make HelioField more useful for your work.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What would you like to do?
+      description: The task or question you have, such as checking which coronal hole feeds a spacecraft, comparing two dates, or preparing a figure.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could HelioField help?
+      description: Optional. A sketch of the feature, or a tool that already does something similar.
+  - type: input
+    id: link
+    attributes:
+      label: Example view
+      description: Optional. A HelioField link where the feature would have helped.
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contributing
+      options:
+        - label: I would be happy to help build or test this.

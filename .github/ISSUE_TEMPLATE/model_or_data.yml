@@ -1,0 +1,28 @@
+name: Model or data request
+description: Ask for another magnetogram source, coronal model, layer or derived product.
+labels: [data]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of addition
+      options:
+        - Another magnetogram source (for example ADAPT, KPVT/SOLIS, SFT models)
+        - Another coronal model (for example outflow fields, MHD output)
+        - A new layer or derived product (for example coronal holes, squashing factor, null points)
+        - A spacecraft or planet in the scene
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why
+      description: What it is, what you would use it for, and where it is published or archived (a link, a DOI or a paper).
+    validations:
+      required: true
+  - type: textarea
+    id: access
+    attributes:
+      label: Access
+      description: Optional. Licence, file format and whether the archive can be read from a GitHub Actions runner or a browser (some archives block both).

@@ -1,0 +1,16 @@
+## What this changes
+
+<!-- A short description of the change and why it is needed. Link the issue it addresses, e.g. "Closes #12". -->
+
+## How it was checked
+
+<!-- What you looked at: which dates (a daily product and a past date computed in the browser), themes and screen sizes; any comparison with sunkit-magex, another PFSS code or observations. Screenshots help for visual changes. -->
+
+## Checklist
+
+- [ ] The page works on a phone-sized screen and in the light and dark themes, with no errors in the browser console
+- [ ] A past date computed in the browser still loads (try one before 2015)
+- [ ] Any change to `js/pfss.js` or `scripts/build_day.py` was compared against the other (open flux, neutral line and footpoints for the same map)
+- [ ] Any new or changed colour was validated as described in `js/theme.js` (colour-vision separation and 3:1 contrast in both themes)
+- [ ] New controls, link parameters or methods are described in the README and on the guide page
+- [ ] I have read the [contributing guidelines](https://github.com/sr-dash/heliofield/blob/main/CONTRIBUTING.md) and the [code of conduct](https://github.com/sr-dash/heliofield/blob/main/CODE_OF_CONDUCT.md)

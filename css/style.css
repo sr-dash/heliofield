@@ -179,6 +179,13 @@ output { font-weight: 650; font-variant-numeric: tabular-nums; }
 .ln.on { background: var(--line-neg); } .ln.hcs { background: var(--line-hcs); height: 4px; }
 .key.ln { width: 14px; }
 .key.ln.op { margin-right: 3px; }
+.credits {
+  position: fixed; right: 18px; bottom: 16px; z-index: 3; font-size: 13px; color: var(--muted);
+  padding: 7px 12px; border-radius: 9px; background: var(--label-bg);
+}
+.credits a { color: var(--text); text-decoration: none; }
+.credits a:hover { text-decoration: underline; }
+.embed .credits { display: none; }
 #status {
   position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2;
   color: var(--muted); pointer-events: none; font-size: 15px; text-align: center; max-width: 80vw;
@@ -242,6 +249,7 @@ dialog .noask { display: flex; gap: 8px; align-items: center; color: var(--muted
   .menu-btn { width: 36px; }
   #panel { left: 8px; right: 8px; width: auto; transform-origin: top center; }
   #legend { bottom: 8px; left: 8px; right: 8px; font-size: 12.5px; gap: 4px 12px; padding: 6px 10px; }
+  .credits { display: none; }
   .embed #panel { max-height: calc(100% - var(--bar-h) - 12px); transform-origin: bottom center; }
 }
 @media (prefers-reduced-motion: reduce) {

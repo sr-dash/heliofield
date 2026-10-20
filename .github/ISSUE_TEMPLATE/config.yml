@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How to use HelioField
+    url: https://sr-dash.github.io/heliofield/guide.html
+    about: The guide covers every control, link parameter and embed option, and how the field is computed.
+  - name: Spacecraft positions, coverage and observation planning
+    url: https://github.com/sr-dash/heliofleet/issues/new/choose
+    about: Positions and the fleet itself come from HelioFleet; ask there about a spacecraft's position or a missing mission.

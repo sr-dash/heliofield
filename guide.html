@@ -3,8 +3,54 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HelioField Guide</title>
-<meta name="description" content="How to use HelioField, and how its coronal magnetic field, current sheet and spacecraft connectivity are computed.">
+<title>HelioField Guide: Using the Viewer, PFSS Methods and Data | Soumyaranjan Dash</title>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8X5BSNF3VV"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-8X5BSNF3VV');
+</script>
+<meta name="description" content="How to use HelioField, and how it computes the Sun's coronal magnetic field: GONG and SDO/HMI magnetograms, the PFSS model, field-line tracing, the heliospheric current sheet, spacecraft connectivity, colours and data products.">
+<meta name="author" content="Soumyaranjan Dash">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://sr-dash.github.io/heliofield/guide.html">
+<link rel="author" href="https://sr-dash.github.io/">
+<link rel="license" href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">
+<meta name="google-site-verification" content="wNt-P7enH5ZTT0cjYYqXEN9GRrj-0_OcbZSER57FIK4">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#080b14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Soumyaranjan Dash Portfolio">
+<meta property="og:title" content="HelioField guide: using the viewer, PFSS methods and data">
+<meta property="og:description" content="How HelioField computes the Sun's coronal magnetic field, current sheet and spacecraft connectivity, and how to use, save, share and embed it.">
+<meta property="og:url" content="https://sr-dash.github.io/heliofield/guide.html">
+<meta property="og:image" content="https://sr-dash.github.io/heliofield/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="HelioField view of the Sun from Earth with PFSS field lines and the source-surface neutral line">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@soumyatheory">
+<meta name="twitter:creator" content="@soumyatheory">
+<meta name="twitter:image" content="https://sr-dash.github.io/heliofield/assets/og-image.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "HelioField guide: using the viewer, PFSS methods and data",
+  "url": "https://sr-dash.github.io/heliofield/guide.html",
+  "author": { "@type": "Person", "@id": "https://sr-dash.github.io/#person", "name": "Soumyaranjan Dash", "url": "https://sr-dash.github.io/" },
+  "about": { "@id": "https://sr-dash.github.io/heliofield/#app" },
+  "image": "https://sr-dash.github.io/heliofield/assets/og-image.png",
+  "inLanguage": "en"
+}
+</script>
 <script>
   (() => {
     let t = new URLSearchParams(location.search).get("theme");
@@ -20,7 +66,7 @@
 
 <header class="top">
   <h1>HelioField guide</h1>
-  <p>Using the viewer, and how its field is computed.</p>
+  <p>Using the viewer, and how its field is computed. By <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a>; companion to <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>.</p>
   <button class="theme" id="theme" type="button">Light theme</button>
   <a class="back" href="./">← Back to the viewer</a>
 </header>
@@ -349,7 +395,10 @@ addEventListener("message", (e) =&gt; {
 </section>
 </main>
 
-<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> · <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a></footer>
+<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
+  <a href="https://github.com/sr-dash/heliofield/issues/new/choose">Report a problem or suggest a feature</a> ·
+  Companion to <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a> · Made by <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> ·
+  <a href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">MIT licence</a></footer>
 </div>
 <script>
   const b = document.getElementById("theme"), r = document.documentElement;

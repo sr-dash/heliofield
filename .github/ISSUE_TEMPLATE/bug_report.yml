@@ -1,0 +1,44 @@
+name: Something looks wrong
+description: A field line, current sheet, footpoint, number, date or part of the page that is incorrect or broken.
+labels: [bug]
+body:
+  - type: input
+    id: link
+    attributes:
+      label: Link to the view
+      description: Use "Save & share → Copy link" in the menu so the date, layers, wind speed and camera come with it.
+      placeholder: https://sr-dash.github.io/heliofield/?date=2026-10-17&view=earth
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What is wrong
+      description: What you see, and what you expected. For the field itself, say what you compared it with (another PFSS code, a coronagraph image, in-situ polarity, ...).
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Which part
+      options:
+        - Field lines, source surface or current sheet
+        - Spacecraft positions or footpoints
+        - A past date computed in the browser
+        - Snapshots, links or embedding
+        - Layout, colours or themes
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Chrome 130 on macOS, Safari on iPhone, ...
+    validations:
+      required: true
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Optional. Screenshots, console messages, or a saved PNG snapshot help a lot.

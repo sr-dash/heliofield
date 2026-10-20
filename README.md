@@ -132,6 +132,19 @@ seeds are offset the same way.
 `.github/workflows/daily.yml` rebuilds yesterday and today at 23:40 UTC and
 keeps every day for 120 days, then one per Carrington rotation.
 
+## Contributing, licence and citation
+
+Bug reports, feature requests and model or data requests go through the
+[issue forms](https://github.com/sr-dash/heliofield/issues/new/choose); see
+[CONTRIBUTING.md](CONTRIBUTING.md), the [code of conduct](CODE_OF_CONDUCT.md)
+and the [security policy](SECURITY.md). HelioField is released under the
+[MIT licence](LICENSE); [CITATION.cff](CITATION.cff) gives the citation.
+`scripts/make_icons.py` regenerates the icons and the social-preview image.
+
+HelioField is the companion to [HelioFleet](https://sr-dash.github.io/heliofleet/),
+which maps the spacecraft around the Sun and supplies their positions here. Both
+are by [Soumyaranjan Dash](https://sr-dash.github.io/).
+
 ## Credits
 
 Magnetograms: NSO/GONG and SDO/HMI (JSOC; rotation maps and daily frames). Ephemerides: JPL Horizons via HelioFleet.

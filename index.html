@@ -3,8 +3,124 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HelioField</title>
-<meta name="description" content="The Sun's coronal magnetic field in 3D for any date since 2010: magnetograms, PFSS field lines, source surface, heliospheric current sheet and the spacecraft fleet.">
+<title>HelioField: The Sun's Coronal Magnetic Field in 3D | Soumyaranjan Dash</title>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8X5BSNF3VV"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-8X5BSNF3VV');
+</script>
+<meta name="description" content="Explore the Sun's coronal magnetic field in 3D for any date since 2010: GONG and SDO/HMI magnetograms, PFSS field lines, the source surface, the heliospheric current sheet, and the magnetic connection of Parker Solar Probe, Solar Orbiter, STEREO and the L1 fleet. Free, in the browser, with PNG/PDF snapshots and embeds.">
+<meta name="keywords" content="HelioField, coronal magnetic field, PFSS, potential field source surface, heliospheric current sheet, solar magnetic field 3D, field lines, coronal holes, open flux, magnetic connectivity, Parker spiral, Parker Solar Probe, Solar Orbiter, STEREO, GONG, SDO HMI, synoptic map, Carrington rotation, heliophysics">
+<meta name="author" content="Soumyaranjan Dash">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://sr-dash.github.io/heliofield/">
+<link rel="author" href="https://sr-dash.github.io/">
+<link rel="license" href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">
+<link rel="help" href="https://sr-dash.github.io/heliofield/guide.html">
+<meta name="google-site-verification" content="wNt-P7enH5ZTT0cjYYqXEN9GRrj-0_OcbZSER57FIK4">
+<meta name="application-name" content="HelioField">
+<meta name="apple-mobile-web-app-title" content="HelioField">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#080b14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Soumyaranjan Dash Portfolio">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="HelioField: the Sun's coronal magnetic field in 3D">
+<meta property="og:description" content="PFSS field lines, the heliospheric current sheet and spacecraft magnetic connectivity for any date since 2010, computed from GONG and SDO/HMI magnetograms.">
+<meta property="og:url" content="https://sr-dash.github.io/heliofield/">
+<meta property="og:image" content="https://sr-dash.github.io/heliofield/assets/og-image.png">
+<meta property="og:image:secure_url" content="https://sr-dash.github.io/heliofield/assets/og-image.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="HelioField view of the Sun from Earth on 17 October 2026: the photospheric magnetic field with open and closed PFSS field lines and the source-surface neutral line">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@soumyatheory">
+<meta name="twitter:creator" content="@soumyatheory">
+<meta name="twitter:title" content="HelioField: the Sun's coronal magnetic field in 3D">
+<meta name="twitter:description" content="PFSS field lines, the heliospheric current sheet and spacecraft magnetic connectivity for any date since 2010.">
+<meta name="twitter:image" content="https://sr-dash.github.io/heliofield/assets/og-image.png">
+<meta name="twitter:image:alt" content="HelioField view of the Sun from Earth: photospheric magnetic field, open and closed PFSS field lines, and the source-surface neutral line">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": "https://sr-dash.github.io/#person",
+      "name": "Soumyaranjan Dash",
+      "givenName": "Soumyaranjan",
+      "familyName": "Dash",
+      "honorificPrefix": "Dr.",
+      "jobTitle": "Solar Physicist & Brinson Postdoctoral Fellow",
+      "url": "https://sr-dash.github.io/",
+      "sameAs": [
+        "https://github.com/sr-dash",
+        "https://www.linkedin.com/in/soumya-theory",
+        "https://twitter.com/soumyatheory",
+        "https://orcid.org/0000-0003-0103-6569"
+      ],
+      "worksFor": { "@type": "EducationalOrganization", "name": "National Solar Observatory", "alternateName": "NSO", "url": "https://nso.edu" }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://sr-dash.github.io/#website",
+      "url": "https://sr-dash.github.io/",
+      "name": "Soumyaranjan Dash Portfolio",
+      "publisher": { "@id": "https://sr-dash.github.io/#person" }
+    },
+    {
+      "@type": "WebApplication",
+      "@id": "https://sr-dash.github.io/heliofield/#app",
+      "name": "HelioField",
+      "alternateName": "HelioField 3D coronal magnetic field viewer",
+      "url": "https://sr-dash.github.io/heliofield/",
+      "description": "Explore the Sun's coronal magnetic field in 3D for any date since 2010: GONG and SDO/HMI magnetograms, PFSS field lines, the source surface, the heliospheric current sheet, and the magnetic connection of Parker Solar Probe, Solar Orbiter, STEREO and the L1 fleet. Free, in the browser, with PNG/PDF snapshots and embeds.",
+      "applicationCategory": "EducationalApplication",
+      "applicationSubCategory": "Heliophysics visualization",
+      "operatingSystem": "Any (web browser)",
+      "browserRequirements": "Requires JavaScript, WebGL and Web Workers",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "datePublished": "2026-10-17",
+      "license": "https://opensource.org/licenses/MIT",
+      "image": "https://sr-dash.github.io/heliofield/assets/og-image.png",
+      "screenshot": "https://sr-dash.github.io/heliofield/assets/og-image.png",
+      "softwareHelp": "https://sr-dash.github.io/heliofield/guide.html",
+      "codeRepository": "https://github.com/sr-dash/heliofield",
+      "keywords": "coronal magnetic field, PFSS, heliospheric current sheet, magnetic connectivity, Parker spiral, open flux, coronal holes, GONG, SDO HMI, Carrington rotation",
+      "featureList": [
+        "PFSS coronal magnetic field for any date since May 2010, daily from GONG and computed in the browser from SDO/HMI rotation maps",
+        "Open and closed field lines with an adjustable count, extendable to 1 au as Parker spirals or radially",
+        "Source surface, neutral line and heliospheric current sheet",
+        "Planets and spacecraft with Parker-spiral magnetic footpoints for 300-800 km/s wind",
+        "Dark and light themes with an accessibility-checked colour scheme",
+        "PNG and PDF snapshots, shareable links and an embeddable mode"
+      ],
+      "isRelatedTo": { "@type": "WebApplication", "name": "HelioFleet", "url": "https://sr-dash.github.io/heliofleet/" },
+      "author": { "@id": "https://sr-dash.github.io/#person" },
+      "creator": { "@id": "https://sr-dash.github.io/#person" },
+      "isPartOf": { "@id": "https://sr-dash.github.io/#website" }
+    }
+  ]
+}
+</script>
 <script>
   // Set before first paint so neither the theme, the embed layout nor a
   // folded panel flashes.
@@ -115,6 +231,9 @@
   </details>
 
   <p class="panel-foot"><a href="guide.html">How to use</a> · <a href="guide.html#methods">Methods and data</a></p>
+  <p class="panel-foot">Companion to <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, spacecraft positions around the Sun.
+    Made by <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
+    <a href="https://github.com/sr-dash/heliofield/issues/new/choose">Report a problem or suggest a feature</a></p>
 </aside>
 
 <div id="legend" aria-label="Legend">
@@ -125,6 +244,7 @@
   <span><i class="ln closed"></i><span>closed</span></span>
   <span><i class="ln hcs"></i><span>current sheet</span></span>
 </div>
+<nav class="credits" aria-label="Related"><a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a> · <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> · <a href="https://github.com/sr-dash/heliofield/issues/new/choose">Report or suggest</a></nav>
 <div id="status" role="status" aria-live="polite"></div>
 
 <dialog id="computeDlg" aria-labelledby="dlgTitle">
