@@ -88,6 +88,8 @@
   <a href="#fieldlines">Field lines</a>
   <a href="#hcs">Current sheet</a>
   <a href="#history">Past dates</a>
+  <a href="#openfield">Open-field footprints</a>
+  <a href="#series">Solar-cycle series</a>
   <a href="#connectivity">Spacecraft connectivity</a>
   <a href="#coords">Coordinates and scale</a>
   <a href="#colours">Colours and accessibility</a>
@@ -151,6 +153,7 @@
   <table>
     <tr><th>Layer</th><th>What it shows</th></tr>
     <tr><td>Photospheric B<sub>r</sub></td><td>The radial magnetic field at the solar surface. Gold is outward and cerulean is inward, around a neutral silver. The colours saturate at ±20 G, so weak quiet-Sun field is visible as well as active regions.</td></tr>
+    <tr><td>Open-field footprints</td><td>Off by default. Where the model's field is open on the surface: its coronal holes. Gold patches are outward and cerulean ones inward, the colours of the open lines; closed regions are dimmed. The patches come from a field line traced from every 1° cell, so they show the whole open area, not only where drawn lines start. See <a href="#openfield">how footprints are found</a>.</td></tr>
     <tr><td>Closed field lines</td><td>Violet. Lines that leave the surface and return to it. They outline active-region loops and the large helmet streamers.</td></tr>
     <tr><td>Open field lines</td><td>Lines that reach the source surface and are carried into the solar wind. Gold lines leave outward-polarity regions and cerulean lines inward ones. They root in coronal holes.</td></tr>
     <tr><td>Extend into the heliosphere</td><td>Off by default. It carries every drawn open line beyond the source surface, out to the distance set by <b>Out to</b> in the Heliosphere section. <b>Parker spiral</b> winds the extension up with solar rotation at the chosen wind speed, the same way the current sheet and the spacecraft connections are drawn. <b>Radial</b> continues each line straight out. See <a href="#extension">how open lines are extended</a>.</td></tr>
@@ -336,6 +339,28 @@ addEventListener("message", (e) =&gt; {
   <p>A rotation map is assembled over about 27 days, so a computed date shows the field <i>around</i> that date. A daily product shows the field as of that day.</p>
 </section>
 
+<section id="openfield">
+  <h3>Open-field footprints</h3>
+  <p>A field line is traced from the centre of every cell of a 1° grid just above the surface (1.001 R<sub>☉</sub>), with rows equally spaced in sine latitude so every cell has the same area. A line that reaches the source surface is open, and its sign is the polarity of its footpoint; a line that comes back down is closed. That is 64,800 lines per map, traced with sunkit-magex on the same PFSS solution as the daily product.</p>
+  <ul>
+    <li><b>Daily products</b> have their own footprints, made by the nightly job from the same magnetogram (<code>data/&lt;date&gt;/open.png</code>).</li>
+    <li><b>Past dates</b>, and days without their own map, use the footprints of the HMI rotation map that covers the date (<code>data/history/open/NNNN.png</code>). The info panel says which one is shown.</li>
+  </ul>
+  <p>For past dates the field lines are solved in your browser with spherical harmonics up to degree 40, while the footprints come from the full sunkit-magex solution of the same map. The two agree to within a cell or two at hole boundaries, so a drawn open line occasionally starts just outside a patch.</p>
+</section>
+
+<section id="series">
+  <h3>Solar-cycle series</h3>
+  <p>The <a href="series.html">series page</a> reduces each HMI rotation map since May 2010 to a few numbers, solving it with sunkit-magex at the daily settings (source surface 2.5 R<sub>☉</sub>, 40 radial shells). A new point is added when JSOC publishes the next rotation map, about once a month. Each chart draws every rotation and its 13-rotation running mean.</p>
+  <ul>
+    <li><b>Open flux</b>: the unsigned flux through the source surface, the sum of |B<sub>r</sub>| over its area.</li>
+    <li><b>Open area</b>: the share of the photosphere covered by <a href="#openfield">open-field footprints</a>.</li>
+    <li><b>Current-sheet tilt</b>: the highest latitude the source-surface neutral line reaches in each hemisphere, the quantity the Wilcox Solar Observatory reports for its own maps (Hoeksema 1984). Sign changes between neighbouring cells are interpolated in latitude. The grid's highest row is at 84°, so a neutral line that crosses the pole reads 84°.</li>
+    <li><b>Polar field</b>: the mean photospheric B<sub>r</sub> of all cells poleward of 60° in each hemisphere.</li>
+  </ul>
+  <p>The numbers are for this model on these maps, not for the Sun as such. The open flux from PFSS is typically about half of what spacecraft measure at 1 au, a long-standing difference known as the open flux problem (Linker et al. 2017); it depends on the source-surface height and on the polar fields. WSO's tilt uses line-of-sight maps and other source-surface heights, so its values differ from these by several degrees, most near maximum. The polar means are dominated by fields seen at a grazing angle, and the annual swing of B<sub>0</sub> by ±7° hides each pole for part of the year.</p>
+</section>
+
 <section id="colours">
   <h3>Colours and accessibility</h3>
   <p>The colours were chosen by calculation, not by eye. Each one was checked in both themes against the background it is drawn on.</p>
@@ -364,6 +389,7 @@ addEventListener("message", (e) =&gt; {
     <li><b>Poorly observed poles.</b> The polar fields are seen at a grazing angle. They strongly influence the open field, and so the current sheet.</li>
     <li><b>Constant, radial solar wind.</b> The spirals and current sheet ignore acceleration, stream interactions and transients such as coronal mass ejections.</li>
     <li><b>The HMI fallback lags.</b> The HMI frame is typically several hours old when it is published.</li>
+    <li><b>Footprints are the model's coronal holes.</b> They follow the open field of PFSS and are not compared with EUV images; the model typically opens a smaller area than the dark regions seen in EUV.</li>
     <li><b>Past dates use rotation maps.</b> They show the field averaged over the rotation, not that day's map, and the browser solution is truncated at harmonic degree 40.</li>
   </ul>
 </section>
@@ -378,6 +404,12 @@ addEventListener("message", (e) =&gt; {
     <tr><td><code>ss.png</code></td><td>Source-surface B<sub>r</sub> on the same grid, scaled to ±<code>ss_scale</code> G from <code>meta.json</code>.</td></tr>
     <tr><td><code>lines.bin</code></td><td>Every polyline as little-endian 16-bit integer Carrington <i>x</i>, <i>y</i>, <i>z</i> in units of 10<sup>−4</sup> R<sub>☉</sub>. Line lengths are in <code>meta.counts</code>: field lines first, then one per connectivity entry.</td></tr>
   </table>
+  <p>Two more sets of files support the footprints and the series page:</p>
+  <table>
+    <tr><th>File</th><th>Content</th></tr>
+    <tr><td><code>open.png</code></td><td>In each day's folder, and as <code>data/history/open/NNNN.png</code> for each rotation map. Open-field footprints, 360 × 180, equirectangular, 8-bit grey, north up: 0 closed, 128 open inward, 255 open outward.</td></tr>
+    <tr><td><code>data/series/rotations.json</code></td><td>One row per rotation: <code>cr</code>, <code>mid</code> (centre date), <code>flux</code> (10<sup>22</sup> Mx), <code>area</code> (fraction), <code>tilt_n</code> and <code>tilt_s</code> (degrees), <code>polar_n</code> and <code>polar_s</code> (G).</td></tr>
+  </table>
   <p>The code that builds them is in the <a href="https://github.com/sr-dash/heliofield">repository</a>.</p>
 </section>
 
@@ -390,6 +422,8 @@ addEventListener("message", (e) =&gt; {
     <li>Nolte, J. T. &amp; Roelof, E. C. 1973, Large-scale structure of the interplanetary medium, I, <i>Solar Physics</i>, 33, 241.</li>
     <li>Stansby, D., Yeates, A. &amp; Badman, S. T. 2020, pfsspy: a Python package for potential field source surface modelling, <i>Journal of Open Source Software</i>, 5, 2732.</li>
     <li>Harvey, J. W. et al. 1996, The Global Oscillation Network Group (GONG) project, <i>Science</i>, 272, 1284.</li>
+    <li>Hoeksema, J. T. 1984, Structure and evolution of the large scale solar and heliospheric magnetic fields, PhD thesis, Stanford University (CSSA-ASTRO-84-07).</li>
+    <li>Linker, J. A. et al. 2017, The open flux problem, <i>The Astrophysical Journal</i>, 848, 70.</li>
     <li>Scherrer, P. H. et al. 2012, The Helioseismic and Magnetic Imager (HMI) investigation for the Solar Dynamics Observatory (SDO), <i>Solar Physics</i>, 275, 207.</li>
   </ol>
   <p class="muted">Magnetograms courtesy of NSO/GONG and of NASA/SDO and the HMI science team. PFSS by sunkit-magex (SunPy project). Ephemerides from JPL Horizons via HelioFleet.</p>
@@ -418,7 +452,7 @@ addEventListener("message", (e) =&gt; {
 </main>
 
 </div>
-<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
+<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="series.html">Solar-cycle series</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
   <a href="https://github.com/sr-dash/heliofield/issues/new/choose">Report a problem or suggest a feature</a> ·
   Companion to <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a> · Made by <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> ·
   <a href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">MIT licence</a> · DOI <a href="https://doi.org/10.5281/zenodo.23487231">10.5281/zenodo.23487231</a></footer>

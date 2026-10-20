@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HelioField Solar-Cycle Series: PFSS Open Flux, Current-Sheet Tilt and Polar Field since 2010 | Soumyaranjan Dash</title>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8X5BSNF3VV"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-8X5BSNF3VV');
+</script>
+<meta name="description" content="PFSS open flux, open-field area, heliospheric current sheet tilt and polar magnetic field for every Carrington rotation since 2010, from SDO/HMI rotation maps.">
+<meta name="author" content="Soumyaranjan Dash">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://sr-dash.github.io/heliofield/series.html">
+<link rel="author" href="https://sr-dash.github.io/">
+<link rel="license" href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#080b14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Soumyaranjan Dash Portfolio">
+<meta property="og:title" content="HelioField solar-cycle series since 2010">
+<meta property="og:description" content="PFSS open flux, open area, current-sheet tilt and polar field per Carrington rotation, from SDO/HMI.">
+<meta property="og:url" content="https://sr-dash.github.io/heliofield/series.html">
+<meta property="og:image" content="https://sr-dash.github.io/heliofield/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@soumyatheory">
+<meta name="twitter:creator" content="@soumyatheory">
+<script>
+  (() => {
+    let t = new URLSearchParams(location.search).get("theme");
+    if (t !== "light" && t !== "dark") try { t = localStorage.getItem("hf.theme"); } catch (e) {}
+    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<link rel="stylesheet" href="css/guide.css">
+<link rel="stylesheet" href="css/series.css">
+</head>
+<body>
+<div class="page">
+
+<header class="top">
+  <h1>Solar-cycle series</h1>
+  <p>The coronal model, rotation by rotation since 2010. By <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a>.</p>
+  <button class="theme" id="theme" type="button">Light theme</button>
+  <a class="back" href="./">← Back to the viewer</a>
+</header>
+
+<p class="lede">Each point is one Carrington rotation (about 27 days): an SDO/HMI synoptic map, extrapolated with the same PFSS model the viewer uses (source surface at 2.5 R<sub>☉</sub>). Hover or tap a chart to read every series at that rotation, or use the arrow keys once a chart has focus. <a href="guide.html#series">How these are computed</a></p>
+
+<div class="filters" role="group" aria-label="Time range">
+  <button data-range="all" class="on" aria-pressed="true">Since 2010</button>
+  <button data-range="c24" aria-pressed="false">Cycle 24</button>
+  <button data-range="c25" aria-pressed="false">Cycle 25</button>
+  <button data-range="3y" aria-pressed="false">Last 3 years</button>
+</div>
+
+<section class="tiles" id="tiles" aria-label="Latest rotation"></section>
+
+<section class="chart" id="flux" aria-labelledby="flux-h">
+  <h2 id="flux-h">Open flux at the source surface</h2>
+  <p class="sub">Unsigned magnetic flux through the source surface, 10<sup>22</sup> Mx. In-situ estimates at 1 au are typically about twice the PFSS value: the open flux problem (Linker et al. 2017).</p>
+</section>
+
+<section class="chart" id="area" aria-labelledby="area-h">
+  <h2 id="area-h">Open-field area</h2>
+  <p class="sub">Share of the photosphere whose field reaches the source surface, %: the model's coronal holes. Shown on the Sun with <a href="./?layers=photo,foot,pil">Open-field footprints</a> in the viewer.</p>
+</section>
+
+<section class="chart" id="tilt" aria-labelledby="tilt-h">
+  <h2 id="tilt-h">Current-sheet tilt</h2>
+  <p class="sub">Highest latitude reached by the source-surface neutral line in each hemisphere, degrees, as in the Wilcox Solar Observatory product. The grid tops out at 84°.</p>
+</section>
+
+<section class="chart" id="polar" aria-labelledby="polar-h">
+  <h2 id="polar-h">Polar field</h2>
+  <p class="sub">Mean photospheric B<sub>r</sub> poleward of 60°, gauss. The sign changes mark the polar reversals at solar maximum.</p>
+</section>
+
+<p class="muted small">Data: <a href="data/series/rotations.json">rotations.json</a> (one row per rotation), rebuilt when JSOC publishes a new rotation map. Sources and limitations are in the <a href="guide.html#series">guide</a>.</p>
+</div>
+
+<div class="tip" id="tip" role="status" aria-live="polite" hidden></div>
+
+<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="guide.html">Guide</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
+  <a href="https://github.com/sr-dash/heliofield/issues/new/choose">Report a problem or suggest a feature</a> ·
+  Made by <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> ·
+  <a href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">MIT licence</a> · DOI <a href="https://doi.org/10.5281/zenodo.23487231">10.5281/zenodo.23487231</a></footer>
+
+<script type="module" src="js/series.js"></script>
+</body>
+</html>

@@ -19,6 +19,10 @@ export const THEMES = {
     closed: "#6b50c2",  // closed field (violet)
     hcs: "#d7506e",     // neutral line and current sheet (rose)
     fleet: { earth: "#3987e5", psp: "#d95926", solo: "#199e70", sta: "#c98500", bepi: "#d55181", l1: "#008300", stb: "#9085e9" },
+    // Series page (series.html), in this order: one series takes `a`; north
+    // and south hemispheres take `a` and `b`. Checked as a categorical pair
+    // against bg: protan/deutan dE 26.8, normal 31.8, both >= 3:1.
+    chart: { a: "#3987e5", b: "#d95926" },
   },
   light: {
     bg: "#f6f3ec", occluder: "#d9d5cc", planet: "#545c6c",
@@ -27,6 +31,8 @@ export const THEMES = {
     closed: "#583bab",
     hcs: "#9c113f",
     fleet: { earth: "#2a78d6", psp: "#e4622d", solo: "#2b9c6f", sta: "#b87f1d", bepi: "#d26790", l1: "#008300", stb: "#6250d6" },
+    // protan/deutan dE 25.0, normal 33.1, both >= 3:1 against bg.
+    chart: { a: "#2a78d6", b: "#e4622d" },
   },
 };
 

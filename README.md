@@ -51,6 +51,34 @@ beyond it without a second solve: straight out (`ext=radial`) or, by default, as
 Parker spirals at the chosen wind speed, the same kinematic continuation as the
 current sheet and spacecraft connectivity. Off by default (`layers` with `ext`).
 
+## Open-field footprints
+
+`scripts/build_open_field.py` traces a field line from every cell of a 1° grid
+(rows uniform in sine latitude) at 1.001 R☉ and records whether it reaches the
+source surface, and with which polarity: 64,800 lines per map, about 3 s with
+sunkit-magex. The result is a 360 × 180 grey PNG (0 closed, 128 open inward,
+255 open outward, north up), one per daily product (`data/<date>/open.png`,
+made from the cached input map right after `build_day.py`) and one per HMI
+rotation map (`data/history/open/NNNN.png`, about 4 kB each). The viewer draws
+it as the *Open-field footprints* layer (`layers` with `foot`); a day without
+its own map, and any computed date, shows the covering rotation's footprints.
+These are the model's coronal holes; they are not checked against EUV images.
+
+## Solar-cycle series
+
+`series.html` shows one point per HMI rotation since CR 2096, from
+`data/series/rotations.json`, built by `scripts/build_series.py`: open flux
+through the source surface, open-field area, the highest latitude of the
+source-surface neutral line in each hemisphere (the Wilcox tilt definition,
+Hoeksema 1984; the grid tops out at 84°), and the mean photospheric B<sub>r</sub>
+poleward of 60°. `scripts/rotations.py` holds the shared solve (sunkit-magex,
+R<sub>ss</sub> = 2.5 R☉, 40 shells) and caches each rotation under
+`cache/solve/`; a full rebuild of footprints and series takes about 25 minutes,
+and the nightly job only solves rotations it has not seen. Limitations: PFSS
+open flux is typically half the in-situ value at 1 au (the open flux problem,
+Linker et al. 2017); the tilt differs from WSO's line-of-sight values by several
+degrees; polar means rest on fields seen at a grazing angle.
+
 ## Colours and themes
 
 Dark and light themes; one hue per role in both. The field colours (open +, open −,
@@ -58,6 +86,8 @@ closed, current sheet) were validated as an all-pairs set in each theme against
 its background: protan/deutan ΔE ≥ 9.8 (OKLab × 100), normal-vision ΔE ≥ 17, and
 ≥ 3:1 contrast (WCAG 2.1 SC 1.4.11). Values and the reasoning are in `js/theme.js`
 and the guide's colour section. Re-validate before changing any of them.
+The series charts use a separate blue/orange pair (`chart` in `js/theme.js`),
+checked the same way: protan/deutan ΔE ≥ 25, ≥ 3:1 in both themes.
 
 **Save & share → Save PNG / Save PDF** writes the current view with a title band
 and legend.
