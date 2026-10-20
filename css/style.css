@@ -179,6 +179,9 @@ output { font-weight: 650; font-variant-numeric: tabular-nums; }
 .ln.on { background: var(--line-neg); } .ln.hcs { background: var(--line-hcs); height: 4px; }
 .key.ln { width: 14px; }
 .key.ln.op { margin-right: 3px; }
+.sw.op { background: var(--line-pos); } .sw.on { background: var(--line-neg); }
+.key.sw { width: 11px; height: 11px; border-radius: 3px; }
+.key.sw.op { margin-right: 3px; }
 .credits {
   position: fixed; right: 18px; bottom: 16px; z-index: 3; font-size: 13px; color: var(--muted);
   padding: 7px 12px; border-radius: 9px; background: var(--label-bg);
