@@ -63,9 +63,9 @@ button.primary:hover { opacity: .9; background: var(--text); }
   pointer-events: none;
 }
 .bar > * { pointer-events: auto; }
-.brand { display: flex; flex-direction: column; line-height: 1.2; margin-right: auto; }
-.brand strong { font-size: 19px; letter-spacing: .01em; }
-.brand span { color: var(--muted); font-size: 13.5px; }
+.brand { display: flex; flex-direction: column; gap: 1px; line-height: 1.2; margin-right: auto; }
+.brand strong { font-size: 24px; font-weight: 700; letter-spacing: .005em; }
+.brand span { color: var(--muted); font-size: 15.5px; }
 .date { display: flex; gap: 5px; align-items: center; }
 .src {
   font-size: 12px; font-weight: 600; letter-spacing: .04em; white-space: nowrap;
@@ -138,6 +138,9 @@ a.help:hover { color: var(--text); border-color: var(--text); }
 #panel label.slider { flex-direction: column; align-items: stretch; gap: 2px; margin-top: 5px; }
 #panel label.sub { margin-left: 25px; margin-top: 0; color: var(--muted); font-size: 13.5px; }
 #panel label:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+.seg.sub { margin: 2px 0 6px 25px; }
+.seg.sub button { font-size: 12.5px; padding: 3px 6px; min-height: 28px; }
+.seg button:disabled { opacity: .45; cursor: not-allowed; }
 #panel input[type=range] { width: 100%; accent-color: var(--text); }
 #panel input[type=checkbox] { accent-color: var(--text); margin: 0; width: 16px; height: 16px; }
 output { font-weight: 650; font-variant-numeric: tabular-nums; }

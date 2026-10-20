@@ -106,8 +106,9 @@
     <tr><td>Photospheric B<sub>r</sub></td><td>The radial magnetic field at the solar surface. Gold is outward and cerulean is inward, around a neutral silver. The colours saturate at ±20 G, so weak quiet-Sun field is visible as well as active regions.</td></tr>
     <tr><td>Closed field lines</td><td>Violet. Lines that leave the surface and return to it. They outline active-region loops and the large helmet streamers.</td></tr>
     <tr><td>Open field lines</td><td>Lines that reach the source surface and are carried into the solar wind. Gold lines leave outward-polarity regions and cerulean lines inward ones. They root in coronal holes.</td></tr>
+    <tr><td>Extend into the heliosphere</td><td>Off by default. It carries every drawn open line beyond the source surface, out to the distance set by <b>Out to</b> in the Heliosphere section. <b>Parker spiral</b> winds the extension up with solar rotation at the chosen wind speed, the same way the current sheet and the spacecraft connections are drawn. <b>Radial</b> continues each line straight out. See <a href="#extension">how open lines are extended</a>.</td></tr>
     <tr><td>Lines drawn</td><td>How many of the day's traced field lines are drawn, from 50 to all of them (usually 740). The default of 250 keeps the corona readable. The subset is fixed for each day, so moving the slider adds or removes lines without the others changing, and closed and open lines keep their proportions.</td></tr>
-    <tr><td>Source surface B<sub>r</sub></td><td>The radial field on the outer boundary of the model, at 2.5 solar radii. Use the opacity slider to see through it. Its scale is set per day, because this field is far weaker than at the surface.</td></tr>
+    <tr><td>Source surface B<sub>r</sub></td><td>Off by default. The radial field on the outer boundary of the model, at 2.5 solar radii. Use the opacity slider to see through it. Its scale is set per day, because this field is far weaker than at the surface.</td></tr>
     <tr><td>Neutral line</td><td>Rose. Where the source-surface field changes sign. This is the base of the heliospheric current sheet.</td></tr>
   </table>
 </section>
@@ -116,7 +117,8 @@
   <h3>Heliosphere layers</h3>
   <table>
     <tr><th>Layer</th><th>What it shows</th></tr>
-    <tr><td>Current sheet</td><td>The heliospheric current sheet: the neutral line carried outward by the solar wind and wound into a spiral by solar rotation. <b>Out to</b> sets how far it is drawn.</td></tr>
+    <tr><td>Out to</td><td>How far the current sheet and the extended open field lines reach, from 0.1 to 1.8 au.</td></tr>
+    <tr><td>Current sheet</td><td>Off by default. The heliospheric current sheet: the neutral line carried outward by the solar wind and wound into a spiral by solar rotation. With extended open lines on, it runs along the boundary between gold and cerulean spirals.</td></tr>
     <tr><td>Planets and spacecraft</td><td>Positions at the time of the map. The seven Sun–Earth L1 monitors share one marker beside Earth.</td></tr>
     <tr><td>Connection to the Sun</td><td>For each spacecraft, the Parker spiral back to the source surface and the model field line from there to the photosphere. The end of that line is the spacecraft's magnetic footpoint.</td></tr>
   </table>
@@ -147,7 +149,8 @@
     <tr><th>Parameter</th><th>Values</th><th>Default</th></tr>
     <tr><td><code>date</code></td><td><code>YYYY-MM-DD</code> from 2010-05-01, or <code>latest</code>. A date without a daily product is computed in the browser.</td><td>latest</td></tr>
     <tr><td><code>v</code></td><td>Solar wind speed: 300, 400 … 800 km/s</td><td>400</td></tr>
-    <tr><td><code>layers</code></td><td>Comma list of layers to show: <code>photo, closed, open, ss, pil, hcs, fleet, spiral</code></td><td>all</td></tr>
+    <tr><td><code>layers</code></td><td>Comma list of layers to show: <code>photo, closed, open, ext, ss, pil, hcs, fleet, spiral</code> (<code>ext</code> is the extension of open lines)</td><td><code>photo, closed, open, pil, fleet, spiral</code></td></tr>
+    <tr><td><code>ext</code></td><td><code>radial</code> to extend open lines straight out instead of as Parker spirals</td><td>spiral</td></tr>
     <tr><td><code>view</code></td><td><code>earth</code>, <code>north</code> or <code>fleet</code></td><td>oblique</td></tr>
     <tr><td><code>cam</code></td><td>A fixed camera: Carrington longitude, latitude (degrees) and distance (R<sub>☉</sub>)</td><td>none</td></tr>
     <tr><td><code>rmax</code></td><td>Current-sheet extent, 0.1–1.8 au</td><td>1.2</td></tr>
@@ -232,6 +235,13 @@ addEventListener("message", (e) =&gt; {
     <li>A set spread evenly just inside the source surface, so that open field is shown wherever it reaches the boundary. Starting only from strong field would return almost nothing from coronal holes.</li>
   </ul>
   <p>Each line is traced in both directions until it leaves the domain. A line is open if one end reaches the source surface. Its colour comes from the sign of the field at its photospheric end. Lines are resampled evenly along their length before they are stored.</p>
+  <h4 id="extension">Extending open lines into the heliosphere</h4>
+  <p>PFSS stops at the source surface, where its outer boundary condition makes the field purely radial. Beyond it the model says nothing more, so no second solution is needed: the open field simply leaves the Sun along the radial direction it has at the boundary. The page continues each open line from its outer end in one of two ways.</p>
+  <ul>
+    <li><b>Radial.</b> The line goes straight out at the latitude and longitude where it left the source surface. This is the boundary condition taken literally. It would also be the field's shape if the solar wind were infinitely fast.</li>
+    <li><b>Parker spiral</b> (default). The solar wind carries the radial field outward at the chosen speed <i>v</i> while the Sun rotates beneath it, so in the Sun's rotating frame each line winds back in longitude: <span class="math">φ(<i>r</i>) = φ<sub>ss</sub> − Ω (<i>r</i> − R<sub>ss</sub>) / <i>v</i></span>, at constant latitude. This is the same continuation used for the <a href="#hcs">current sheet</a> and for <a href="#connectivity">spacecraft connectivity</a>, so the three agree. Lines of opposite polarity meet along the current sheet, and each spacecraft's connecting spiral lies among the extended lines of its own sector.</li>
+  </ul>
+  <p>Lines traced on the server end at 0.98 R<sub>ss</sub>, where their outer seeds sit. Lines traced in the browser end at R<sub>ss</sub>. The field in that last shell is already all but radial, so the extension starts wherever each line ends. Like the current sheet, the extension is kinematic. It has no solar-wind acceleration, no stream interactions, no transients, and no change of latitude with distance.</p>
 </section>
 
 <section id="hcs">
@@ -258,7 +268,7 @@ addEventListener("message", (e) =&gt; {
   <p>The whole scene is in the Carrington frame. It is fixed to the rotating Sun, with <i>z</i> along the solar rotation axis and <i>x</i> at Carrington longitude 0. The field therefore stays still from day to day, and the planets and spacecraft move around it. Earth's position in this frame is given by L<sub>0</sub> and B<sub>0</sub>, its heliographic longitude and latitude.</p>
   <p>In log-distance mode, distances out to the source surface are true. Beyond it, they are compressed:</p>
   <div class="eq"><i>r</i>′ = R<sub>ss</sub> [1 + 2 ln(<i>r</i> / R<sub>ss</sub>)] &nbsp; for &nbsp;<i>r</i> &gt; R<sub>ss</sub></div>
-  <p>This puts 1 au at about 25 R<sub>☉</sub>. Spirals and the current sheet are computed at true distance and compressed afterwards, so their longitudes are unchanged.</p>
+  <p>This puts 1 au at about 25 R<sub>☉</sub>. Spirals, the current sheet and the extended field lines are computed at true distance and compressed afterwards, so their longitudes are unchanged.</p>
 </section>
 
 <section id="history">

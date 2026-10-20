@@ -25,8 +25,8 @@ python3 -m http.server 8811
 Then open <http://localhost:8811/>. How to use the viewer, and how everything
 is computed, is on the guide page: [`guide.html`](https://sr-dash.github.io/heliofield/guide.html).
 
-The URL holds the full state (`date`, `v`, `layers`, `lines`, `view` or `cam`,
-`rmax`, `scale`, `ss`, `rotate`, `panel`, `theme`), so any view can be linked.
+The URL holds the full state (`date`, `v`, `layers`, `lines`, `ext`, `view` or
+`cam`, `rmax`, `scale`, `ss`, `rotate`, `panel`, `theme`), so any view can be linked.
 
 ## Any date since 2010
 
@@ -41,6 +41,13 @@ On the GONG map of 2026-10-17 it matches the sunkit-magex pipeline to a
 source-surface correlation of 0.9998, a neutral line within 0.6°, open flux within
 2%, and footpoints within about 1°. The page asks before computing, because the
 current field is cleared first.
+
+## Open field into the heliosphere
+
+PFSS makes the field radial at the source surface, so open lines are extended
+beyond it without a second solve: straight out (`ext=radial`) or, by default, as
+Parker spirals at the chosen wind speed, the same kinematic continuation as the
+current sheet and spacecraft connectivity. Off by default (`layers` with `ext`).
 
 ## Colours and themes
 

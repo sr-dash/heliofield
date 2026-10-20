@@ -27,7 +27,7 @@ const params = new URLSearchParams(location.search);
 const EMBED = root.classList.contains("embed");
 const state = {
   dates: [], day: null, product: null,
-  vsw: 400, rmaxAu: 1.2, logScale: true, rss: 2.5, nLines: 250,
+  vsw: 400, rmaxAu: 1.2, logScale: true, rss: 2.5, nLines: 250, extMode: "spiral",
 };
 const T = () => THEMES[currentTheme()];
 
@@ -54,7 +54,7 @@ controls.maxDistance = 2000;
 // lines with a width use three's screen-space "fat" lines. Their materials
 // need the viewport size, kept current here.
 const lineMats = new Set();
-const WIDTH = { field: 1.6, spiral: 2.2, pil: 2.4 };
+const WIDTH = { field: 1.6, ext: 1.3, spiral: 2.2, pil: 2.4 };
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h);
@@ -67,7 +67,7 @@ addEventListener("resize", resize);
 resize();
 
 const G = {};
-for (const k of ["photo", "closed", "open", "ss", "pil", "hcs", "fleet", "spiral"]) {
+for (const k of ["photo", "closed", "open", "ext", "ss", "pil", "hcs", "fleet", "spiral"]) {
   G[k] = new THREE.Group();
   scene.add(G[k]);
 }
@@ -250,6 +250,41 @@ function buildLines() {
   G.open.add(segments(open, (i) => (openKind[i] > 0 ? th.pos : th.neg), 1));
   $("nlOut").textContent = keep.length;
   $("nLines").max = nf;
+  buildExt();
+}
+
+// Open lines carried beyond the source surface. PFSS makes the field radial
+// there, so no further solve is needed: each line's source-surface end is
+// continued outward either straight (radial) or as a Parker spiral, where
+// plasma moving out at the wind speed v carries the radial field while the
+// Sun turns beneath it -- the same continuation as the current sheet and
+// the spacecraft spirals, so all three stay consistent.
+function buildExt() {
+  clear(G.ext);
+  const p = state.product;
+  if (!p || !$("lyrExt").checked) return applyVisibility();
+  const kind = p.meta.lines.kind, nf = p.meta.lines.count, th = T(), v = state.vsw;
+  const rOut = Math.max(state.rmaxAu * AU_RS, state.rss * 1.01), N = 64;
+  const wind = state.extMode === "spiral";
+  const polys = [], pol = [];
+  for (const i of p.order.slice(0, Math.min(state.nLines, nf))) {
+    if (!kind[i]) continue;
+    const q = p.polys[i], a = q[0], b = q[q.length - 1];
+    const e = Math.hypot(...a) > Math.hypot(...b) ? a : b, r0 = Math.hypot(...e);
+    // Server-traced lines end at 0.98 R_ss (their seeds), browser-traced
+    // ones at R_ss; the field is already all but radial in that last shell,
+    // so continue from wherever the line ends.
+    if (r0 < state.rss * 0.95) continue;
+    const lon0 = Math.atan2(e[1], e[0]) / DEG, lat0 = Math.asin(e[2] / r0) / DEG, pts = [];
+    for (let j = 0; j < N; j++) {
+      const r = r0 * Math.pow(rOut / r0, j / (N - 1));
+      const lon = wind ? lon0 - (OMEGA * Math.max(0, r - state.rss) * RSUN_KM / v) / DEG : lon0;
+      const s = sph(r, lon, lat0);
+      pts.push([s.x, s.y, s.z]);
+    }
+    polys.push(pts); pol.push(kind[i]);
+  }
+  G.ext.add(segments(polys, (k) => (pol[k] > 0 ? th.pos : th.neg), 0.75, WIDTH.ext));
   applyVisibility();
 }
 
@@ -332,7 +367,7 @@ function buildHelio() {
     if (o.colors.length) { el.style.setProperty("--dot", o.colors[0]); el.dataset.color = o.colors[0]; }
     o.sprite.add(new CSS2DObject(el));
   }
-  applyVisibility();
+  buildExt();
   feet();
 }
 
@@ -360,8 +395,10 @@ $("themeToggle").onclick = () => setTheme(currentTheme() === "dark" ? "light" : 
 
 // ------------------------------------------------------------- panel
 const DEFAULTS = { v: 400, rmax: 1.2, ss: 0.25, lines: 250 };
-const LAYERS = { photo: "lyrPhoto", closed: "lyrClosed", open: "lyrOpen", ss: "lyrSS",
+const LAYERS = { photo: "lyrPhoto", closed: "lyrClosed", open: "lyrOpen", ext: "lyrExt", ss: "lyrSS",
   pil: "lyrPIL", hcs: "lyrHCS", fleet: "lyrFleet", spiral: "lyrSpiral" };
+// Layers shown on a first visit; links list layers only when they differ.
+const DEFAULT_ON = ["photo", "closed", "open", "pil", "fleet", "spiral"];
 
 function applyVisibility() {
   for (const [g, id] of Object.entries(LAYERS)) G[g].visible = $(id).checked;
@@ -370,6 +407,10 @@ function applyVisibility() {
   // own switch is a sub-option, disabled meanwhile.
   G.spiral.visible = G.fleet.visible && $("lyrSpiral").checked;
   $("lyrSpiral").disabled = !G.fleet.visible;
+  // Extensions belong to the open lines in the same way.
+  G.ext.visible = G.open.visible && $("lyrExt").checked;
+  $("lyrExt").disabled = !G.open.visible;
+  for (const b of $("extMode").querySelectorAll("button")) b.disabled = !G.ext.visible;
   // The label renderer reads each label's own visible flag every frame and
   // ignores its parents', so the flag has to be set on the labels themselves.
   G.fleet.traverse((o) => { if (o.isCSS2DObject) o.visible = G.fleet.visible; });
@@ -377,9 +418,19 @@ function applyVisibility() {
 function setLayers(list) {
   const on = new Set(String(list).split(",").map((s) => s.trim()));
   for (const [g, id] of Object.entries(LAYERS)) $(id).checked = on.has(g);
-  applyVisibility();
+  if (state.product) buildExt(); else applyVisibility();
 }
 for (const id of Object.values(LAYERS)) $(id).addEventListener("change", () => { applyVisibility(); syncUrl(); });
+$("lyrExt").addEventListener("change", () => { if (state.product) buildExt(); });
+function setExtMode(mode) {
+  state.extMode = mode === "radial" ? "radial" : "spiral";
+  for (const [id, on] of [["extSpiral", state.extMode === "spiral"], ["extRadial", state.extMode === "radial"]]) {
+    $(id).classList.toggle("on", on); $(id).setAttribute("aria-pressed", on);
+  }
+  if (state.product) buildExt();
+}
+$("extSpiral").onclick = () => { setExtMode("spiral"); syncUrl(); };
+$("extRadial").onclick = () => { setExtMode("radial"); syncUrl(); };
 
 function setAlpha(a) {
   $("ssAlpha").value = a;
@@ -513,7 +564,8 @@ function stateParams() {
   const p = new URLSearchParams({ date: state.day });
   if (state.vsw !== DEFAULTS.v) p.set("v", state.vsw);
   const on = Object.keys(LAYERS).filter((g) => $(LAYERS[g]).checked);
-  if (on.length !== Object.keys(LAYERS).length) p.set("layers", on.join(","));
+  if (on.length !== DEFAULT_ON.length || on.some((g) => !DEFAULT_ON.includes(g))) p.set("layers", on.join(","));
+  if (state.extMode === "radial") p.set("ext", "radial");
   if (state.rmaxAu !== DEFAULTS.rmax) p.set("rmax", state.rmaxAu);
   if (!state.logScale) p.set("scale", "true");
   if (+$("ssAlpha").value !== DEFAULTS.ss) p.set("ss", $("ssAlpha").value);
@@ -763,6 +815,7 @@ async function start() {
     if (params.has("layers")) setLayers(params.get("layers"));
     const r = +params.get("rmax");
     if (r >= 0.1 && r <= 1.8) setRmax(r);
+    if (params.get("ext") === "radial") setExtMode("radial");
     if (params.get("scale") === "true") setScale(false);
     const a = params.get("ss");
     if (a !== null && +a >= 0 && +a <= 1) $("ssAlpha").value = a;
