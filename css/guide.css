@@ -33,7 +33,9 @@ header.top .theme:hover { border-color: var(--accent); }
 header.top .back { text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; font-size: 14px; color: var(--text); }
 header.top .back:hover { border-color: var(--accent); }
 
-nav.toc { position: sticky; top: 16px; align-self: start; font-size: 14px; }
+nav.toc { position: sticky; top: 16px; align-self: start; font-size: 14px;
+  max-height: calc(100vh - 32px); overflow-y: auto; overscroll-behavior: contain; }
+pre.cite { white-space: pre-wrap; overflow-wrap: anywhere; }
 nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 18px 0 6px; }
 nav.toc h2:first-child { margin-top: 4px; }
 nav.toc a { display: block; padding: 3px 0 3px 10px; color: var(--muted); text-decoration: none; border-left: 1px solid var(--line); }
@@ -73,11 +75,12 @@ td:first-child { white-space: nowrap; }
 .callout { padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); margin: 0 0 14px; }
 .chip { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 7px; }
 .refs li { font-size: 14px; }
-footer.end { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 14px; color: var(--muted); font-size: 14px; }
+/* Outside the page grid, so the sticky contents column stops above it. */
+footer.end { max-width: 1060px; margin: 0 auto; padding: 14px 16px 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
 
 @media (max-width: 820px) {
   .wrap { grid-template-columns: 1fr; gap: 8px; }
-  nav.toc { position: static; columns: 2; column-gap: 20px; }
+  nav.toc { position: static; columns: 2; column-gap: 20px; max-height: none; overflow: visible; }
   nav.toc h2 { break-after: avoid; }
   header.top .theme { margin-left: 0; }
   td:first-child { white-space: normal; }
