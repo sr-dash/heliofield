@@ -59,3 +59,31 @@ details.table td { padding-left: 10px; }
   .tile .value { font-size: 19px; }
   header.top .theme { margin-left: 0; }
 }
+
+/* Embed code on the full page. */
+.filters .embed-btn { margin-left: auto; }
+.embed-out {
+  display: block; width: 100%; margin: -8px 0 16px; resize: vertical; padding: 8px;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+}
+.embed-only { display: none; }
+.embed-out[hidden] { display: none; }
+
+/* Embed (?embed=1): the charts alone. compact=1 also drops the summary,
+   the per-chart notes and the tables, for a side panel. */
+.embed header.top, .embed .lede, .embed footer.end, .embed .full-only, .embed .embed-btn { display: none; }
+.embed .embed-only { display: block; margin: 12px 0 0; }
+.embed .page { padding: 12px 14px 16px; }
+.embed body { background: transparent; }
+.compact body { font-size: 14px; }
+.compact .filters, .compact .tiles, .compact .chart .sub { display: none; }
+.compact .page { padding: 6px 10px 10px; }
+.compact .chart { margin: 10px 0 0; }
+.compact .chart:first-of-type { margin-top: 2px; }
+.compact .chart h2 { font-size: 14px; margin: 0 0 2px; }
+.compact .legend { font-size: 12px; gap: 2px 10px; }
+.compact .chart svg .tick { font-size: 10.5px; }
+.compact .embed-only { margin: 8px 0 0; font-size: 12.5px; }
+.legend .mark { color: var(--text); gap: 6px; }
+.lkey.dash { height: 0; border-top: 2px dashed var(--text); background: none; }

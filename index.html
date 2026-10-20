@@ -225,6 +225,7 @@
       <button id="viewEarth" title="From Earth (E)">From Earth</button><button id="viewNorth" title="From north (N)">From north</button><button id="viewFleet" title="Whole fleet (F)">Whole fleet</button>
     </div>
     <label><input type="checkbox" id="spin"> <span>Rotate slowly</span></label>
+    <label><input type="checkbox" id="seriesToggle"> <span>Solar-cycle panel</span></label>
   </details>
 
   <details>
@@ -263,6 +264,15 @@
   <span><i class="ln closed"></i><span>closed</span></span>
   <span><i class="ln hcs"></i><span>current sheet</span></span>
 </div>
+<aside id="seriesPanel" class="series-panel" aria-label="Solar-cycle series" hidden>
+  <div class="sp-head">
+    <span>Solar cycle since 2010</span>
+    <a href="series.html" target="_blank" rel="noopener" title="Open the full series page" aria-label="Open the full series page">↗</a>
+    <button id="spClose" class="icon" aria-label="Hide the solar-cycle panel" title="Hide (C)">×</button>
+  </div>
+  <iframe id="seriesFrame" title="Solar-cycle series: open flux, open area, current-sheet tilt and polar field per Carrington rotation since 2010"></iframe>
+  <p class="sp-hint">The dashed line marks the date shown. Click a rotation to open it.</p>
+</aside>
 <nav class="credits" aria-label="Related"><a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a> · <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> · <a href="https://github.com/sr-dash/heliofield/issues/new/choose">Report or suggest</a></nav>
 <div id="status" role="status" aria-live="polite"></div>
 

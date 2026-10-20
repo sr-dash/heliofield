@@ -40,6 +40,9 @@
     if (t !== "light" && t !== "dark") try { t = localStorage.getItem("hf.theme"); } catch (e) {}
     if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
     document.documentElement.dataset.theme = t;
+    const q = new URLSearchParams(location.search);
+    if (q.get("embed") === "1") document.documentElement.classList.add("embed");
+    if (q.get("embed") === "1" && q.get("compact") === "1") document.documentElement.classList.add("compact");
   })();
 </script>
 <link rel="stylesheet" href="css/guide.css">
@@ -62,7 +65,9 @@
   <button data-range="c24" aria-pressed="false">Cycle 24</button>
   <button data-range="c25" aria-pressed="false">Cycle 25</button>
   <button data-range="3y" aria-pressed="false">Last 3 years</button>
+  <button id="copyEmbed" class="embed-btn" type="button" title="Code to show these charts on another page">Copy embed code</button>
 </div>
+<textarea id="embedOut" class="embed-out" readonly rows="3" aria-label="Embed code" hidden></textarea>
 
 <section class="tiles" id="tiles" aria-label="Latest rotation"></section>
 
@@ -86,7 +91,8 @@
   <p class="sub">Mean photospheric B<sub>r</sub> poleward of 60°, gauss. The sign changes mark the polar reversals at solar maximum.</p>
 </section>
 
-<p class="muted small">Data: <a href="data/series/rotations.json">rotations.json</a> (one row per rotation), rebuilt when JSOC publishes a new rotation map. Sources and limitations are in the <a href="guide.html#series">guide</a>.</p>
+<p class="embed-only small"><a href="series.html" target="_blank" rel="noopener">Open the full series ↗</a></p>
+<p class="muted small full-only">Data: <a href="data/series/rotations.json">rotations.json</a> (one row per rotation), rebuilt when JSOC publishes a new rotation map. Sources and limitations are in the <a href="guide.html#series">guide</a>.</p>
 </div>
 
 <div class="tip" id="tip" role="status" aria-live="polite" hidden></div>

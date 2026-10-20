@@ -58,6 +58,9 @@ const lineMats = new Set();
 const WIDTH = { field: 1.6, ext: 1.3, spiral: 2.2, pil: 2.4 };
 function resize() {
   const w = innerWidth, h = innerHeight;
+  // A hidden tab or a collapsed iframe reports a zero size; an aspect of
+  // 0/0 would turn the camera, and the shared link, into NaN.
+  if (!w || !h) return;
   renderer.setSize(w, h);
   labels.setSize(w, h);
   for (const m of lineMats) m.resolution.set(w, h);
@@ -264,6 +267,7 @@ function showProduct(p) {
   $("src").title = p.meta.source.name;
   $("src").classList.toggle("computed", !!p.computed);
   syncUrl(); postState();
+  seriesPost({ mark: p.day });
 }
 
 function buildSun() {
@@ -527,9 +531,37 @@ function setTheme(name, remember = true) {
   scene.background.set(T().bg);
   paintLegend();
   if (state.product) { buildSun(); buildHelio(); }
+  seriesPost({ theme: name });
   syncUrl();
 }
 $("themeToggle").onclick = () => setTheme(currentTheme() === "dark" ? "light" : "dark");
+
+// ------------------------------------------------------------- solar cycle
+// The series page's compact embed, floating at the left. It marks the date
+// shown here, follows the theme, and a click on a rotation opens that date.
+// On by default on wide screens; ?series=0|1 forces it; C toggles it.
+let seriesReady = false;
+function seriesPost(msg) {
+  const f = $("seriesFrame");
+  if (seriesReady && f.contentWindow) f.contentWindow.postMessage({ type: "heliofield-series:set", ...msg }, "*");
+}
+function setSeries(on, remember = true) {
+  $("seriesPanel").hidden = !on;
+  $("seriesToggle").checked = on;
+  if (on && !$("seriesFrame").getAttribute("src")) {
+    seriesReady = false;
+    $("seriesFrame").src = `series.html?embed=1&compact=1&theme=${currentTheme()}${state.day ? `&mark=${state.day}` : ""}`;
+  }
+  if (remember && !EMBED) try { localStorage.setItem("hf.series", on ? "on" : "off"); } catch (e) {}
+}
+$("seriesToggle").addEventListener("change", (e) => setSeries(e.target.checked));
+$("spClose").onclick = () => setSeries(false);
+addEventListener("message", (e) => {
+  if (e.source !== $("seriesFrame").contentWindow) return;   // only our own panel
+  const d = e.data;
+  if (d?.type === "heliofield-series:ready") { seriesReady = true; seriesPost({ mark: state.day, theme: currentTheme() }); }
+  else if (d?.type === "heliofield-series:pick" && /^\d{4}-\d{2}-\d{2}$/.test(d.date)) openDate(d.date);
+});
 
 // ------------------------------------------------------------- panel
 const DEFAULTS = { v: 400, rmax: 1.2, ss: 0.25, lines: 250 };
@@ -702,7 +734,7 @@ function flyTo(pos, instant) {
 const dir = (lon, lat, d) => new THREE.Vector3(
   d * Math.cos(lat * DEG) * Math.cos(lon * DEG), d * Math.cos(lat * DEG) * Math.sin(lon * DEG), d * Math.sin(lat * DEG));
 // Back off on portrait screens so the source surface still fits across.
-const near = () => 9 / Math.min(1, camera.aspect * 1.6);
+const near = () => 9 / Math.min(1, (camera.aspect || 1) * 1.6);
 const VIEWS = {
   earth: () => dir(state.product.meta.L0, state.product.meta.B0, near()),
   north: () => dir(state.product.meta.L0 + 180, 89.5, near() * 1.2),
@@ -756,7 +788,8 @@ function syncUrl() {
   if (!state.day) return;
   const p = stateParams();
   $("embedOpen").href = base() + "?" + p;
-  for (const k of ["embed", "controls", "panel", "theme"]) if (params.has(k)) p.set(k, params.get(k));
+  for (const k of ["embed", "controls", "panel", "series"]) if (params.has(k)) p.set(k, params.get(k));
+  if (params.has("theme")) p.set("theme", currentTheme());     // a linked theme follows later switches
   history.replaceState(null, "", "?" + p);
 }
 
@@ -940,7 +973,8 @@ async function openDate(day, { ask = true } = {}) {
 $("busyCancel").onclick = () => { loading++; cancel(); recover(); };
 
 async function goDaily(day) {
-  ++loading; cancel();
+  // Supersedes any computation in progress, overlay included.
+  ++loading; cancel(); showProgress(false);
   $("status").textContent = "Loading " + day + "…";
   showProduct(await fetchDaily(day));
   if (view) setView(view, true);
@@ -973,6 +1007,7 @@ addEventListener("keydown", (e) => {
   else if (k === "l") setPanel(root.classList.contains("panel-closed"));
   else if (k === "escape" && !root.classList.contains("panel-closed")) { setPanel(false); $("menuBtn").focus(); }
   else if (k === "t") setTheme(currentTheme() === "dark" ? "light" : "dark");
+  else if (k === "c") setSeries($("seriesPanel").hidden);
   else if (k === "e") setView("earth");
   else if (k === "n") setView("north");
   else if (k === "f") setView("fleet");
@@ -1005,6 +1040,12 @@ addEventListener("message", async (e) => {
 // ------------------------------------------------------------- start
 async function start() {
   setTheme(currentTheme(), false);
+  {
+    const q = params.get("series");
+    let on = q === "1" ? true : q === "0" ? false : !EMBED && matchMedia("(min-width: 1100px)").matches;
+    if (!q && on) try { on = localStorage.getItem("hf.series") !== "off"; } catch (e) {}
+    setSeries(on, false);
+  }
   try {
     const idx = await fetch("data/index.json").then((r) => r.json());
     state.dates = idx.dates;
@@ -1026,7 +1067,7 @@ async function start() {
     // shared links do not ask first; the page itself does).
     const want = params.get("date");
     let ok = false;
-    if (want && want !== "latest" && !state.dates.includes(want.slice(0, 10))) ok = await openDate(want, { ask: !EMBED });
+    if (want && want !== "latest") ok = await openDate(want, { ask: !EMBED });
     if (!ok) await goDaily(state.dates[state.dates.length - 1]);
     const cam = (params.get("cam") || "").split(",").map(Number);
     if (view) setView(view, true);

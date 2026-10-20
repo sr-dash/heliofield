@@ -97,6 +97,14 @@ open flux is typically half the in-situ value at 1 au (the open flux problem,
 Linker et al. 2017); the tilt differs from WSO's line-of-sight values by several
 degrees; polar means rest on fields seen at a grazing angle.
 
+The viewer shows the same series in a floating panel at the left (`series=0|1`,
+key C) with the viewer's date marked; clicking a rotation opens it. The panel is
+the series page's own embed, `series.html?embed=1&compact=1&mark=YYYY-MM-DD`,
+which any page can use (`charts=`, `range=`, `theme=`) and drive with
+`postMessage({ type: "heliofield-series:set", mark, theme, range })`; it answers
+with `heliofield-series:pick` (the clicked rotation) and `heliofield-series:ready`.
+**Copy embed code** on the series page writes the `<iframe>`.
+
 ## Colours and themes
 
 Dark and light themes; one hue per role in both. The field colours (open +, open −,

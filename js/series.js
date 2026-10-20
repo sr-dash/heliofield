@@ -14,7 +14,13 @@ const RANGES = {
   c25: () => [Date.UTC(2019, 11, 15), Infinity],
   "3y": (last) => [last - 3 * 365.25 * DAY, Infinity],
 };
-const state = { range: "all", data: null };
+const params = new URLSearchParams(location.search);
+// Embed mode (?embed=1): the charts alone, for an iframe. compact=1 makes
+// them small enough for a side panel; charts= picks which; mark= draws the
+// date a host page (such as the 3D viewer) is showing.
+const EMBED = params.get("embed") === "1", COMPACT = EMBED && params.get("compact") === "1";
+const parseDay = (v) => (/^\d{4}-\d{2}-\d{2}/.test(v || "") ? Date.parse(v.slice(0, 10) + "T12:00:00Z") : null);
+const state = { range: "all", data: null, mark: parseDay(params.get("mark")) };
 
 const CHARTS = [
   { id: "flux", unit: "× 10²² Mx", fmt: (v) => v.toFixed(2), zero: true,
@@ -26,6 +32,19 @@ const CHARTS = [
   { id: "polar", unit: "G", fmt: (v) => (v > 0 ? "+" : "") + v.toFixed(2), zero: true, symmetric: true,
     series: [{ key: "polar_n", label: "North", slot: "a" }, { key: "polar_s", label: "South", slot: "b" }] },
 ];
+
+// Charts shown: all, or the ones named in ?charts=flux,tilt,...
+const WANT = (params.get("charts") || "").split(",").filter((c) => CHARTS.some((x) => x.id === c));
+const SHOWN = WANT.length ? CHARTS.filter((c) => WANT.includes(c.id)) : CHARTS;
+for (const c of CHARTS) if (!SHOWN.includes(c)) $(c.id)?.remove();
+
+// The rotation nearest a time, if one lies within half a rotation of it.
+function rotationAt(tm) {
+  const t = state.data.t;
+  let best = -1, gap = Infinity;
+  t.forEach((x, i) => { const g = Math.abs(x - tm); if (g < gap) { gap = g; best = i; } });
+  return gap <= 14 * DAY ? best : -1;
+}
 
 // Centred running mean; a value needs at least `need` of its `n` neighbours.
 function runningMean(v, n = 13, need = 7) {
@@ -79,7 +98,7 @@ function draw(cfg) {
   if (!fig) {
     fig = document.createElement("figure");
     sec.append(fig);
-    sec.append(tableView(cfg));
+    if (!COMPACT) sec.append(tableView(cfg));
   }
   fig.replaceChildren();
 
@@ -97,13 +116,20 @@ function draw(cfg) {
   const thin = document.createElement("i"); thin.className = "lkey thin";
   const thick = document.createElement("i"); thick.className = "lkey";
   how.append(thin, document.createTextNode("each rotation"), thick, document.createTextNode("13-rotation mean"));
-  leg.append(how);
+  if (!COMPACT) leg.append(how);
+  const mi = state.mark != null ? rotationAt(state.mark) : -1;
+  if (state.mark != null) {
+    const mk = document.createElement("span"); mk.className = "mark";
+    const k = document.createElement("i"); k.className = "lkey dash";
+    mk.append(k, document.createTextNode(new Date(state.mark).toISOString().slice(0, 10) + (mi >= 0 ? ` · CR ${d.cr[mi]}` : " · after the latest rotation map")));
+    leg.append(mk);
+  }
   fig.append(leg);
 
   const t = d.t, [r0, r1] = RANGES[state.range](t[t.length - 1]);
   const idx = t.map((x, i) => i).filter((i) => t[i] >= r0 && t[i] <= r1);
-  const W = Math.max(280, fig.clientWidth), H = W < 560 ? 200 : 240;
-  const m = { l: 46, r: W < 560 ? 12 : 58, t: 10, b: 26 };
+  const W = Math.max(COMPACT ? 200 : 280, fig.clientWidth), H = COMPACT ? 96 : W < 560 ? 200 : 240;
+  const m = COMPACT ? { l: 40, r: 10, t: 8, b: 22 } : { l: 46, r: W < 560 ? 12 : 58, t: 10, b: 26 };
   const scale = cfg.scale || 1;
   const vals = cfg.series.map((s) => d[s.key].map((v) => (v == null ? null : v * scale)));
   const means = vals.map((v) => runningMean(v));
@@ -114,7 +140,9 @@ function draw(cfg) {
   if (cfg.max) hi = cfg.max;
   const yt = niceTicks(lo, hi);
   lo = Math.min(lo, yt[0]); hi = Math.max(hi, yt[yt.length - 1]);
-  const xa = t[idx[0]], xb = t[idx[idx.length - 1]];
+  const xa = t[idx[0]];
+  // A marked date newer than the latest rotation still gets its line.
+  const xb = Math.max(t[idx[idx.length - 1]], state.mark != null && state.mark >= xa && state.mark <= r1 ? state.mark : -Infinity);
   const X = (x) => m.l + ((x - xa) / (xb - xa || 1)) * (W - m.l - m.r);
   const Y = (y) => m.t + (1 - (y - lo) / (hi - lo || 1)) * (H - m.t - m.b);
 
@@ -154,6 +182,16 @@ function draw(cfg) {
     const c = th.chart[s.slot];
     el("path", { d: path(means[k]), fill: "none", stroke: c, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
   });
+  // The marked date: a dashed line, and a ring on each series at the
+  // rotation that covers it.
+  if (state.mark != null && state.mark >= xa && state.mark <= xb) {
+    el("line", { x1: X(state.mark), x2: X(state.mark), y1: m.t, y2: H - m.b, stroke: ink.text, "stroke-width": 1.5, "stroke-dasharray": "4 3" }, svg);
+    if (mi >= 0 && idx.includes(mi)) cfg.series.forEach((s, k) => {
+      if (vals[k][mi] == null) return;
+      el("circle", { cx: X(t[mi]), cy: Y(vals[k][mi]), r: 5, fill: th.chart[s.slot], stroke: ink.text, "stroke-width": 2 }, svg);
+    });
+  }
+
   // Direct end labels on the mean lines, when there is room and they don't collide.
   if (m.r > 40 && cfg.series.length > 1) {
     const ends = cfg.series.map((s, k) => {
@@ -192,6 +230,15 @@ function draw(cfg) {
   };
   hit.addEventListener("pointermove", (e) => show(nearest(e.clientX), e.clientX, e.clientY));
   hit.addEventListener("pointerdown", (e) => show(nearest(e.clientX), e.clientX, e.clientY));
+  // In an embed, a click hands the rotation to the host page (the viewer
+  // opens that date).
+  if (EMBED && window.parent !== window) {
+    hit.style.cursor = "pointer";
+    hit.addEventListener("click", (e) => {
+      const i = idx[nearest(e.clientX)];
+      window.parent.postMessage({ type: "heliofield-series:pick", date: d.mid[i], cr: d.cr[i] }, "*");
+    });
+  }
   svg.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); hideTip(); });
   svg.addEventListener("focus", () => show(cur));
   svg.addEventListener("blur", () => { cross.setAttribute("visibility", "hidden"); hideTip(); });
@@ -252,13 +299,13 @@ function tableView(cfg) {
   return det;
 }
 
-function render() { if (state.data) { tiles(); CHARTS.forEach(draw); } }
+function render() { if (state.data) { if (!COMPACT) tiles(); SHOWN.forEach(draw); } }
 
 // ------------------------------------------------------------------ controls
-for (const b of document.querySelectorAll(".filters button")) {
+for (const b of document.querySelectorAll(".filters button[data-range]")) {
   b.onclick = () => {
     state.range = b.dataset.range;
-    for (const o of document.querySelectorAll(".filters button")) {
+    for (const o of document.querySelectorAll(".filters button[data-range]")) {
       o.classList.toggle("on", o === b); o.setAttribute("aria-pressed", o === b);
     }
     const u = new URL(location.href);
@@ -281,6 +328,31 @@ new ResizeObserver(() => {
   if (Math.abs(w - lastW) > 4) { lastW = w; render(); }
 }).observe(document.querySelector(".page"));
 
+// Host pages drive an embed with
+//   frame.contentWindow.postMessage({ type: "heliofield-series:set", mark: "2014-03-12", theme: "light", range: "c24" }, "*")
+// and hear { type: "heliofield-series:pick", date, cr } when a rotation is clicked.
+addEventListener("message", (e) => {
+  const m = e.data;
+  if (!m || m.type !== "heliofield-series:set") return;
+  if ("mark" in m) state.mark = parseDay(m.mark);
+  if (m.theme === "light" || m.theme === "dark") { root.dataset.theme = m.theme; themeLabel(); }
+  if (m.range && RANGES[m.range]) { document.querySelector(`.filters button[data-range="${m.range}"]`)?.click(); return; }
+  render();
+});
+
+// Embed code for the current range (and charts, if a subset is shown).
+$("copyEmbed")?.addEventListener("click", async (e) => {
+  const u = new URL("series.html", location.href);
+  u.searchParams.set("embed", "1");
+  if (state.range !== "all") u.searchParams.set("range", state.range);
+  if (WANT.length) u.searchParams.set("charts", WANT.join(","));
+  const code = `<iframe src="${u.href}" title="HelioField solar-cycle series: PFSS open flux, open area, current-sheet tilt and polar field since 2010" `
+    + `width="100%" height="900" style="border:0;border-radius:12px" loading="lazy"></iframe>`;
+  const out = $("embedOut");
+  out.hidden = false; out.value = code; out.select();
+  try { await navigator.clipboard.writeText(code); e.target.textContent = "Copied"; setTimeout(() => { e.target.textContent = "Copy embed code"; }, 1400); } catch (err) { /* the text is selected for copying */ }
+});
+
 (async () => {
   try {
     const d = await fetch("data/series/rotations.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
@@ -289,7 +361,9 @@ new ResizeObserver(() => {
     const r = new URLSearchParams(location.search).get("range");
     if (r && RANGES[r]) document.querySelector(`.filters button[data-range="${r}"]`)?.click();
     else render();
+    if (EMBED && window.parent !== window) window.parent.postMessage({ type: "heliofield-series:ready" }, "*");
   } catch (e) {
+    console.error(e);
     $("tiles").textContent = "The series could not be loaded.";
   }
 })();

@@ -127,6 +127,7 @@
     <tr><td><kbd>E</kbd> <kbd>N</kbd> <kbd>F</kbd></td><td>From Earth, from north, whole fleet</td></tr>
     <tr><td><kbd>R</kbd></td><td>Start or stop slow rotation</td></tr>
     <tr><td><kbd>T</kbd></td><td>Switch between the dark and light theme</td></tr>
+    <tr><td><kbd>C</kbd></td><td>Show or hide the solar-cycle panel</td></tr>
   </table>
 </section>
 
@@ -213,6 +214,7 @@
     <tr><td><code>rotate</code></td><td><code>1</code> to rotate slowly</td><td>off</td></tr>
     <tr><td><code>lines</code></td><td>Number of field lines drawn</td><td>250</td></tr>
     <tr><td><code>panel</code></td><td><code>0</code> or <code>1</code> to start with the menu closed or open</td><td>last choice</td></tr>
+    <tr><td><code>series</code></td><td><code>0</code> or <code>1</code> to hide or show the solar-cycle panel</td><td>shown on wide screens</td></tr>
     <tr><td><code>embed</code></td><td><code>1</code> for the embedded layout</td><td>off</td></tr>
     <tr><td><code>controls</code></td><td><code>0</code> hides the date bar in an embed</td><td>shown</td></tr>
     <tr><td><code>theme</code></td><td><code>dark</code> or <code>light</code></td><td>system</td></tr>
@@ -387,6 +389,27 @@ addEventListener("message", (e) =&gt; {
     <li><b>Polar field</b>: the mean photospheric B<sub>r</sub> of all cells poleward of 60° in each hemisphere.</li>
   </ul>
   <p>The numbers are for this model on these maps, not for the Sun as such. The open flux from PFSS is typically about half of what spacecraft measure at 1 au, a long-standing difference known as the open flux problem (Linker et al. 2017); it depends on the source-surface height and on the polar fields. WSO's tilt uses line-of-sight maps and other source-surface heights, so its values differ from these by several degrees, most near maximum. The polar means are dominated by fields seen at a grazing angle, and the annual swing of B<sub>0</sub> by ±7° hides each pole for part of the year.</p>
+  <h4 id="series-panel">The solar-cycle panel in the viewer</h4>
+  <p>On wide screens the viewer shows the four series in a panel at the left; <b>View → Solar-cycle panel</b> or <kbd>C</kbd> shows or hides it, and on phones it opens as a sheet at the bottom. A dashed line marks the date the viewer is showing, and a ring on each series marks the rotation map that covers it; a daily product newer than the latest rotation map is marked past the last point. The marker follows every change of date. Click a point on any chart to open the middle of that rotation in the viewer, computed in your browser as for any past date. <b>↗</b> opens the full series page.</p>
+  <h4 id="series-embed">Embedding the series</h4>
+  <p><b>Copy embed code</b> on the series page writes an <code>&lt;iframe&gt;</code> for the range on screen. The series page takes:</p>
+  <table>
+    <tr><th>Parameter</th><th>Values</th></tr>
+    <tr><td><code>embed</code></td><td><code>1</code> for the charts alone, without the page around them</td></tr>
+    <tr><td><code>compact</code></td><td><code>1</code> (with <code>embed=1</code>) for small charts without the summary, notes and tables, as in the viewer's panel</td></tr>
+    <tr><td><code>charts</code></td><td>Comma list of <code>flux, area, tilt, polar</code></td></tr>
+    <tr><td><code>range</code></td><td><code>all</code>, <code>c24</code>, <code>c25</code> or <code>3y</code></td></tr>
+    <tr><td><code>mark</code></td><td><code>YYYY-MM-DD</code>: draw the dashed date marker</td></tr>
+    <tr><td><code>theme</code></td><td><code>dark</code> or <code>light</code></td></tr>
+  </table>
+<pre><code>&lt;iframe src="https://sr-dash.github.io/heliofield/series.html?embed=1&amp;compact=1&amp;charts=flux,tilt&amp;mark=2014-03-12"
+        title="HelioField solar-cycle series" width="360" height="420" style="border:0"&gt;&lt;/iframe&gt;</code></pre>
+  <p>A host page moves the marker or changes the theme or range without reloading, and hears which rotation was clicked:</p>
+<pre><code>frame.contentWindow.postMessage({ type: "heliofield-series:set", mark: "2020-05-08", theme: "light", range: "c25" }, "*");
+addEventListener("message", (e) =&gt; {
+  if (e.data?.type === "heliofield-series:pick") console.log(e.data.date, e.data.cr);   // middle of the clicked rotation
+});</code></pre>
+  <p>The page also sends <code>{ type: "heliofield-series:ready" }</code> once its data are drawn.</p>
 </section>
 
 <section id="colours">
