@@ -6,6 +6,11 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
+import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
+import { Line2 } from "three/addons/lines/Line2.js";
+import { LineGeometry } from "three/addons/lines/LineGeometry.js";
+import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { THEMES, divergingLUT, lutColor, currentTheme } from "./theme.js";
 import { historyIndex, rotationFor, sourceUrl, fleetFor, compute, cancel, unflatten } from "./history.js";
 import { compose, savePNG, savePDF } from "./snapshot.js";
@@ -22,7 +27,7 @@ const params = new URLSearchParams(location.search);
 const EMBED = root.classList.contains("embed");
 const state = {
   dates: [], day: null, product: null,
-  vsw: 400, rmaxAu: 1.2, logScale: true, rss: 2.5,
+  vsw: 400, rmaxAu: 1.2, logScale: true, rss: 2.5, nLines: 250,
 };
 const T = () => THEMES[currentTheme()];
 
@@ -45,10 +50,16 @@ controls.enableDamping = true;
 controls.minDistance = 1.3;
 controls.maxDistance = 2000;
 
+// WebGL draws ordinary lines one pixel wide whatever the material says, so
+// lines with a width use three's screen-space "fat" lines. Their materials
+// need the viewport size, kept current here.
+const lineMats = new Set();
+const WIDTH = { field: 1.6, spiral: 2.2, pil: 2.4 };
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h);
   labels.setSize(w, h);
+  for (const m of lineMats) m.resolution.set(w, h);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
 }
@@ -118,12 +129,18 @@ function clear(g) {
     g.remove(o);
     o.traverse((c) => {
       c.geometry?.dispose();
-      if (c.material) (Array.isArray(c.material) ? c.material : [c.material]).forEach((m) => m.dispose());
+      if (c.material) (Array.isArray(c.material) ? c.material : [c.material]).forEach((m) => { lineMats.delete(m); m.dispose(); });
       if (c.isCSS2DObject) c.element.remove();
     });
   }
 }
-function segments(polys, colorOf, opacity) {
+function lineMaterial(width, opacity, extra = {}) {
+  const m = new LineMaterial({ linewidth: width, transparent: opacity < 1, opacity, ...extra });
+  m.resolution.set(innerWidth, innerHeight);
+  lineMats.add(m);
+  return m;
+}
+function segments(polys, colorOf, opacity, width = WIDTH.field) {
   const pos = [], col = [], c = new THREE.Color();
   polys.forEach((p, i) => {
     c.set(colorOf(i));
@@ -132,14 +149,26 @@ function segments(polys, colorOf, opacity) {
       col.push(c.r, c.g, c.b, c.r, c.g, c.b);
     }
   });
-  const g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
-  return new THREE.LineSegments(g, new THREE.LineBasicMaterial({ vertexColors: true, transparent: opacity < 1, opacity }));
+  const g = new LineSegmentsGeometry();
+  if (!pos.length) return new THREE.Group();
+  g.setPositions(pos);
+  g.setColors(col);
+  return new LineSegments2(g, lineMaterial(width, opacity, { vertexColors: true }));
 }
-function line(points, color, opacity = 1) {
-  const g = new THREE.BufferGeometry().setFromPoints(points);
-  return new THREE.Line(g, new THREE.LineBasicMaterial({ color, transparent: opacity < 1, opacity }));
+function line(points, color, opacity = 1, width = WIDTH.spiral) {
+  const g = new LineGeometry();
+  g.setPositions(points.flatMap((p) => [p.x, p.y, p.z]));
+  return new Line2(g, lineMaterial(width, opacity, { color }));
+}
+// A fixed shuffle of a day's field lines, so the count control adds and
+// removes lines without the rest jumping about, and closed and open lines
+// keep their proportions at any count.
+function lineOrder(n) {
+  const idx = Array.from({ length: n }, (_, i) => i);
+  let seed = 7;
+  const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  return idx;
 }
 function dotTexture() {
   const c = document.createElement("canvas");
@@ -196,10 +225,7 @@ function buildSun() {
     new THREE.MeshBasicMaterial({ color: th.occluder }));
   scene.add(G.photo.userData.dark);
 
-  const closed = [], open = [], openKind = [];
-  for (let i = 0; i < nf; i++) (kind[i] ? (open.push(p.polys[i]), openKind.push(kind[i])) : closed.push(p.polys[i]));
-  G.closed.add(segments(closed, () => th.closed, 0.8));
-  G.open.add(segments(open, (i) => (openKind[i] > 0 ? th.pos : th.neg), 1));
+  buildLines();
 
   const ss = new THREE.Mesh(new THREE.SphereGeometry(state.rss, 96, 48), brShader(p.ssTex, +$("ssAlpha").value));
   ss.renderOrder = 2;
@@ -207,8 +233,23 @@ function buildSun() {
   for (const h of m.hcs) {
     const pts = [];
     for (let k = 0; k < h.length; k += 2) pts.push(sph(state.rss * 1.004, h[k], h[k + 1]));
-    G.pil.add(line(pts, th.hcs));
+    G.pil.add(line(pts, th.hcs, 1, WIDTH.pil));
   }
+  applyVisibility();
+}
+
+// Field lines alone, so the count control does not rebuild anything else.
+function buildLines() {
+  const p = state.product, kind = p.meta.lines.kind, nf = p.meta.lines.count, th = T();
+  clear(G.closed); clear(G.open);
+  p.order ??= lineOrder(nf);
+  const keep = p.order.slice(0, Math.min(state.nLines, nf));
+  const closed = [], open = [], openKind = [];
+  for (const i of keep) (kind[i] ? (open.push(p.polys[i]), openKind.push(kind[i])) : closed.push(p.polys[i]));
+  G.closed.add(segments(closed, () => th.closed, 0.85));
+  G.open.add(segments(open, (i) => (openKind[i] > 0 ? th.pos : th.neg), 1));
+  $("nlOut").textContent = keep.length;
+  $("nLines").max = nf;
   applyVisibility();
 }
 
@@ -318,7 +359,7 @@ function setTheme(name, remember = true) {
 $("themeToggle").onclick = () => setTheme(currentTheme() === "dark" ? "light" : "dark");
 
 // ------------------------------------------------------------- panel
-const DEFAULTS = { v: 400, rmax: 1.2, ss: 0.25 };
+const DEFAULTS = { v: 400, rmax: 1.2, ss: 0.25, lines: 250 };
 const LAYERS = { photo: "lyrPhoto", closed: "lyrClosed", open: "lyrOpen", ss: "lyrSS",
   pil: "lyrPIL", hcs: "lyrHCS", fleet: "lyrFleet", spiral: "lyrSpiral" };
 
@@ -340,6 +381,12 @@ function setAlpha(a) {
   G.ss.children.forEach((m) => { m.material.uniforms.alpha.value = +a; });
 }
 $("ssAlpha").addEventListener("input", (e) => { setAlpha(e.target.value); syncUrl(); });
+function setNLines(n) {
+  state.nLines = n; $("nLines").value = n;
+  if (state.product) buildLines(); else $("nlOut").textContent = n;
+}
+$("nLines").addEventListener("input", (e) => { setNLines(+e.target.value); });
+$("nLines").addEventListener("change", () => syncUrl());
 function setV(v) {
   state.vsw = v; $("vsw").value = v; $("vOut").textContent = v;
   if (state.product) buildHelio();
@@ -391,21 +438,30 @@ function feet() {
     <table><tr><th></th><th>r [au]</th><th>Lon</th><th>Lat</th></tr>${rows}</table>`;
 }
 
-// Folding the panel. Remembered on wide screens; ?panel=0|1 forces it.
+// The menu: a dropdown under the hamburger button. Remembered on wide
+// screens; ?panel=0|1 forces it; L and Escape work from the keyboard.
 const narrow = matchMedia("(max-width: 760px)");
 function setPanel(open) {
   root.classList.toggle("panel-closed", !open);
-  $("panelToggle").setAttribute("aria-expanded", open);
+  $("menuBtn").setAttribute("aria-expanded", open);
+  $("menuBtn").setAttribute("aria-label", open ? "Close the menu" : "Open the menu");
   if (!EMBED && !narrow.matches) try { localStorage.setItem("hf.panel", open ? "open" : "closed"); } catch (e) {}
 }
-$("panelToggle").setAttribute("aria-expanded", !root.classList.contains("panel-closed"));
-$("panelToggle").onclick = () => setPanel(root.classList.contains("panel-closed"));
-$("panelClose").onclick = () => { setPanel(false); $("panelToggle").focus(); };
+setPanel(!root.classList.contains("panel-closed"));
+$("menuBtn").onclick = () => setPanel(root.classList.contains("panel-closed"));
+// The menu sits just below (or, in an embed, above) the bar, whose height
+// changes when it wraps on a phone.
+const bar = document.querySelector(".bar");
+const barHeight = () => root.style.setProperty("--bar-h", bar.offsetHeight + "px");
+new ResizeObserver(barHeight).observe(bar);
+barHeight();
 
 // ------------------------------------------------------------- views
 let tween = null, view = null;
 function flyTo(pos, instant) {
-  if (instant) { camera.position.copy(pos); controls.target.set(0, 0, 0); return; }
+  // Aim at once: otherwise the camera only turns to the Sun on the next
+  // animation frame, which a background tab may not run before a snapshot.
+  if (instant) { camera.position.copy(pos); controls.target.set(0, 0, 0); controls.update(); return; }
   const from = camera.position.clone(), t0 = performance.now();
   tween = (now) => {
     const t = Math.min((now - t0) / 700, 1), e = t * t * (3 - 2 * t);
@@ -456,6 +512,7 @@ function stateParams() {
   if (state.rmaxAu !== DEFAULTS.rmax) p.set("rmax", state.rmaxAu);
   if (!state.logScale) p.set("scale", "true");
   if (+$("ssAlpha").value !== DEFAULTS.ss) p.set("ss", $("ssAlpha").value);
+  if (state.nLines !== DEFAULTS.lines) p.set("lines", state.nLines);
   if (view) p.set("view", view); else p.set("cam", camParam());
   if (controls.autoRotate) p.set("rotate", "1");
   return p;
@@ -489,6 +546,7 @@ $("copyEmbed").onclick = (e) => {
 
 // ------------------------------------------------------------- snapshots
 function snapshotCanvas() {
+  controls.update();
   const m = state.product.meta, th = T(), cs = getComputedStyle(root);
   const legend = [
     { label: "Br > 0", color: lutColor(LUT_DATA, 1), kind: "swatch" },
@@ -659,6 +717,7 @@ addEventListener("keydown", (e) => {
   if (k === "arrowleft") step(-1);
   else if (k === "arrowright") step(1);
   else if (k === "l") setPanel(root.classList.contains("panel-closed"));
+  else if (k === "escape" && !root.classList.contains("panel-closed")) { setPanel(false); $("menuBtn").focus(); }
   else if (k === "t") setTheme(currentTheme() === "dark" ? "light" : "dark");
   else if (k === "e") setView("earth");
   else if (k === "n") setView("north");
@@ -703,6 +762,8 @@ async function start() {
     const a = params.get("ss");
     if (a !== null && +a >= 0 && +a <= 1) $("ssAlpha").value = a;
     setSpin(params.get("rotate") === "1");
+    const nl = +params.get("lines");
+    if (nl >= 20 && nl <= 2000) setNLines(nl);
     if (VIEWS[params.get("view")]) view = params.get("view");
     // A daily product opens directly; another date is computed (embeds and
     // shared links do not ask first; the page itself does).

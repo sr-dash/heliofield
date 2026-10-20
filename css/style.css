@@ -4,7 +4,7 @@
    on both the background and the panel in each theme. */
 :root, :root[data-theme="dark"] {
   --bg: #080b14;
-  --panel: rgba(15, 20, 31, 0.93);
+  --panel: rgba(15, 20, 31, 0.97);
   --line: rgba(255, 255, 255, 0.13);
   --text: #e8eaf0;
   --muted: #a3abbb;
@@ -18,7 +18,7 @@
 }
 :root[data-theme="light"] {
   --bg: #f6f3ec;
-  --panel: rgba(255, 253, 248, 0.95);
+  --panel: rgba(255, 253, 248, 0.98);
   --line: rgba(27, 32, 48, 0.15);
   --text: #1b2030;
   --muted: #545c6c;
@@ -30,7 +30,7 @@
   --warn: #7a4a00;
   color-scheme: light;
 }
-:root { --panel-w: 300px; }
+:root { --panel-w: 310px; --bar-h: 62px; --ease: cubic-bezier(.2, .8, .2, 1); }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; }
 body {
@@ -58,11 +58,10 @@ button.primary:hover { opacity: .9; background: var(--text); }
 .bar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 3;
   display: flex; align-items: center; gap: 10px;
-  padding: 12px calc(var(--panel-w) + 26px) 12px 18px;
+  padding: 12px 14px 12px 18px;
   background: linear-gradient(var(--bg) 40%, transparent);
-  pointer-events: none; transition: padding-right .2s;
+  pointer-events: none;
 }
-.panel-closed .bar { padding-right: 18px; }
 .bar > * { pointer-events: auto; }
 .brand { display: flex; flex-direction: column; line-height: 1.2; margin-right: auto; }
 .brand strong { font-size: 19px; letter-spacing: .01em; }
@@ -84,24 +83,37 @@ button.primary:hover { opacity: .9; background: var(--text); }
 .theme-toggle .i-moon { fill: currentColor; stroke: none; }
 .theme-toggle .i-moon, [data-theme="light"] .theme-toggle .i-sun { display: none; }
 [data-theme="light"] .theme-toggle .i-moon { display: block; }
-.panel-toggle { display: none; }
-.panel-closed .panel-toggle { display: inline-block; }
+/* Hamburger: three bars that fold into a cross while the menu is open. */
+.menu-btn { width: 40px; padding: 0; display: grid; place-items: center; }
+.menu-btn .bars { position: relative; width: 18px; height: 14px; }
+.menu-btn .bars i {
+  position: absolute; left: 0; width: 18px; height: 2px; border-radius: 2px; background: currentColor;
+  transition: transform .22s var(--ease), opacity .15s ease;
+}
+.menu-btn .bars i:nth-child(1) { top: 0; }
+.menu-btn .bars i:nth-child(2) { top: 6px; }
+.menu-btn .bars i:nth-child(3) { top: 12px; }
+.menu-btn[aria-expanded="true"] .bars i:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.menu-btn[aria-expanded="true"] .bars i:nth-child(2) { opacity: 0; transform: scaleX(.3); }
+.menu-btn[aria-expanded="true"] .bars i:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+.menu-btn[aria-expanded="true"] { background: var(--control-hover); }
 
-/* ---------- panel ---------- */
+/* ---------- menu ----------
+   A dropdown under the hamburger. Only opacity and transform animate (both
+   run on the compositor), there is no backdrop blur to repaint, and nothing
+   else on the page moves, so opening and closing stay smooth. */
 #panel {
-  position: fixed; top: 10px; right: 10px; bottom: 10px; width: var(--panel-w); z-index: 4;
-  overflow-y: auto; padding: 0 16px 12px; border-radius: 12px; font-size: 14.5px;
-  background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(8px); box-shadow: var(--shadow);
-  transition: transform .2s ease, opacity .2s ease;
+  position: fixed; top: calc(var(--bar-h) + 2px); right: 12px; width: var(--panel-w); z-index: 4;
+  max-height: calc(100vh - var(--bar-h) - 16px); max-height: calc(100dvh - var(--bar-h) - 16px);
+  overflow-y: auto; overscroll-behavior: contain; padding: 2px 16px 12px; border-radius: 12px; font-size: 14.5px;
+  background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow);
+  transform-origin: top right; will-change: transform, opacity;
+  transition: opacity .18s ease, transform .24s var(--ease), visibility 0s;
 }
-.panel-closed #panel { transform: translateX(calc(100% + 20px)); opacity: 0; pointer-events: none; }
-.panel-head {
-  position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between;
-  margin: 0 -16px; padding: 10px 10px 8px 16px; background: var(--panel);
-  font-weight: 650; font-size: 15.5px; border-bottom: 1px solid var(--line);
+.panel-closed #panel {
+  opacity: 0; transform: translateY(-8px) scale(.97); visibility: hidden; pointer-events: none;
+  transition: opacity .14s ease, transform .18s ease, visibility 0s linear .18s;
 }
-button.icon { padding: 0 9px; font-size: 22px; line-height: 30px; border-color: transparent; background: none; }
-button.icon:hover { background: var(--control-hover); }
 
 #panel details { border-bottom: 1px solid var(--line); padding: 2px 0 10px; }
 #panel details:not([open]) { padding-bottom: 2px; }
@@ -211,8 +223,8 @@ dialog .noask { display: flex; gap: 8px; align-items: center; color: var(--muted
 }
 .embed .brand, .embed .guide-link, .embed #legend, .embed .latest { display: none; }
 .embed .embed-open { display: inline-block; margin-left: auto; font-weight: 650; font-size: 13px; }
-.embed .panel-toggle { order: 3; }
-.embed #panel { bottom: 58px; }
+.embed #panel { top: auto; bottom: calc(var(--bar-h) + 2px); transform-origin: bottom right; }
+.embed.panel-closed #panel { transform: translateY(8px) scale(.97); }
 .no-controls .bar { display: none; }
 
 /* ---------- narrow screens: panel becomes a bottom sheet ---------- */
@@ -223,13 +235,10 @@ dialog .noask { display: flex; gap: 8px; align-items: center; color: var(--muted
   .bar button, .bar input[type=date] { padding: 4px 7px; font-size: 13.5px; }
   .theme-toggle { width: 34px; padding: 0; margin-left: auto; }
   .src { padding: 2px 6px; }
-  .panel-toggle { display: inline-block; }
-  #panel {
-    top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 62vh;
-  }
-  .panel-closed #panel { transform: translateY(calc(100% + 20px)); }
+  .menu-btn { width: 36px; }
+  #panel { left: 8px; right: 8px; width: auto; transform-origin: top center; }
   #legend { bottom: 8px; left: 8px; right: 8px; font-size: 12.5px; gap: 4px 12px; padding: 6px 10px; }
-  .embed #panel { bottom: 56px; max-height: calc(100% - 66px); }
+  .embed #panel { max-height: calc(100% - var(--bar-h) - 12px); transform-origin: bottom center; }
 }
 @media (prefers-reduced-motion: reduce) {
   #panel, .bar { transition: none; }

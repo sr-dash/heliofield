@@ -25,8 +25,8 @@ python3 -m http.server 8811
 Then open <http://localhost:8811/>. How to use the viewer, and how everything
 is computed, is on the guide page: [`guide.html`](https://sr-dash.github.io/heliofield/guide.html).
 
-The URL holds the full state (`date`, `v`, `layers`, `view` or `cam`, `rmax`,
-`scale`, `ss`, `rotate`, `panel`), so any view can be linked.
+The URL holds the full state (`date`, `v`, `layers`, `lines`, `view` or `cam`,
+`rmax`, `scale`, `ss`, `rotate`, `panel`, `theme`), so any view can be linked.
 
 ## Any date since 2010
 

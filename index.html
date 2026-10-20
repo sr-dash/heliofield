@@ -52,20 +52,18 @@
     <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
     <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
   </button>
-  <button id="panelToggle" class="panel-toggle" aria-controls="panel" aria-expanded="true" title="Show or hide the panel (L)">Layers</button>
+  <button id="menuBtn" class="menu-btn" aria-controls="panel" aria-expanded="false" aria-label="Open the menu" title="Menu (L)">
+    <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
+  </button>
 </header>
 
 <aside id="panel" aria-label="Layers and view">
-  <div class="panel-head">
-    <span>Layers &amp; view</span>
-    <button id="panelClose" class="icon" aria-label="Hide panel" title="Hide panel (L)">×</button>
-  </div>
-
   <details open>
     <summary>Sun <a class="help" href="guide.html#layers-sun" title="What these layers show">?</a></summary>
     <label><input type="checkbox" id="lyrPhoto" checked> <span>Photospheric B<sub>r</sub></span></label>
     <label><input type="checkbox" id="lyrClosed" checked> <span><i class="key ln closed"></i>Closed field lines</span></label>
     <label><input type="checkbox" id="lyrOpen" checked> <span><i class="key ln op"></i><i class="key ln on"></i>Open field lines</span></label>
+    <label class="slider sub"><span>Lines drawn <output id="nlOut">250</output></span><input type="range" id="nLines" min="50" max="740" step="10" value="250" aria-label="Number of field lines drawn"></label>
     <label><input type="checkbox" id="lyrSS" checked> <span>Source surface B<sub>r</sub></span></label>
     <label class="slider sub"><span>Opacity</span><input type="range" id="ssAlpha" min="0" max="1" step="0.05" value="0.25"></label>
     <label><input type="checkbox" id="lyrPIL" checked> <span><i class="key ln hcs"></i>Neutral line</span></label>

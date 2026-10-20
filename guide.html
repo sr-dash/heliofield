@@ -61,7 +61,7 @@
     <tr><td>Zoom</td><td>Scroll wheel</td><td>Pinch</td></tr>
     <tr><td>Pan</td><td>Right-drag, or Shift-drag</td><td>Drag with two fingers</td></tr>
   </table>
-  <p>The Sun's rotation axis always points up the screen. Three preset views sit in the panel's <b>View</b> section:</p>
+  <p>The Sun's rotation axis always points up the screen. Three preset views sit in the menu's <b>View</b> section:</p>
   <ul>
     <li><b>From Earth</b> looks at the Sun along the Sun–Earth line, as a ground telescope would see it.</li>
     <li><b>From north</b> looks down on the solar north pole, with Earth towards the top of the screen.</li>
@@ -72,7 +72,8 @@
   <table>
     <tr><th>Key</th><th>Does</th></tr>
     <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Previous or next day</td></tr>
-    <tr><td><kbd>L</kbd></td><td>Show or hide the panel</td></tr>
+    <tr><td><kbd>L</kbd></td><td>Open or close the menu</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Close the menu</td></tr>
     <tr><td><kbd>E</kbd> <kbd>N</kbd> <kbd>F</kbd></td><td>From Earth, from north, whole fleet</td></tr>
     <tr><td><kbd>R</kbd></td><td>Start or stop slow rotation</td></tr>
     <tr><td><kbd>T</kbd></td><td>Switch between the dark and light theme</td></tr>
@@ -105,6 +106,7 @@
     <tr><td>Photospheric B<sub>r</sub></td><td>The radial magnetic field at the solar surface. Gold is outward and cerulean is inward, around a neutral silver. The colours saturate at ±20 G, so weak quiet-Sun field is visible as well as active regions.</td></tr>
     <tr><td>Closed field lines</td><td>Violet. Lines that leave the surface and return to it. They outline active-region loops and the large helmet streamers.</td></tr>
     <tr><td>Open field lines</td><td>Lines that reach the source surface and are carried into the solar wind. Gold lines leave outward-polarity regions and cerulean lines inward ones. They root in coronal holes.</td></tr>
+    <tr><td>Lines drawn</td><td>How many of the day's traced field lines are drawn, from 50 to all of them (usually 740). The default of 250 keeps the corona readable. The subset is fixed for each day, so moving the slider adds or removes lines without the others changing, and closed and open lines keep their proportions.</td></tr>
     <tr><td>Source surface B<sub>r</sub></td><td>The radial field on the outer boundary of the model, at 2.5 solar radii. Use the opacity slider to see through it. Its scale is set per day, because this field is far weaker than at the surface.</td></tr>
     <tr><td>Neutral line</td><td>Rose. Where the source-surface field changes sign. This is the base of the heliospheric current sheet.</td></tr>
   </table>
@@ -123,19 +125,19 @@
 </section>
 
 <section id="panel">
-  <h3>The panel</h3>
-  <p>The panel on the right holds the layers, views and details for the day. Close it with <b>×</b> or <kbd>L</kbd>, and reopen it with <b>Layers</b> in the top bar. On wide screens your choice is remembered. On phones the panel is a sheet that slides up from the bottom.</p>
+  <h3>The menu</h3>
+  <p>The menu button (☰) at the right of the top bar opens the layers, views and details for the day. It drops down below the button and turns into a × while open. Close it with the same button, <kbd>L</kbd> or <kbd>Esc</kbd>. On wide screens the page remembers whether you left it open. On phones it starts closed.</p>
   <p>Each section folds, so you can keep open only what you use. The <b>?</b> on a section links to its part of this guide.</p>
   <ul>
     <li><b>This map</b> lists the map time, the magnetogram file, the Carrington rotation, Earth's heliographic longitude and latitude, and the open magnetic flux.</li>
     <li><b>Footpoints</b> lists where each spacecraft's field line meets the photosphere, at the chosen wind speed.</li>
-    <li><b>Share</b> copies a link or an embed code for exactly what you are looking at.</li>
+    <li><b>Save &amp; share</b> saves a snapshot, or copies a link or an embed code for exactly what you are looking at.</li>
   </ul>
 </section>
 
 <section id="save">
   <h3>Saving snapshots</h3>
-  <p><b>Save &amp; share → Save PNG</b> saves what you see at twice screen resolution, in the current theme. The image carries a title band with the date, the magnetogram, the model and the wind speed, plus the labels and the legend. <b>Save PDF</b> puts the same picture on a single page sized to it, ready to drop into a document or a slide. The panel itself is never part of the image.</p>
+  <p><b>Save &amp; share → Save PNG</b> saves what you see at twice screen resolution, in the current theme. The image carries a title band with the date, the magnetogram, the model and the wind speed, plus the labels and the legend. <b>Save PDF</b> puts the same picture on a single page sized to it, ready to drop into a document or a slide. The menu is never part of the image.</p>
 </section>
 
 <section id="embed">
@@ -152,14 +154,15 @@
     <tr><td><code>scale</code></td><td><code>true</code> for true distances</td><td>log</td></tr>
     <tr><td><code>ss</code></td><td>Source-surface opacity, 0–1</td><td>0.25</td></tr>
     <tr><td><code>rotate</code></td><td><code>1</code> to rotate slowly</td><td>off</td></tr>
-    <tr><td><code>panel</code></td><td><code>0</code> or <code>1</code> to start with the panel closed or open</td><td>last choice</td></tr>
+    <tr><td><code>lines</code></td><td>Number of field lines drawn</td><td>250</td></tr>
+    <tr><td><code>panel</code></td><td><code>0</code> or <code>1</code> to start with the menu closed or open</td><td>last choice</td></tr>
     <tr><td><code>embed</code></td><td><code>1</code> for the embedded layout</td><td>off</td></tr>
     <tr><td><code>controls</code></td><td><code>0</code> hides the date bar in an embed</td><td>shown</td></tr>
     <tr><td><code>theme</code></td><td><code>dark</code> or <code>light</code></td><td>system</td></tr>
   </table>
 
   <h4>Embedding in another page</h4>
-  <p>With <code>embed=1</code> the page shows the scene alone. A slim bar keeps the date controls, a Layers button and a link to the full site. The panel's <b>Share → Copy embed code</b> writes the code for the current view:</p>
+  <p>With <code>embed=1</code> the page shows the scene alone. A slim bar keeps the date controls, the menu button and a link to the full site. The menu's <b>Save &amp; share → Copy embed code</b> writes the code for the current view:</p>
 <pre><code>&lt;iframe src="https://sr-dash.github.io/heliofield/?date=latest&amp;view=earth&amp;embed=1"
         title="HelioField: the Sun's coronal magnetic field in 3D"
         width="100%" height="560" style="border:0;border-radius:12px"
@@ -244,7 +247,7 @@ addEventListener("message", (e) =&gt; {
   <p>A spacecraft's magnetic footpoint is found in two steps.</p>
   <ol>
     <li><b>Ballistic mapping to the source surface.</b> The spacecraft at distance <i>r</i><sub>sc</sub> and longitude φ<sub>sc</sub> is joined to the source surface along a Parker spiral at the chosen wind speed: <span class="math">φ<sub>ss</sub> = φ<sub>sc</sub> + Ω (<i>r</i><sub>sc</sub> − R<sub>ss</sub>) / <i>v</i></span>, at the spacecraft's latitude.</li>
-    <li><b>PFSS mapping to the photosphere.</b> From just inside that point, the model field line is traced down to the solar surface. Its end is the footpoint listed in the panel.</li>
+    <li><b>PFSS mapping to the photosphere.</b> From just inside that point, the model field line is traced down to the solar surface. Its end is the footpoint listed in the menu.</li>
   </ol>
   <p>Footpoints are computed for wind speeds of 300 to 800 km/s in steps of 100. The uncertainty of a footpoint is large. The wind speed is rarely known to better than 100 km/s. For a spacecraft near 1 au, that alone shifts the footpoint by about 20 degrees of longitude in slow wind, and by about 5 degrees in fast wind. Close to the neutral line, a small shift can move the footpoint into the other polarity.</p>
   <p>Spacecraft positions come from <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, which takes them from JPL Horizons. They are converted to the Carrington frame for the time of the magnetogram.</p>
