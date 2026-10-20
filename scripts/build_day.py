@@ -60,7 +60,7 @@ AU_KM = 149597870.7
 # Bodies drawn in the scene. *_geo series are geocentric km; Earth is added.
 FLEET = {
     "earth": "Earth", "mercury": "Mercury", "venus": "Venus", "mars": "Mars",
-    "psp": "Parker Solar Probe", "solo": "Solar Orbiter", "sta": "STEREO-A",
+    "psp": "Parker Solar Probe", "solo": "Solar Orbiter", "sta": "STEREO-A", "stb": "STEREO-B",
     "bepi": "BepiColombo", "aditya": "Aditya-L1", "soho_geo": "SOHO",
     "ace_geo": "ACE", "wind_geo": "Wind", "dscovr_geo": "DSCOVR",
     "imap_geo": "IMAP", "swfo_geo": "SWFO-L1",

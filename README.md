@@ -1,7 +1,8 @@
 # HelioField
 
-The Sun's coronal magnetic field in 3D, updated daily, with the heliophysics
-fleet placed in it. A static site: plain ES modules and three.js, no build step.
+The Sun's coronal magnetic field in 3D for any date since May 2010, with the
+heliophysics fleet placed in it. Recent days are computed nightly on the
+server; any other date is computed in the browser from an HMI rotation map. A static site: plain ES modules and three.js, no build step.
 Companion to [HelioFleet](https://sr-dash.github.io/heliofleet/), which supplies
 the spacecraft positions.
 
@@ -26,6 +27,31 @@ is computed, is on the guide page: [`guide.html`](https://sr-dash.github.io/heli
 
 The URL holds the full state (`date`, `v`, `layers`, `view` or `cam`, `rmax`,
 `scale`, `ss`, `rotate`, `panel`), so any view can be linked.
+
+## Any date since 2010
+
+`scripts/build_history.py` keeps `data/history/`: one HMI Carrington-rotation map
+per rotation since CR 2096 (`hmi.Synoptic_Mr_small`, or `hmi.Synoptic_Mr` averaged
+down where only that exists), stored as gzipped int16 on the 180 × 360 sin-latitude
+grid (about 85 kB each, 18 MB in all), and the daily Carrington positions of Earth,
+the planets and the spacecraft. A date without a daily product is solved in a Web
+Worker by `js/pfss.js`: spherical harmonics to degree 40, a 36 × 90 × 180 field grid,
+RK4 tracing, the source-surface neutral line and connectivity, in about a second.
+On the GONG map of 2026-10-17 it matches the sunkit-magex pipeline to a
+source-surface correlation of 0.9998, a neutral line within 0.6°, open flux within
+2%, and footpoints within about 1°. The page asks before computing, because the
+current field is cleared first.
+
+## Colours and themes
+
+Dark and light themes; one hue per role in both. The field colours (open +, open −,
+closed, current sheet) were validated as an all-pairs set in each theme against
+its background: protan/deutan ΔE ≥ 9.8 (OKLab × 100), normal-vision ΔE ≥ 17, and
+≥ 3:1 contrast (WCAG 2.1 SC 1.4.11). Values and the reasoning are in `js/theme.js`
+and the guide's colour section. Re-validate before changing any of them.
+
+**Save & share → Save PNG / Save PDF** writes the current view with a title band
+and legend.
 
 ## Embedding
 
@@ -101,5 +127,5 @@ keeps every day for 120 days, then one per Carrington rotation.
 
 ## Credits
 
-Magnetograms: NSO/GONG and SDO/HMI (JSOC). Ephemerides: JPL Horizons via HelioFleet.
+Magnetograms: NSO/GONG and SDO/HMI (JSOC; rotation maps and daily frames). Ephemerides: JPL Horizons via HelioFleet.
 PFSS: sunkit-magex (SunPy project).

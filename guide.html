@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HelioField Guide</title>
 <meta name="description" content="How to use HelioField, and how its coronal magnetic field, current sheet and spacecraft connectivity are computed.">
+<script>
+  (() => {
+    let t = new URLSearchParams(location.search).get("theme");
+    if (t !== "light" && t !== "dark") try { t = localStorage.getItem("hf.theme"); } catch (e) {}
+    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
 <link rel="stylesheet" href="css/guide.css">
 </head>
 <body>
@@ -13,6 +21,7 @@
 <header class="top">
   <h1>HelioField guide</h1>
   <p>Using the viewer, and how its field is computed.</p>
+  <button class="theme" id="theme" type="button">Light theme</button>
   <a class="back" href="./">← Back to the viewer</a>
 </header>
 
@@ -23,6 +32,8 @@
   <a href="#layers-sun">Sun layers</a>
   <a href="#layers-helio">Heliosphere layers</a>
   <a href="#panel">The panel</a>
+  <a href="#themes">Themes</a>
+  <a href="#save">Saving snapshots</a>
   <a href="#embed">Links and embedding</a>
   <h2>Methods</h2>
   <a href="#methods">Overview</a>
@@ -30,8 +41,10 @@
   <a href="#pfss">PFSS model</a>
   <a href="#fieldlines">Field lines</a>
   <a href="#hcs">Current sheet</a>
+  <a href="#history">Past dates</a>
   <a href="#connectivity">Spacecraft connectivity</a>
   <a href="#coords">Coordinates and scale</a>
+  <a href="#colours">Colours and accessibility</a>
   <a href="#limits">Limitations</a>
   <a href="#products">Data products</a>
   <a href="#refs">References</a>
@@ -62,29 +75,38 @@
     <tr><td><kbd>L</kbd></td><td>Show or hide the panel</td></tr>
     <tr><td><kbd>E</kbd> <kbd>N</kbd> <kbd>F</kbd></td><td>From Earth, from north, whole fleet</td></tr>
     <tr><td><kbd>R</kbd></td><td>Start or stop slow rotation</td></tr>
+    <tr><td><kbd>T</kbd></td><td>Switch between the dark and light theme</td></tr>
   </table>
 </section>
 
 <section id="dates">
   <h3>Dates and sources</h3>
-  <p>Each day has one product, built from the last magnetogram of that day (UTC). Step through days with the arrows beside the date, or pick one from the list.</p>
-  <p>The badge beside the date names the magnetogram behind that day.</p>
+  <p>The date field opens a calendar for any day from 1 May 2010, the start of the SDO/HMI era, to today. <b>Latest</b> returns to the newest daily product. The arrows step one day at a time.</p>
+  <p>Recent days have a <b>daily product</b>, computed on the server each night from the last magnetogram of the day. They open at once. Daily products are kept for about four months, then one day per Carrington rotation.</p>
+  <p>Any other date is <b>computed in your browser</b>. The page asks first, because this replaces the field on screen. See <a href="#history">Past dates</a> for how it works.</p>
+  <p>The badge beside the date names the magnetogram behind the field:</p>
   <ul>
-    <li><b>GONG</b> is the normal source: the NSO Global Oscillation Network Group's zero-point-corrected synoptic map.</li>
-    <li><b>HMI</b> marks a day built from the SDO/HMI daily synoptic frame. That happens when GONG could not be reached at build time.</li>
+    <li><b>GONG</b>: the NSO Global Oscillation Network Group's zero-point-corrected synoptic map, the normal source for daily products.</li>
+    <li><b>HMI</b>: the SDO/HMI daily synoptic frame, used for a daily product when GONG could not be reached at build time.</li>
+    <li><b>HMI CR <i>n</i></b> with a dashed outline: a date computed in your browser from the HMI map of Carrington rotation <i>n</i>.</li>
   </ul>
-  <p>History is kept day by day for about four months. Older history keeps one day per Carrington rotation.</p>
+</section>
+
+<section id="themes">
+  <h3>Themes</h3>
+  <p>The sun-and-moon button in the top bar switches between a dark and a light theme, and <kbd>T</kbd> does the same. The first visit follows your system setting, and after that the page remembers your choice. Links and embeds can fix it with <code>theme=dark</code> or <code>theme=light</code>.</p>
+  <p>The scene uses the same colour for each role in both themes; only lightness changes. See <a href="#colours">Colours and accessibility</a>.</p>
 </section>
 
 <section id="layers-sun">
   <h3>Sun layers</h3>
   <table>
     <tr><th>Layer</th><th>What it shows</th></tr>
-    <tr><td>Photospheric B<sub>r</sub></td><td>The radial magnetic field at the solar surface. <span class="sw pos"></span> red is outward, <span class="sw neg"></span> blue is inward. The colours saturate at ±20 G, so weak quiet-Sun field is visible as well as active regions.</td></tr>
-    <tr><td>Closed field lines</td><td>Lines that leave the surface and return to it. They outline active-region loops and the large helmet streamers.</td></tr>
-    <tr><td>Open field lines</td><td>Lines that reach the source surface and are carried into the solar wind. They are coloured by the polarity of their footpoint, and they root in coronal holes.</td></tr>
+    <tr><td>Photospheric B<sub>r</sub></td><td>The radial magnetic field at the solar surface. Gold is outward and cerulean is inward, around a neutral silver. The colours saturate at ±20 G, so weak quiet-Sun field is visible as well as active regions.</td></tr>
+    <tr><td>Closed field lines</td><td>Violet. Lines that leave the surface and return to it. They outline active-region loops and the large helmet streamers.</td></tr>
+    <tr><td>Open field lines</td><td>Lines that reach the source surface and are carried into the solar wind. Gold lines leave outward-polarity regions and cerulean lines inward ones. They root in coronal holes.</td></tr>
     <tr><td>Source surface B<sub>r</sub></td><td>The radial field on the outer boundary of the model, at 2.5 solar radii. Use the opacity slider to see through it. Its scale is set per day, because this field is far weaker than at the surface.</td></tr>
-    <tr><td>Neutral line</td><td>Where the source-surface field changes sign. This is the base of the heliospheric current sheet.</td></tr>
+    <tr><td>Neutral line</td><td>Rose. Where the source-surface field changes sign. This is the base of the heliospheric current sheet.</td></tr>
   </table>
 </section>
 
@@ -111,12 +133,17 @@
   </ul>
 </section>
 
+<section id="save">
+  <h3>Saving snapshots</h3>
+  <p><b>Save &amp; share → Save PNG</b> saves what you see at twice screen resolution, in the current theme. The image carries a title band with the date, the magnetogram, the model and the wind speed, plus the labels and the legend. <b>Save PDF</b> puts the same picture on a single page sized to it, ready to drop into a document or a slide. The panel itself is never part of the image.</p>
+</section>
+
 <section id="embed">
   <h3>Links and embedding</h3>
   <p>The address bar always holds the full state of the page, so any view can be bookmarked or shared. Parameters left out take their defaults.</p>
   <table>
     <tr><th>Parameter</th><th>Values</th><th>Default</th></tr>
-    <tr><td><code>date</code></td><td><code>YYYY-MM-DD</code> or <code>latest</code>. A date without a product opens the latest product on or before it.</td><td>latest</td></tr>
+    <tr><td><code>date</code></td><td><code>YYYY-MM-DD</code> from 2010-05-01, or <code>latest</code>. A date without a daily product is computed in the browser.</td><td>latest</td></tr>
     <tr><td><code>v</code></td><td>Solar wind speed: 300, 400 … 800 km/s</td><td>400</td></tr>
     <tr><td><code>layers</code></td><td>Comma list of layers to show: <code>photo, closed, open, ss, pil, hcs, fleet, spiral</code></td><td>all</td></tr>
     <tr><td><code>view</code></td><td><code>earth</code>, <code>north</code> or <code>fleet</code></td><td>oblique</td></tr>
@@ -128,6 +155,7 @@
     <tr><td><code>panel</code></td><td><code>0</code> or <code>1</code> to start with the panel closed or open</td><td>last choice</td></tr>
     <tr><td><code>embed</code></td><td><code>1</code> for the embedded layout</td><td>off</td></tr>
     <tr><td><code>controls</code></td><td><code>0</code> hides the date bar in an embed</td><td>shown</td></tr>
+    <tr><td><code>theme</code></td><td><code>dark</code> or <code>light</code></td><td>system</td></tr>
   </table>
 
   <h4>Embedding in another page</h4>
@@ -153,7 +181,7 @@ frame.contentWindow.postMessage(
 addEventListener("message", (e) =&gt; {
   if (e.data?.type === "heliofield:state") console.log(e.data.date, e.data.source);
 });</code></pre>
-  <p>Every field of the <code>set</code> message is optional. <code>layers</code> takes the same comma list as the URL. The reply carries <code>date</code>, <code>v</code>, <code>source</code> (GONG or HMI) and <code>obstime</code>, the map's time. A host showing a different instant, such as <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, can pass its own date and let HelioField pick the nearest product.</p>
+  <p>Every field of the <code>set</code> message is optional. <code>layers</code> takes the same comma list as the URL. The reply carries <code>date</code>, <code>v</code>, <code>source</code>, <code>computed</code> (true for a date computed in the browser) and <code>obstime</code>. A host showing any date since 2010, such as <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, can pass it directly. Embeds and host messages compute past dates without asking; only the page itself shows the confirmation.</p>
 </section>
 
 <h2 class="part" id="methods">Methods</h2>
@@ -230,6 +258,43 @@ addEventListener("message", (e) =&gt; {
   <p>This puts 1 au at about 25 R<sub>☉</sub>. Spirals and the current sheet are computed at true distance and compressed afterwards, so their longitudes are unchanged.</p>
 </section>
 
+<section id="history">
+  <h3>Past dates</h3>
+  <p>A date without a daily product is computed in your browser. The page cannot compute on a server, because it is a static site. The GONG and JSOC archives do not allow other websites to read their files directly. So HelioField keeps its own small archive of inputs.</p>
+  <ul>
+    <li><b>One HMI map per Carrington rotation</b> since May 2010 (<code>hmi.Synoptic_Mr_small</code> from JSOC). Each is averaged to the same 180 × 360 grid as GONG, which comes to about 85 kB per rotation. The 2012 rotations exist at JSOC only at full resolution and are averaged down from those. The two paths give identical maps where both exist.</li>
+    <li><b>Daily positions</b> of Earth, the planets and the spacecraft at 12:00 UTC, converted to the Carrington frame from HelioFleet's ephemerides. STEREO-B is shown until contact was lost on 1 October 2014.</li>
+  </ul>
+  <p>For a chosen date the page takes the rotation whose time span contains noon of that day. It downloads that map and solves the field in a background thread. The same method is used as for daily products, with a spherical-harmonic solution up to degree 40 on a 36 × 90 × 180 grid. It then traces the same seed pattern of field lines, contours the neutral line and maps the spacecraft connections. On a laptop this takes about a second. Moving to another day in the same rotation only re-traces the spacecraft connections.</p>
+  <p>Checked against the server pipeline on the same GONG map, the browser solution agrees closely:</p>
+  <ul>
+    <li>Source-surface field: correlation 0.9998, same sign over 99.8% of the surface.</li>
+    <li>Neutral line: within 0.6° everywhere.</li>
+    <li>Open flux: within 2%.</li>
+    <li>Spacecraft footpoints: within about 1°.</li>
+  </ul>
+  <p>A rotation map is assembled over about 27 days, so a computed date shows the field <i>around</i> that date. A daily product shows the field as of that day.</p>
+</section>
+
+<section id="colours">
+  <h3>Colours and accessibility</h3>
+  <p>The colours were chosen by calculation, not by eye. Each one was checked in both themes against the background it is drawn on.</p>
+  <table>
+    <tr><th>Role</th><th>Dark theme</th><th>Light theme</th></tr>
+    <tr><td>Open field, outward</td><td><span class="chip" style="background:#c28412"></span><code>#c28412</code> gold</td><td><span class="chip" style="background:#a67110"></span><code>#a67110</code></td></tr>
+    <tr><td>Open field, inward</td><td><span class="chip" style="background:#1687a9"></span><code>#1687a9</code> cerulean</td><td><span class="chip" style="background:#0a8aae"></span><code>#0a8aae</code></td></tr>
+    <tr><td>Closed field</td><td><span class="chip" style="background:#6b50c2"></span><code>#6b50c2</code> violet</td><td><span class="chip" style="background:#583bab"></span><code>#583bab</code></td></tr>
+    <tr><td>Neutral line and current sheet</td><td><span class="chip" style="background:#d7506e"></span><code>#d7506e</code> rose</td><td><span class="chip" style="background:#9c113f"></span><code>#9c113f</code></td></tr>
+  </table>
+  <ul>
+    <li><b>Colour-vision deficiency.</b> Every pair of field colours stays distinct under simulated protanopia and deuteranopia (Machado et al. 2009). The worst pair is separated by ΔE 9.8 in the dark theme and 15.6 in the light, where 8 is the target (OKLab × 100). Tritanopia is also checked.</li>
+    <li><b>Normal vision.</b> Every pair is at least ΔE 17 apart.</li>
+    <li><b>Contrast.</b> Every line colour has at least 3:1 contrast against its background, the WCAG 2.1 requirement for graphical objects (success criterion 1.4.11). Text meets WCAG AA (at least 4.5:1) in both themes.</li>
+    <li><b>Spacecraft</b> use a fixed categorical order, stepped in lightness to reach 3:1 on the light background. Every marker carries a text label, so identity never rests on colour alone.</li>
+  </ul>
+  <p>The surface field uses one diverging scale in both themes. Gold for outward field and cerulean for inward field sit at equal lightness on either side of a neutral silver. It is paler than the line colours, so a line stays visible where it crosses a region of its own polarity. Sign is read from hue, and strength from how far the colour moves from silver.</p>
+</section>
+
 <section id="limits">
   <h3>Limitations</h3>
   <ul>
@@ -239,6 +304,7 @@ addEventListener("message", (e) =&gt; {
     <li><b>Poorly observed poles.</b> The polar fields are seen at a grazing angle. They strongly influence the open field, and so the current sheet.</li>
     <li><b>Constant, radial solar wind.</b> The spirals and current sheet ignore acceleration, stream interactions and transients such as coronal mass ejections.</li>
     <li><b>The HMI fallback lags.</b> The HMI frame is typically several hours old when it is published.</li>
+    <li><b>Past dates use rotation maps.</b> They show the field averaged over the rotation, not that day's map, and the browser solution is truncated at harmonic degree 40.</li>
   </ul>
 </section>
 
@@ -272,5 +338,15 @@ addEventListener("message", (e) =&gt; {
 
 <footer class="end">HelioField · <a href="./">Viewer</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> · <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a></footer>
 </div>
+<script>
+  const b = document.getElementById("theme"), r = document.documentElement;
+  const label = () => { b.textContent = r.dataset.theme === "dark" ? "Light theme" : "Dark theme"; };
+  b.onclick = () => {
+    r.dataset.theme = r.dataset.theme === "dark" ? "light" : "dark";
+    try { localStorage.setItem("hf.theme", r.dataset.theme); } catch (e) {}
+    label();
+  };
+  label();
+</script>
 </body>
 </html>

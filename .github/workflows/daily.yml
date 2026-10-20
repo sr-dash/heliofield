@@ -46,6 +46,11 @@ jobs:
           [ -z "$from" ] && from=$(date -u -d yesterday +%F)
           python scripts/build_day.py --date "$from" --to "$today" --force --prune
 
+      # New HMI rotation maps (one a month) and this year's fleet positions,
+      # for dates computed in the browser.
+      - name: Update the history archive
+        run: python scripts/build_history.py
+
       - name: Commit and push
         id: commit
         run: |

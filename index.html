@@ -4,11 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HelioField</title>
-<meta name="description" content="The Sun's coronal magnetic field in 3D, updated daily: GONG magnetograms, PFSS field lines, source surface, heliospheric current sheet and the spacecraft fleet.">
+<meta name="description" content="The Sun's coronal magnetic field in 3D for any date since 2010: magnetograms, PFSS field lines, source surface, heliospheric current sheet and the spacecraft fleet.">
 <script>
-  // Set before first paint so neither the embed layout nor a folded panel flashes.
+  // Set before first paint so neither the theme, the embed layout nor a
+  // folded panel flashes.
   (() => {
     const q = new URLSearchParams(location.search), h = document.documentElement;
+    let theme = q.get("theme");
+    if (theme !== "light" && theme !== "dark") try { theme = localStorage.getItem("hf.theme"); } catch (e) {}
+    if (theme !== "light" && theme !== "dark") theme = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    h.dataset.theme = theme;
     const embed = q.get("embed") === "1";
     if (embed) h.classList.add("embed");
     if (q.get("controls") === "0") h.classList.add("no-controls");
@@ -36,12 +41,17 @@
   <div class="brand"><strong>HelioField</strong><span>coronal magnetic field in 3D</span></div>
   <div class="date">
     <button id="prev" title="Previous day (←)" aria-label="Previous day">‹</button>
-    <select id="day" aria-label="Date"></select>
+    <input type="date" id="day" aria-label="Date (any day since May 2010)" title="Any day since May 2010">
     <button id="next" title="Next day (→)" aria-label="Next day">›</button>
+    <button id="latest" class="latest" title="Back to the latest daily product">Latest</button>
     <span id="src" class="src"></span>
   </div>
   <a class="guide-link" href="guide.html">Guide</a>
   <a class="embed-open" id="embedOpen" href="./" target="_blank" rel="noopener">HelioField ↗</a>
+  <button id="themeToggle" class="theme-toggle" aria-label="Switch theme">
+    <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+    <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+  </button>
   <button id="panelToggle" class="panel-toggle" aria-controls="panel" aria-expanded="true" title="Show or hide the panel (L)">Layers</button>
 </header>
 
@@ -54,11 +64,11 @@
   <details open>
     <summary>Sun <a class="help" href="guide.html#layers-sun" title="What these layers show">?</a></summary>
     <label><input type="checkbox" id="lyrPhoto" checked> <span>Photospheric B<sub>r</sub></span></label>
-    <label><input type="checkbox" id="lyrClosed" checked> <span>Closed field lines</span></label>
-    <label><input type="checkbox" id="lyrOpen" checked> <span>Open field lines</span></label>
+    <label><input type="checkbox" id="lyrClosed" checked> <span><i class="key ln closed"></i>Closed field lines</span></label>
+    <label><input type="checkbox" id="lyrOpen" checked> <span><i class="key ln op"></i><i class="key ln on"></i>Open field lines</span></label>
     <label><input type="checkbox" id="lyrSS" checked> <span>Source surface B<sub>r</sub></span></label>
     <label class="slider sub"><span>Opacity</span><input type="range" id="ssAlpha" min="0" max="1" step="0.05" value="0.25"></label>
-    <label><input type="checkbox" id="lyrPIL" checked> <span>Neutral line</span></label>
+    <label><input type="checkbox" id="lyrPIL" checked> <span><i class="key ln hcs"></i>Neutral line</span></label>
   </details>
 
   <details open>
@@ -91,9 +101,11 @@
     <div id="feet"></div>
   </details>
 
-  <details>
-    <summary>Share <a class="help" href="guide.html#embed" title="Links and embedding">?</a></summary>
-    <p class="note">Opens on this date, with these layers, wind speed and view.</p>
+  <details open>
+    <summary>Save &amp; share <a class="help" href="guide.html#embed" title="Snapshots, links and embedding">?</a></summary>
+    <div class="seg">
+      <button id="savePNG" title="Save the view as a PNG image">Save PNG</button><button id="savePDF" title="Save the view as a one-page PDF">Save PDF</button>
+    </div>
     <div class="seg">
       <button id="copyLink">Copy link</button><button id="copyEmbed">Copy embed code</button>
     </div>
@@ -103,15 +115,43 @@
   <p class="panel-foot"><a href="guide.html">How to use</a> · <a href="guide.html#methods">Methods and data</a></p>
 </aside>
 
-<div id="legend">
+<div id="legend" aria-label="Legend">
   <span><i class="sw neg"></i><span>B<sub>r</sub> &lt; 0</span></span>
   <span><i class="sw pos"></i><span>B<sub>r</sub> &gt; 0</span></span>
-  <span><i class="ln closed"></i><span>closed</span></span>
   <span><i class="ln op"></i><span>open +</span></span>
   <span><i class="ln on"></i><span>open −</span></span>
-  <span><i class="ln hcs"></i><span>HCS</span></span>
+  <span><i class="ln closed"></i><span>closed</span></span>
+  <span><i class="ln hcs"></i><span>current sheet</span></span>
 </div>
-<div id="status" role="status"></div>
+<div id="status" role="status" aria-live="polite"></div>
+
+<dialog id="computeDlg" aria-labelledby="dlgTitle">
+  <h2 id="dlgTitle">Compute the field for <span id="dlgDate"></span>?</h2>
+  <p>There is no ready-made product for this date. Your browser will download the SDO/HMI map for
+    <b id="dlgRot"></b> (about 90 kB) and compute the field, field lines, current sheet and spacecraft connections itself.</p>
+  <ul>
+    <li><b>The field shown now will be cleared from memory.</b> Going back to it means loading it again.</li>
+    <li><b>Please wait for the new map.</b> It usually appears within seconds, but can take <b>2–3 minutes</b> on a slow connection or an older phone or tablet.</li>
+    <li>A rotation map is built from about 27 days of observations around this date, so it shows the field <i>around</i> the date, not on that exact day. Earth and the spacecraft are placed for 12:00 UTC on the date.</li>
+    <li id="dlgInexact" hidden>No rotation map covers this exact date, so the nearest one is used.</li>
+  </ul>
+  <p class="more"><a href="guide.html#history" target="_blank" rel="noopener">How a past date is computed</a></p>
+  <label class="noask"><input type="checkbox" id="dlgNoAsk"> Don't ask again in this session</label>
+  <div class="dlg-actions">
+    <button id="dlgCancel">Cancel</button>
+    <button id="dlgGo" class="primary">Compute</button>
+  </div>
+</dialog>
+
+<div id="busy" class="busy" role="alertdialog" aria-labelledby="busyTitle" aria-describedby="busyStage" hidden>
+  <div class="busy-card">
+    <strong id="busyTitle">Computing</strong>
+    <span id="busyStage">Preparing</span>
+    <progress id="busyBar" max="1" value="0"></progress>
+    <span class="busy-note">The previous field has been cleared. This can take 2–3 minutes on slower devices.</span>
+    <button id="busyCancel">Cancel</button>
+  </div>
+</div>
 
 <script type="module" src="js/main.js"></script>
 </body>
