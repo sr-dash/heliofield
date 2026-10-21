@@ -7,8 +7,8 @@ authors:
     given-names: Soumyaranjan
     orcid: "https://orcid.org/0000-0003-0103-6569"
     affiliation: "National Solar Observatory"
-version: 1.0.0
-date-released: 2026-10-20
+version: 1.1.0
+date-released: 2026-10-21
 doi: 10.5281/zenodo.23487231
 identifiers:
   - type: doi
