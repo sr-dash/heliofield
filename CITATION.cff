@@ -15,6 +15,9 @@ identifiers:
     value: 10.5281/zenodo.23487231
     description: "All versions (resolves to the latest release)"
   - type: doi
+    value: 10.5281/zenodo.23521418
+    description: "Version 1.1.0"
+  - type: doi
     value: 10.5281/zenodo.23487232
     description: "Version 1.0.0"
 url: "https://sr-dash.github.io/heliofield/"
