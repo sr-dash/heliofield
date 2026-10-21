@@ -1,6 +1,6 @@
 // Solves PFSS off the main thread. Keeps the last rotation's field so a new
 // date inside the same rotation only re-traces spacecraft connectivity.
-import { solve, connectOnly } from "./pfss.js?v=13053a7fd4";
+import { solve, connectOnly } from "./pfss.js?v=3f651b8b64";
 
 let last = null;   // { key, models }
 

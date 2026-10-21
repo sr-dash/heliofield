@@ -228,7 +228,7 @@ function seeds(br, ny, nx, rss, nU = 260, nF = 220, nO = 260) {
 }
 
 // Source-surface B_r on an equirectangular grid (lat rows south first).
-function surfaceBr(coef, r, rss, nlat = 180, nlon = 360) {
+export function surfaceBr(coef, r, rss, nlat = 180, nlon = 360) {
   const { C, S, L } = coef, W = L + 1, out = new Float32Array(nlat * nlon), P = new Float64Array(W * W);
   const fl = new Float64Array(W);
   for (let l = 1; l <= L; l++) fl[l] = radial(l, r, rss).f;
@@ -251,7 +251,7 @@ function surfaceBr(coef, r, rss, nlat = 180, nlon = 360) {
 
 // Zero contour of an equirectangular field (south-first rows), longitude
 // periodic. Returns polylines as flat [lon, lat, lon, lat, ...].
-function zeroContour(F, nlat, nlon) {
+export function zeroContour(F, nlat, nlon) {
   const lon = (j) => (j + 0.5) * 360 / nlon, lat = (i) => -90 + (i + 0.5) * 180 / nlat;
   const val = (i, j) => F[i * nlon + ((j % nlon) + nlon) % nlon];
   const segs = [];
@@ -353,9 +353,13 @@ function isOpen(G, lon, lat, v) {
 // closed (longitude wraps). Also returns the open fraction.
 export function chBoundary(G) {
   const nlat = 180 / CH_STEP, nlon = 360 / CH_STEP, op = new Uint8Array(nlat * nlon), v = [0, 0, 0];
-  let nOpen = 0;
-  for (let i = 0; i < nlat; i++) for (let j = 0; j < nlon; j++) {
-    nOpen += op[i * nlon + j] = isOpen(G, (j + 0.5) * CH_STEP, -90 + (i + 0.5) * CH_STEP, v) ? 1 : 0;
+  let aOpen = 0, aAll = 0;   // area-weighted: rows are uniform in latitude
+  for (let i = 0; i < nlat; i++) {
+    const w = Math.cos((-90 + (i + 0.5) * CH_STEP) * DEG);
+    for (let j = 0; j < nlon; j++) {
+      aOpen += w * (op[i * nlon + j] = isOpen(G, (j + 0.5) * CH_STEP, -90 + (i + 0.5) * CH_STEP, v) ? 1 : 0);
+      aAll += w;
+    }
   }
   const pts = [];
   for (let i = 0; i < nlat; i++) for (let j = 0; j < nlon; j++) {
@@ -363,7 +367,7 @@ export function chBoundary(G) {
     if (op[i * nlon + j] !== op[i * nlon + (j + 1) % nlon]) pts.push(...cart(1, lon + CH_STEP / 2, lat));
     if (i + 1 < nlat && op[i * nlon + j] !== op[(i + 1) * nlon + j]) pts.push(...cart(1, lon, lat + CH_STEP / 2));
   }
-  return { bound: Float64Array.from(pts), openFraction: nOpen / (nlat * nlon) };
+  return { bound: Float64Array.from(pts), open: op, openFraction: aOpen / aAll };
 }
 
 // Angle [deg] from (lon, lat) to the nearest boundary point.

@@ -11,7 +11,7 @@
 - [ ] After any change in `css/` or `js/`, I ran `python3 scripts/stamp_assets.py` and committed the files it rewrote
 - [ ] The page works on a phone-sized screen and in the light and dark themes, with no errors in the browser console
 - [ ] A past date computed in the browser still loads (try one before 2015)
-- [ ] Any change to `js/pfss.js` or `scripts/build_day.py` was compared against the other (open flux, neutral line and footpoints for the same map)
+- [ ] After any change to `js/pfss.js` or `scripts/build_day.py`, `python -m pytest tests -v` passes (or the tolerances and the guide's Validation table were updated, with the reason)
 - [ ] Any new or changed colour was validated as described in `js/theme.js` (colour-vision separation and 3:1 contrast in both themes)
 - [ ] New controls, link parameters or methods are described in the README and on the guide page
 - [ ] I have read the [contributing guidelines](https://github.com/sr-dash/heliofield/blob/main/CONTRIBUTING.md) and the [code of conduct](https://github.com/sr-dash/heliofield/blob/main/CODE_OF_CONDUCT.md)

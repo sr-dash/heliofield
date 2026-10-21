@@ -94,6 +94,7 @@
   <a href="#sources">Solar-wind sources</a>
   <a href="#coords">Coordinates and scale</a>
   <a href="#colours">Colours and accessibility</a>
+  <a href="#validation">Validation</a>
   <a href="#limits">Limitations</a>
   <a href="#products">Data products</a>
   <a href="#refs">References</a>
@@ -366,6 +367,7 @@ addEventListener("message", (e) =&gt; {
     <li>Open flux: within 2%.</li>
     <li>Spacecraft footpoints: within about 1°.</li>
   </ul>
+  <p>The test suite repeats this on HMI rotation maps from three phases of the cycle; see <a href="#validation">Validation</a>.</p>
   <p>A rotation map is assembled over about 27 days, so a computed date shows the field <i>around</i> that date. A daily product shows the field as of that day.</p>
 </section>
 
@@ -429,6 +431,31 @@ addEventListener("message", (e) =&gt; {
     <li><b>Spacecraft</b> use a fixed categorical order, stepped in lightness to reach 3:1 on the light background. Every marker carries a text label, so identity never rests on colour alone.</li>
   </ul>
   <p>The surface field uses one diverging scale in both themes. Gold for outward field and cerulean for inward field sit at equal lightness on either side of a neutral silver. It is paler than the line colours, so a line stays visible where it crosses a region of its own polarity. Sign is read from hue, and strength from how far the colour moves from silver.</p>
+</section>
+
+<section id="validation">
+  <h3>Validation</h3>
+  <p>The browser solver is tested independently of the page, from Python, by a test suite in the repository (<code>tests/</code>). The suite runs <code>js/pfss.js</code> itself under Node.js, so the code it checks is the code the page runs. Anyone can rerun it. It is not part of routine updates; it runs by hand or from the repository's <b>Validation</b> workflow.</p>
+<pre><code>pip install -r requirements.txt -r requirements-test.txt
+python -m pytest tests -v                 # everything, about a minute
+python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code></pre>
+  <p><b>Exact solutions.</b> The associated Legendre functions match SciPy to round-off. A dipole on the photosphere has a closed-form PFSS solution, and the solver reproduces it: the field within 2% everywhere between the photosphere and the source surface, traced field lines that keep the dipole's flux function constant to 1%, open flux within 1%, and a neutral line on the equator to 0.6°. The speed formula matches the Python pipeline's to round-off. The harmonic analysis of a single high-degree term leaks about 4% of its amplitude into other degrees, because the latitude integral uses the map's own uniform rows rather than Gauss–Legendre points. The test keeps that limit in view.</p>
+  <p><b>Against sunkit-magex.</b> Three HMI rotation maps from the archive, one near the cycle-24 maximum (CR 2148, March 2014), one at the 2019–20 minimum (CR 2230, May 2020) and one in cycle 25 (CR 2300, July 2025), are solved by both codes at a source surface of 2.5 R<sub>☉</sub>. Four synthetic spacecraft at 0.3–1 au are connected at every speed from 200 to 900 km/s, 116 connections per map.</p>
+  <table>
+    <tr><th>Quantity</th><th>CR 2148</th><th>CR 2230</th><th>CR 2300</th></tr>
+    <tr><td>Source-surface B<sub>r</sub> correlation</td><td>0.99985</td><td>0.99999</td><td>0.99985</td></tr>
+    <tr><td>Same sign of B<sub>r</sub> (area)</td><td>99.6%</td><td>99.97%</td><td>99.9%</td></tr>
+    <tr><td>Open flux, browser / server</td><td>0.98</td><td>0.99</td><td>0.99</td></tr>
+    <tr><td>Neutral line, median (95%) separation</td><td>0.17° (1.1°)</td><td>0.06° (0.13°)</td><td>0.20° (0.29°)</td></tr>
+    <tr><td>Open area, browser / server</td><td>2.3% / 2.8%</td><td>10.2% / 8.7%</td><td>6.6% / 7.4%</td></tr>
+    <tr><td>Open/closed map, cells that agree</td><td>97.3%</td><td>96.7%</td><td>96.0%</td></tr>
+    <tr><td>Footpoints, median separation</td><td>0.65°</td><td>1.2°</td><td>0.95°</td></tr>
+    <tr><td>Footpoints within 3°</td><td>99%</td><td>83%</td><td>98%</td></tr>
+    <tr><td>DCHB, median difference</td><td>0.24°</td><td>0.15°</td><td>0.28°</td></tr>
+    <tr><td>Estimated speed, median difference</td><td>3 km/s</td><td>1 km/s</td><td>2 km/s</td></tr>
+    <tr><td>Expansion factor, median browser / server</td><td>0.60</td><td>0.42</td><td>0.59</td></tr>
+  </table>
+  <p>The field strength agrees to about 1% (median) everywhere above 1.1 R<sub>☉</sub>. At the photosphere the degree-40 expansion on a 2° grid misses small-scale field that the finite-difference solution keeps at the map's 1° resolution, so the browser's |<b>B</b>| there is 10–50% smaller in median. That one difference explains the rest. The expansion factor scales with the photospheric field, so it is about half the server's. Open area depends on the smallest open regions, so it differs by up to 20%. The speed depends on (1 + <i>f</i><sub>s</sub>)<sup>2/9</sup>, so it barely moves. The values come from the version of each code that the tests ran. Each run writes them to <code>cache/validation/</code>, and the tests fail if they leave these ranges.</p>
 </section>
 
 <section id="limits">

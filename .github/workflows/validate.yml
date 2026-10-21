@@ -1,0 +1,49 @@
+# Validation.
+#
+# The full test suite: the browser solver (js/pfss.js) against exact PFSS
+# solutions and against sunkit-magex on archived HMI rotation maps. It is not
+# needed for routine updates, so it only runs by hand (Actions > Validation >
+# Run workflow). Choose "exact" for the seconds-long exact-solution tests
+# alone. The per-rotation numbers are kept as a run artifact.
+
+name: Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Which tests"
+        type: choice
+        options: [full, exact]
+        default: full
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - run: pip install -r requirements.txt -r requirements-test.txt
+
+      - name: Run the tests
+        run: python -m pytest tests -v -rA ${{ inputs.suite == 'exact' && '-m "not slow"' || '' }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-report
+          path: cache/validation/
+          if-no-files-found: ignore

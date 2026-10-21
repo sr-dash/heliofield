@@ -33,7 +33,14 @@ python scripts/make_icons.py                      # icons and the social-preview
 
 - Run `python3 scripts/stamp_assets.py` after any change in `css/` or `js/`, and commit the files it rewrites. It gives every stylesheet and module a content-hashed URL, so returning visitors never run a mix of old and new files after a deploy (GitHub Pages lets browsers cache them for about ten minutes). A check on every push fails when the stamps are out of date.
 - Check a daily product **and** a past date computed in the browser (try one before 2015), in both themes and at phone width, with the browser console open.
-- If you change the solver in `js/pfss.js` or the pipeline in `scripts/build_day.py`, compare the two on the same magnetogram: open flux, the source-surface neutral line and spacecraft footpoints. The README lists the current agreement.
+- If you change the solver in `js/pfss.js` or the pipeline in `scripts/build_day.py`, run the validation suite. It checks the solver against exact solutions and against sunkit-magex on three archived rotation maps. It needs Node.js 22.12 or newer:
+
+  ```bash
+  pip install -r requirements.txt -r requirements-test.txt
+  python -m pytest tests -v
+  ```
+
+  Each run writes its numbers to `cache/validation/`. If a deliberate change moves them, update the tolerances in `tests/` and the table in the guide's Validation section in the same pull request, and say why.
 - Colours are not chosen by eye. Any new or changed colour in `js/theme.js` must keep colour-vision separation and at least 3:1 contrast against the background in both themes; the file explains how they were validated.
 - New controls, link parameters or methods go into the README and the [guide](https://sr-dash.github.io/heliofield/guide.html).
 

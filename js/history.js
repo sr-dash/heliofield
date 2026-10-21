@@ -52,7 +52,7 @@ export async function fleetFor(day) {
 let worker = null, seq = 0, pending = null;
 function getWorker() {
   if (!worker) {
-    worker = new Worker(new URL("./pfss-worker.js?v=05206b4801", import.meta.url), { type: "module" });
+    worker = new Worker(new URL("./pfss-worker.js?v=7648e5cd34", import.meta.url), { type: "module" });
     worker.onmessage = (e) => {
       const m = e.data;
       if (!pending || m.id !== pending.id) return;

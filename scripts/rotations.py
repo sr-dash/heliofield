@@ -45,7 +45,7 @@ def sinlat_map(br: np.ndarray, date_obs: str):
     meta = {"ctype1": "CRLN-CEA", "ctype2": "CRLT-CEA", "cunit1": "deg", "cunit2": "deg",
             "crpix1": (nx + 1) / 2, "crval1": 180.0, "cdelt1": 360 / nx,
             "crpix2": (ny + 1) / 2, "crval2": 0.0, "cdelt2": 180 / np.pi * 2 / ny, "pv2_1": 1.0,
-            "date-obs": date_obs, "naxis": 2, "naxis1": nx, "naxis2": ny, "rsun_ref": RSUN_KM * 1e3}
+            "date-obs": date_obs, "bunit": "G", "naxis": 2, "naxis1": nx, "naxis2": ny, "rsun_ref": RSUN_KM * 1e3}
     return sunpy.map.Map(br, meta)
 
 

@@ -105,6 +105,35 @@ which any page can use (`charts=`, `range=`, `theme=`) and drive with
 with `heliofield-series:pick` (the clicked rotation) and `heliofield-series:ready`.
 **Copy embed code** on the series page writes the `<iframe>`.
 
+## Validation
+
+`tests/` holds an independent check of the browser solver from Python. It runs
+`js/pfss.js` itself under Node.js (≥ 22.12) through `tests/js/bridge.mjs`, so the
+code under test is the code the page runs.
+
+```bash
+pip install -r requirements.txt -r requirements-test.txt
+python -m pytest tests -v                 # full suite, about a minute
+python -m pytest tests -v -m "not slow"   # exact solutions only, seconds
+```
+
+- `test_exact.py`: Legendre functions against SciPy, harmonic round trip, and the
+  closed-form PFSS dipole (field, field lines, open flux, neutral line).
+- `test_vs_sunkit.py` (marked `slow`): the same HMI rotation maps (CR 2148, 2230,
+  2300) solved by sunkit-magex and by the browser. It compares source-surface
+  B<sub>r</sub>, the neutral line, open flux, the open/closed map, |B| with height,
+  and 116 spacecraft connections per map (footpoints, f<sub>s</sub>, DCHB, speed).
+
+The suite needs no downloads; the maps come from `data/history/`. The numbers of each
+run are written to `cache/validation/`. The **Validation** workflow runs the suite on
+demand (Actions → Validation → Run workflow), not on every push. Current agreement:
+source-surface correlation ≥ 0.9998, open flux within 2%, neutral line within 0.2°
+in median, footpoints within about 1° in median, speeds within 3 km/s in median.
+The browser's photospheric |B| is 10–50% weaker (the degree-40 cut), so its
+f<sub>s</sub> is about half the server's. The guide's
+[Validation](https://sr-dash.github.io/heliofield/guide.html#validation) section has
+the full table.
+
 ## Colours and themes
 
 Dark and light themes; one hue per role in both. The field colours (open +, open −,
