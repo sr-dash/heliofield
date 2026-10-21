@@ -201,6 +201,16 @@ output { font-weight: 650; font-variant-numeric: tabular-nums; }
 .series-panel button.icon { border: 0; background: none; font-size: 20px; line-height: 26px; padding: 0 8px; min-height: 0; }
 .series-panel iframe { flex: 1; width: 100%; border: 0; background: transparent; color-scheme: normal; }
 .sp-hint { margin: 0; padding: 5px 12px 7px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); }
+/* Reset view: back to the opening camera without reloading (and recomputing). */
+.reset-view {
+  position: fixed; right: 18px; bottom: 62px; z-index: 3;
+  width: 44px; height: 44px; padding: 0; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--label-bg); box-shadow: var(--shadow);
+}
+.reset-view:hover { background: var(--control-hover); }
+.embed .reset-view { right: 12px; bottom: calc(var(--bar-h) + 8px); }
+.no-controls .reset-view { display: none; }
 .credits {
   position: fixed; right: 18px; bottom: 16px; z-index: 3; font-size: 13px; color: var(--muted);
   padding: 7px 12px; border-radius: 9px; background: var(--label-bg);
@@ -272,6 +282,8 @@ dialog .noask { display: flex; gap: 8px; align-items: center; color: var(--muted
   #panel { left: 8px; right: 8px; width: auto; transform-origin: top center; }
   #legend { bottom: 8px; left: 8px; right: 8px; font-size: 12.5px; gap: 4px 12px; padding: 6px 10px; }
   .credits { display: none; }
+  .reset-view { right: 10px; bottom: calc(var(--legend-h, 40px) + 16px); }
+  .embed .reset-view { right: 10px; bottom: calc(var(--bar-h) + 8px); }
   .series-panel { left: 8px; right: 8px; width: auto; top: auto; bottom: 56px; height: 48vh; }
   .embed #panel { max-height: calc(100% - var(--bar-h) - 12px); transform-origin: bottom center; }
 }

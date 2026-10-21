@@ -29,6 +29,8 @@ is computed, is on the guide page: [`guide.html`](https://sr-dash.github.io/heli
 
 The URL holds the full state (`date`, `v`, `conn`, `layers`, `lines`, `ext`, `view` or
 `cam`, `rmax`, `scale`, `ss`, `rotate`, `panel`, `theme`), so any view can be linked.
+The round **Reset view** button on the scene (or `H`) returns the camera to the
+opening view without reloading, so a field computed in the browser is kept.
 
 ## Any date since 2010
 

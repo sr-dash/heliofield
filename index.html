@@ -155,14 +155,14 @@
     if (folded) h.classList.add("panel-closed");
   })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=268cfb9fd4">
+<link rel="stylesheet" href="css/style.css?v=75c069b1be">
 <!-- assets:start (written by scripts/stamp_assets.py) -->
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
   "./js/history.js": "./js/history.js?v=bdddf429af",
-  "./js/main.js": "./js/main.js?v=14ccfffe3f",
+  "./js/main.js": "./js/main.js?v=03133bd215",
   "./js/pfss-worker.js": "./js/pfss-worker.js?v=7648e5cd34",
   "./js/pfss.js": "./js/pfss.js?v=3f651b8b64",
   "./js/series.js": "./js/series.js?v=9af40c674f",
@@ -265,6 +265,12 @@
   <p class="panel-foot"><a href="guide.html#cite">Cite HelioField</a> · DOI <a href="https://doi.org/10.5281/zenodo.23487231">10.5281/zenodo.23487231</a></p>
 </aside>
 
+<button id="resetView" class="reset-view" type="button" title="Reset view (H)" aria-label="Reset view">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/>
+  </svg>
+</button>
+
 <div id="legend" aria-label="Legend">
   <span><i class="sw neg"></i><span>B<sub>r</sub> &lt; 0</span></span>
   <span><i class="sw pos"></i><span>B<sub>r</sub> &gt; 0</span></span>
@@ -313,6 +319,6 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js?v=14ccfffe3f"></script>
+<script type="module" src="js/main.js?v=03133bd215"></script>
 </body>
 </html>

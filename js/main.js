@@ -716,6 +716,9 @@ const bar = document.querySelector(".bar");
 const barHeight = () => root.style.setProperty("--bar-h", bar.offsetHeight + "px");
 new ResizeObserver(barHeight).observe(bar);
 barHeight();
+// The legend wraps on phones; the reset button sits just above it.
+const legend = $("legend");
+new ResizeObserver(() => root.style.setProperty("--legend-h", legend.offsetHeight + "px")).observe(legend);
 
 // ------------------------------------------------------------- views
 let tween = null, view = null;
@@ -743,6 +746,15 @@ const VIEWS = {
     return dir(state.product.meta.L0 + 200, 55, far / Math.tan(17.5 * DEG) * 1.15);
   },
 };
+// The opening view, which Reset view returns to: from Earth's side, a little
+// ahead in longitude and above the ecliptic.
+const home = () => dir(state.product.meta.L0 - 35, state.product.meta.B0 + 20, near());
+function resetView() {
+  if (!state.product) return;
+  view = null;
+  flyTo(home());
+}
+$("resetView").onclick = resetView;
 // Named views follow the date (Earth moves); anything else is a fixed
 // Carrington camera, which a shared link reproduces with ?cam=lon,lat,dist.
 function setView(name, instant) {
@@ -1011,6 +1023,7 @@ addEventListener("keydown", (e) => {
   else if (k === "e") setView("earth");
   else if (k === "n") setView("north");
   else if (k === "f") setView("fleet");
+  else if (k === "h" || k === "home") resetView();
   else if (k === "r") { setSpin(!controls.autoRotate); syncUrl(); }
 });
 
@@ -1072,7 +1085,7 @@ async function start() {
     const cam = (params.get("cam") || "").split(",").map(Number);
     if (view) setView(view, true);
     else if (cam.length === 3 && cam.every(Number.isFinite) && cam[2] > 1.2) flyTo(dir(...cam), true);
-    else flyTo(dir(state.product.meta.L0 - 35, state.product.meta.B0 + 20, near()), true);
+    else flyTo(home(), true);
     syncUrl();
   } catch (err) {
     $("status").textContent = "Could not load data: " + err.message;
