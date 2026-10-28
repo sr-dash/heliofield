@@ -1,10 +1,10 @@
 // Solves PFSS off the main thread. Keeps the last rotation's field so a new
 // date inside the same rotation only re-traces spacecraft connectivity, and
 // its map and harmonic coefficients so another source-surface height only
-// re-solves the field.
-import { solve, connectOnly } from "./pfss.js?v=1d334a753e";
+// re-solves the field. The same holds for switching the SCS model on or off.
+import { solve, connectOnly } from "./pfss.js?v=a2831ccca6";
 
-let last = null;   // { key, rss, br, coef, models }
+let last = null;   // { key, rss, rout, br, coef, models }
 
 function flatten(polys) {
   const counts = new Int32Array(polys.length);
@@ -17,11 +17,11 @@ function flatten(polys) {
 }
 
 self.onmessage = async (e) => {
-  const { id, url, key, scale, shape, fleet, reuse, rss = 2.5 } = e.data;
+  const { id, url, key, scale, shape, fleet, reuse, rss = 2.5, rout = 0 } = e.data;
   const progress = (stage, f) => self.postMessage({ id, type: "progress", stage, f });
   try {
     // Only when the page still shows this rotation's field.
-    if (reuse && last && last.key === key && last.rss === rss) {
+    if (reuse && last && last.key === key && last.rss === rss && last.rout === rout) {
       const { connect, conn, ensemble } = connectOnly(last.models, fleet);
       const { xyz, counts } = flatten(conn);
       self.postMessage({ id, type: "connect", connect, ensemble, xyz, counts }, [xyz.buffer, counts.buffer]);
@@ -41,8 +41,8 @@ self.onmessage = async (e) => {
       br = new Float32Array(q.length);
       for (let i = 0; i < q.length; i++) br[i] = q[i] * scale;
     }
-    const out = solve(br, shape[0], shape[1], { rss, coef, fleet, progress });
-    last = { key, rss, br, coef: out.coef, models: out.models };
+    const out = solve(br, shape[0], shape[1], { rss, rout, coef, fleet, progress });
+    last = { key, rss, rout, br, coef: out.coef, models: out.models };
     const { xyz, counts } = flatten(out.polys);
     self.postMessage({ id, type: "done", meta: out.meta, xyz, counts, brTex: out.brTex, ssTex: out.ssTex, footTex: out.footTex },
       [xyz.buffer, counts.buffer, out.brTex.buffer, out.ssTex.buffer, out.footTex.buffer]);

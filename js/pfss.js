@@ -1,7 +1,8 @@
 // PFSS in the browser: spherical-harmonic solution of the potential field
 // between the photosphere and a spherical source surface, a field grid for
 // tracing, field lines, the source-surface neutral line, open flux and
-// spacecraft connectivity. Pure math, no DOM: it runs in a Web Worker and
+// spacecraft connectivity. Optionally coupled to a Schatten current-sheet
+// (SCS) model beyond a cusp surface, as in the WSA model. Pure math, no DOM: it runs in a Web Worker and
 // under Node for testing against the Python pipeline.
 //
 // Input map: Float32Array of ny x nx radial field [G], rows uniform in
@@ -31,8 +32,8 @@ export function alf(mu, L, out = new Float64Array((L + 1) * (L + 1))) {
   return out;
 }
 
-// Harmonic coefficients of the map, monopole removed.
-export function analyse(br, ny, nx, L) {
+// Harmonic coefficients of the map, monopole removed unless `mono`.
+export function analyse(br, ny, nx, L, { mono = false } = {}) {
   const W = L + 1, C = new Float64Array(W * W), S = new Float64Array(W * W);
   const cosT = new Float64Array(nx * W), sinT = new Float64Array(nx * W);
   for (let j = 0; j < nx; j++) for (let m = 0; m <= L; m++) {
@@ -50,12 +51,12 @@ export function analyse(br, ny, nx, L) {
       for (let m = 0; m <= L; m++) { cm[m] += v * cosT[j * W + m]; sm[m] += v * sinT[j * W + m]; }
     }
     alf(mu, L, P);
-    for (let l = 1; l <= L; l++) for (let m = 0; m <= l; m++) {
+    for (let l = mono ? 0 : 1; l <= L; l++) for (let m = 0; m <= l; m++) {
       C[l * W + m] += P[l * W + m] * cm[m] * dOmega;
       S[l * W + m] += P[l * W + m] * sm[m] * dOmega;
     }
   }
-  return { C, S, L };
+  return { C, S, L, lmin: mono ? 0 : 1 };
 }
 
 // Radial factors, scaled by rss^-(2l+1) so nothing overflows.
@@ -68,10 +69,16 @@ function radial(l, r, rss) {
   };
 }
 
+// The same factors for a potential field outside a sphere of radius rcp,
+// vanishing at infinity: B_r = a_lm (rcp/r)^(l+2) Y_lm. Used by the SCS model.
+const exterior = (rcp) => (l, r) => ({ f: Math.pow(rcp / r, l + 2), g: -rcp / (l + 1) * Math.pow(rcp / r, l + 1) });
+
 // Field on a grid uniform in ln r, theta (cell centres) and phi (periodic),
-// stored as Cartesian components for trilinear interpolation.
-export function fieldGrid(coef, { rss = 2.5, nr = 36, nth = 90, nph = 180, progress } = {}) {
-  const { C, S, L } = coef, W = L + 1;
+// stored as Cartesian components for trilinear interpolation. By default the
+// PFSS field between 1 and rss; with r0, r1 and radialFn, any potential field
+// whose radial dependence is given per degree.
+export function fieldGrid(coef, { rss = 2.5, r0 = 1, r1 = rss, radialFn = (l, r) => radial(l, r, rss), nr = 36, nth = 90, nph = 180, progress } = {}) {
+  const { C, S, L } = coef, W = L + 1, l0 = coef.lmin ?? 1;
   const n = nr * nth * nph, B = new Float32Array(3 * n);
   const cph = new Float64Array(nph * W), sph = new Float64Array(nph * W);
   for (let p = 0; p < nph; p++) for (let m = 0; m <= L; m++) {
@@ -91,13 +98,13 @@ export function fieldGrid(coef, { rss = 2.5, nr = 36, nth = 90, nph = 180, progr
     pc = new Float64Array(W), ps = new Float64Array(W);
   const fl = new Float64Array(W), gl = new Float64Array(W);
   for (let ir = 0; ir < nr; ir++) {
-    const r = Math.exp(Math.log(rss) * ir / (nr - 1));
-    for (let l = 1; l <= L; l++) { const x = radial(l, r, rss); fl[l] = x.f; gl[l] = x.g; }
+    const r = r0 * Math.exp(Math.log(r1 / r0) * ir / (nr - 1));
+    for (let l = l0; l <= L; l++) { const x = radialFn(l, r); fl[l] = x.f; gl[l] = x.g; }
     for (let k = 0; k < nth; k++) {
       const th = (k + 0.5) * Math.PI / nth, st = Math.sin(th), ct = Math.cos(th);
       const P = Pth[k], dP = dPth[k];
       rc.fill(0); rs.fill(0); tc.fill(0); ts.fill(0); pc.fill(0); ps.fill(0);
-      for (let l = 1; l <= L; l++) for (let m = 0; m <= l; m++) {
+      for (let l = l0; l <= L; l++) for (let m = 0; m <= l; m++) {
         const i = l * W + m, c = C[i], s = S[i];
         rc[m] += c * P[i] * fl[l]; rs[m] += s * P[i] * fl[l];
         tc[m] += c * dP[i] * gl[l]; ts[m] += s * dP[i] * gl[l];
@@ -121,13 +128,15 @@ export function fieldGrid(coef, { rss = 2.5, nr = 36, nth = 90, nph = 180, progr
     }
     progress?.((ir + 1) / nr);
   }
-  return { B, nr, nth, nph, rss, lnr: Math.log(rss) };
+  // rss is the outer edge, r0 the inner; rStop (set by the caller) can stop
+  // tracing below the outer edge.
+  return { B, nr, nth, nph, rss: r1, r0, lnr0: Math.log(r0), lnr: Math.log(r1 / r0) };
 }
 
 // Trilinear interpolation of the Cartesian field at a Cartesian point.
 export function sample(G, x, y, z, out) {
   const r = Math.hypot(x, y, z);
-  const fr = Math.min(Math.max(Math.log(r) / G.lnr * (G.nr - 1), 0), G.nr - 1.000001);
+  const fr = Math.min(Math.max((Math.log(r) - G.lnr0) / G.lnr * (G.nr - 1), 0), G.nr - 1.000001);
   const ft = Math.min(Math.max(Math.acos(Math.max(-1, Math.min(1, z / r))) / Math.PI * G.nth - 0.5, 0), G.nth - 1.000001);
   let fp = (Math.atan2(y, x) / TAU) * G.nph; if (fp < 0) fp += G.nph;
   const i0 = fr | 0, j0 = ft | 0, k0 = Math.floor(fp) % G.nph, k1 = (k0 + 1) % G.nph;
@@ -143,9 +152,11 @@ export function sample(G, x, y, z, out) {
 }
 
 // One direction of a field line by RK4 along the unit field, until it leaves
-// 1 <= r <= rss. Returns points including the clipped boundary crossing.
+// r0 <= r <= rStop (1 and rss for PFSS). Returns points including the clipped
+// boundary crossing, and which boundary: "sun" (or G.innerEnd) or "ss".
 function traceDir(G, p0, sign, maxSteps = 4000) {
   const pts = [p0.slice()], v = [0, 0, 0], p = p0.slice();
+  const rin = G.r0 ?? 1, rout = G.rStop ?? G.rss, inner = G.innerEnd ?? "sun";
   const k = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], q = [0, 0, 0];
   const dir = (x, y, z, o) => {
     sample(G, x, y, z, v);
@@ -163,11 +174,11 @@ function traceDir(G, p0, sign, maxSteps = 4000) {
     dir(q[0], q[1], q[2], k[3]);
     const nx = [0, 1, 2].map((i) => p[i] + (h / 6) * (k[0][i] + 2 * k[1][i] + 2 * k[2][i] + k[3][i]));
     const rn = Math.hypot(nx[0], nx[1], nx[2]);
-    if (rn <= 1 || rn >= G.rss) {
+    if (rn <= rin || rn >= rout) {
       // Clip the last step at the boundary it crossed.
-      const bound = rn <= 1 ? 1 : G.rss, t = (bound - r) / ((rn - r) || 1e-9);
+      const bound = rn <= rin ? rin : rout, t = (bound - r) / ((rn - r) || 1e-9);
       pts.push(p.map((x, i) => x + Math.max(0, Math.min(1, t)) * (nx[i] - x)));
-      return { pts, end: rn <= 1 ? "sun" : "ss" };
+      return { pts, end: rn <= rin ? inner : "ss" };
     }
     p[0] = nx[0]; p[1] = nx[1]; p[2] = nx[2];
     pts.push(p.slice());
@@ -228,14 +239,14 @@ function seeds(br, ny, nx, rss, nU = 260, nF = 220, nO = 260) {
 }
 
 // Source-surface B_r on an equirectangular grid (lat rows south first).
-export function surfaceBr(coef, r, rss, nlat = 180, nlon = 360) {
+export function surfaceBr(coef, r, rss, nlat = 180, nlon = 360, sinlat = false) {
   const { C, S, L } = coef, W = L + 1, out = new Float32Array(nlat * nlon), P = new Float64Array(W * W);
   const fl = new Float64Array(W);
   for (let l = 1; l <= L; l++) fl[l] = radial(l, r, rss).f;
   const am = new Float64Array(W), bm = new Float64Array(W);
   for (let i = 0; i < nlat; i++) {
-    const lat = -90 + (i + 0.5) * 180 / nlat;
-    alf(Math.sin(lat * DEG), L, P);
+    const mu = sinlat ? -1 + (2 * i + 1) / nlat : Math.sin((-90 + (i + 0.5) * 180 / nlat) * DEG);
+    alf(mu, L, P);
     am.fill(0); bm.fill(0);
     for (let l = 1; l <= L; l++) for (let m = 0; m <= l; m++) {
       am[m] += C[l * W + m] * P[l * W + m] * fl[l]; bm[m] += S[l * W + m] * P[l * W + m] * fl[l];
@@ -346,7 +357,7 @@ function isOpen(G, lon, lat, v) {
     sample(G, mx, my, mz, v); n = Math.hypot(v[0], v[1], v[2]) || 1;
     x += h * s * v[0] / n; y += h * s * v[1] / n; z += h * s * v[2] / n;
     const r = Math.hypot(x, y, z);
-    if (r >= G.rss) return s;
+    if (r >= (G.rStop ?? G.rss)) return s;
     if (r < 1) return 0;
   }
   return 0;
@@ -387,57 +398,146 @@ function dchb(bound, lon, lat) {
 
 const bMag = (G, p, v) => { sample(G, p[0], p[1], p[2], v); return Math.hypot(v[0], v[1], v[2]); };
 
-// A field grid and its coronal-hole boundary for one source surface.
-export function model(coef, rss, progress = () => {}) {
+// ------------------------------------------------------------------ SCS
+// Schatten current-sheet model (Schatten 1972), coupled as in WSA: PFSS
+// inside the cusp surface rcp, a little below the PFSS source surface where
+// the field is not yet radial (McGregor et al. 2008); beyond it, the
+// potential field of |B_r(rcp)|, which points outward everywhere, out to
+// rout. Each line then takes back the sign of B_r where it crossed rcp, so
+// the current sheets sit where neighbouring lines came from opposite
+// polarity. rcp scales with the source surface: 2.3 R_sun at 2.5.
+export const CUSP_FRAC = 0.92;
+export const cusp = (rss) => +(CUSP_FRAC * rss).toFixed(3);
+
+export function scsGrid(coef, rss, rcp, rout, { nr = 40, progress } = {}) {
+  const ny = 180, nx = 360, abs = surfaceBr(coef, rcp, rss, ny, nx, true).map(Math.abs);
+  const a = analyse(abs, ny, nx, coef.L, { mono: true });
+  const S = fieldGrid(a, { r0: rcp, r1: rout, radialFn: exterior(rcp), nr, progress });
+  S.innerEnd = "cp";
+  return S;
+}
+
+// Sign of the PFSS B_r at a point on the cusp surface.
+function cuspSign(G, p, v) {
+  sample(G, p[0], p[1], p[2], v);
+  return (v[0] * p[0] + v[1] * p[1] + v[2] * p[2]) >= 0 ? 1 : -1;
+}
+
+// Polarity (+1/-1) of the coupled field at (lon, lat) on the sphere of
+// radius r between rcp and rout: traced in along the SCS field to the cusp
+// surface. 0 when the line does not get there.
+export function scsPolarity(m, r, lon, lat) {
+  const t = traceDir(m.S, cart(r, lon, lat), -1, 6000);
+  return t.end === "cp" ? cuspSign(m.G, t.pts[t.pts.length - 1], [0, 0, 0]) : 0;
+}
+
+// The current sheet between rcp and rout: field lines traced outward from
+// the cusp-surface neutral line, along which the opposite polarities meet.
+// Each rib is sampled at nRib radii spaced evenly in ln r, as flat
+// [lon, lat, r, ...]; their outer ends give the neutral line at rout.
+function hcsRibs(S, hcs, rcp, rout, nRib = 24) {
+  const radii = Array.from({ length: nRib }, (_, j) => rcp * Math.pow(rout / rcp, j / (nRib - 1)));
+  const ribs = [], out = [];
+  for (const h of hcs) {
+    const n = h.length / 2, step = Math.max(1, Math.floor(n / 220)), R = [], O = [];
+    for (let i = 0; i < n; i += step) {
+      const t = traceDir(S, cart(rcp * 1.001, h[2 * i], h[2 * i + 1]), 1, 6000);
+      if (t.end !== "ss") continue;
+      const rib = [];
+      let k = 0;
+      for (const r of radii) {
+        while (k < t.pts.length - 2 && Math.hypot(...t.pts[k + 1]) < r) k++;
+        const a = t.pts[k], b = t.pts[k + 1] || a, ra = Math.hypot(...a), rb = Math.hypot(...b);
+        const w = Math.max(0, Math.min(1, (r - ra) / ((rb - ra) || 1))), q = [0, 1, 2].map((c) => a[c] + w * (b[c] - a[c]));
+        const rr = Math.hypot(...q);
+        rib.push(+(((Math.atan2(q[1], q[0]) / DEG) + 360) % 360).toFixed(3), +(Math.asin(q[2] / rr) / DEG).toFixed(3), +r.toFixed(4));
+      }
+      R.push(rib);
+      O.push(rib[rib.length - 3], rib[rib.length - 2]);
+    }
+    if (R.length >= 2) { ribs.push(R); out.push(O); }
+  }
+  return { ribs, out };
+}
+
+// A field grid and its coronal-hole boundary for one source surface, with
+// the SCS field beyond its cusp surface when rout is set. With SCS, a line
+// is open once it reaches the cusp surface.
+export function model(coef, rss, { rout = 0, progress } = {}) {
   const G = fieldGrid(coef, { rss, progress });
-  return { G, rss, ...chBoundary(G) };
+  if (!rout) return { G, rss, ...chBoundary(G) };
+  const rcp = cusp(rss);
+  G.rStop = rcp;
+  const S = scsGrid(coef, rss, rcp, rout);
+  return { G, S, rss, rcp, rout, ...chBoundary(G) };
+}
+
+// A PFSS line that reached the cusp surface, continued outward through the
+// SCS field to rout. pts run photosphere first.
+function continueScs(S, pts) {
+  const e = pts[pts.length - 1], r = Math.hypot(...e), f = (S.r0 * 1.0005) / r;
+  const t = traceDir(S, e.map((x) => x * f), 1, 6000);
+  return t.end === "ss" ? t.pts : null;
 }
 
 // Everything the viewer draws, in the same shape as a daily product.
 // fleet: { key: { name, planet, lon, lat, r } } at the requested time.
+// rout > 0 couples the SCS model out to rout [R_sun]; 0 is PFSS alone.
 // Returns the solved models too ([main, ...spread]) for connectOnly, and the
 // harmonic coefficients, which a re-solve of the same map at another source
 // surface can pass back in as `coef` to skip the expansion.
-export function solve(br, ny, nx, { rss = 2.5, L = 40, vsw = [300, 400, 500, 600, 700, 800], fleet = {}, coef = null, progress = () => {} } = {}) {
+export function solve(br, ny, nx, { rss = 2.5, rout = 0, L = 40, vsw = [300, 400, 500, 600, 700, 800], fleet = {}, coef = null, progress = () => {} } = {}) {
   const t0 = Date.now();
   progress("harmonics", 0);
   coef ??= analyse(br, ny, nx, L);
   progress("field", 0.05);
-  const G = fieldGrid(coef, { rss, progress: (f) => progress("field", 0.05 + 0.3 * f) });
+  const G = fieldGrid(coef, { rss, progress: (f) => progress("field", 0.05 + (rout ? 0.15 : 0.3) * f) });
+  const rcp = rout ? cusp(rss) : 0, rIn = rcp || rss;
+  let S = null;
+  if (rout) {
+    G.rStop = rcp;
+    S = scsGrid(coef, rss, rcp, rout, { progress: (f) => progress("field", 0.2 + 0.15 * f) });
+  }
 
   progress("lines", 0.35);
-  const polys = [], kind = [], v = [0, 0, 0], sd = seeds(br, ny, nx, rss);
+  const polys = [], kind = [], v = [0, 0, 0], sd = seeds(br, ny, nx, rIn);
   sd.forEach((p, i) => {
     const t = trace(G, p);
     if (t.pts.length >= 3 && t.ends.includes("sun")) {
       const open = t.ends.includes("ss");
-      const foot = t.ends[0] === "sun" ? t.pts[0] : t.pts[t.pts.length - 1];
+      const pts = t.ends[0] === "sun" ? t.pts : t.pts.slice().reverse(), foot = pts[0];
       sample(G, foot[0], foot[1], foot[2], v);
       const brFoot = (v[0] * foot[0] + v[1] * foot[1] + v[2] * foot[2]) / Math.hypot(...foot);
       kind.push(open ? (brFoot > 0 ? 1 : -1) : 0);
-      polys.push(resample(t.pts));
+      // Beyond the cusp surface the spacing can grow with distance.
+      const out = open && S ? continueScs(S, pts) : null;
+      polys.push(out ? resample(pts).concat(resample(out, 0.08, 110).slice(1)) : resample(pts));
     }
     if (i % 40 === 0) progress("lines", 0.35 + 0.15 * i / sd.length);
   });
 
+  // The surface drawn as the source surface, its neutral line and the open
+  // flux are at the cusp surface with SCS: the SCS field carries the same
+  // unsigned flux out to rout.
   progress("surface", 0.5);
-  const ss = surfaceBr(coef, rss, rss);
+  const ss = surfaceBr(coef, rIn, rss);
   const abs = Array.from(ss, Math.abs).sort((a, b) => a - b);
   const ssScale = abs[Math.floor(0.995 * (abs.length - 1))] || 1;
   let flux = 0;
   for (let i = 0; i < 180; i++) {
-    const w = Math.cos((-90 + i + 0.5) * DEG) * (DEG) * (DEG) * Math.pow(rss * RSUN_CM, 2);
+    const w = Math.cos((-90 + i + 0.5) * DEG) * (DEG) * (DEG) * Math.pow(rIn * RSUN_CM, 2);
     for (let j = 0; j < 360; j++) flux += Math.abs(ss[i * 360 + j]) * w;
   }
   const hcs = zeroContour(ss, 180, 360);
+  const sheet = S ? hcsRibs(S, hcs, rcp, rout) : null;
 
   // Coronal holes for this and the other source surfaces, for the footpoint
   // diagnostics and their spread.
   progress("holes", 0.55);
-  const models = [{ G, rss, ...chBoundary(G) }];
+  const models = [S ? { G, S, rss, rcp, rout, ...chBoundary(G) } : { G, rss, ...chBoundary(G) }];
   rssSpread(rss).forEach((r, k) => {
     progress("holes", 0.65 + 0.15 * k);
-    models.push(model(coef, r));
+    models.push(model(coef, r, { rout }));
   });
 
   progress("connect", 0.95);
@@ -446,10 +546,13 @@ export function solve(br, ny, nx, { rss = 2.5, L = 40, vsw = [300, 400, 500, 600
   return {
     polys: polys.concat(conn),
     meta: {
-      model: { name: "PFSS", code: "HelioField in-browser solver", rss, lmax: L },
+      model: rout
+        ? { name: "PFSS + SCS", code: "HelioField in-browser solver", rss, rcp, rout, lmax: L }
+        : { name: "PFSS", code: "HelioField in-browser solver", rss, lmax: L },
       br_scale: 20, ss_scale: +ssScale.toFixed(4), open_flux_Mx: +flux.toExponential(4),
       lines: { count: polys.length, kind }, counts: polys.concat(conn).map((p) => p.length),
-      hcs, vsw, vgrid: VGRID, fleet, connect, ensemble, seconds: (Date.now() - t0) / 1000,
+      hcs, ...(sheet ? { hcs_out: sheet.out, hcs_ribs: sheet.ribs } : {}),
+      vsw, vgrid: VGRID, fleet, connect, ensemble, seconds: (Date.now() - t0) / 1000,
     },
     brTex: textureFromSinLat(br, ny, nx, 20),
     ssTex: textureFromEquirect(ss, ssScale),
@@ -460,10 +563,12 @@ export function solve(br, ny, nx, { rss = 2.5, L = 40, vsw = [300, 400, 500, 600
   };
 }
 
-// Connectivity: each body joined to the source surface along a ballistic
-// Parker spiral at every speed in VGRID, then the PFSS line from there down
-// to the photosphere, with the source diagnostics at its foot:
-//   fs   = (|B_phot| / |B_ss|) (R_sun / R_ss)^2   expansion factor
+// Connectivity: each body joined to the model's outer boundary (the source
+// surface, or rout with SCS) along a ballistic Parker spiral at every speed
+// in VGRID, then the model field line from there down to the photosphere,
+// with the source diagnostics at its foot:
+//   fs   = (|B_phot| / |B_top|) (R_sun / R_top)^2   expansion factor, R_top
+//          the source surface for PFSS and the cusp surface with SCS
 //   dchb = angle to the nearest coronal-hole boundary [deg]
 //   vwsa = wsaSpeed(fs, dchb)
 // models[0] gives the drawn lines and `connect`; the others only footpoints
@@ -472,20 +577,36 @@ export function solve(br, ny, nx, { rss = 2.5, L = 40, vsw = [300, 400, 500, 600
 export function connectOnly(models, fleet) {
   const v = [0, 0, 0];
   const one = (m, b, vs, lines) => {
-    const rRs = b.r * AU_RS;
-    const lon = (b.lon + (OMEGA * (rRs - m.rss) * RSUN_KM / vs) / DEG) % 360, lat = Math.max(-89, Math.min(89, b.lat));
-    const t = trace(m.G, cart(m.rss * 0.995, lon, lat));
-    let pts = t.pts;
-    if (pts.length && Math.hypot(...pts[0]) > Math.hypot(...pts[pts.length - 1])) pts = pts.slice().reverse();
+    const rRs = b.r * AU_RS, rEdge = m.rout || m.rss;
+    const lon = (b.lon + (OMEGA * (rRs - rEdge) * RSUN_KM / vs) / DEG) % 360, lat = Math.max(-89, Math.min(89, b.lat));
+    let pts = [], top = cart(m.rss, lon, lat), rTop = m.rss, ok = false;
+    if (m.S) {
+      // In along the SCS field to the cusp surface, then down through PFSS.
+      const s = traceDir(m.S, cart(rEdge * 0.995, lon, lat), -1, 6000);
+      if (s.end === "cp") {
+        const e = s.pts[s.pts.length - 1], f = (m.rcp * 0.995) / Math.hypot(...e);
+        top = e; rTop = m.rcp;
+        const t = trace(m.G, e.map((x) => x * f));
+        let low = t.pts;
+        if (low.length && Math.hypot(...low[0]) > Math.hypot(...low[low.length - 1])) low = low.slice().reverse();
+        pts = low.concat(s.pts.slice().reverse());
+        ok = t.ends.includes("sun");
+      } else pts = s.pts.slice().reverse();
+    } else {
+      const t = trace(m.G, cart(m.rss * 0.995, lon, lat));
+      pts = t.pts;
+      if (pts.length && Math.hypot(...pts[0]) > Math.hypot(...pts[pts.length - 1])) pts = pts.slice().reverse();
+      ok = t.ends.includes("sun");
+    }
     const c = { ss: [+lon.toFixed(3), +lat.toFixed(3)], foot: null, fs: null, dchb: null, vwsa: null };
-    if (pts.length && t.ends.includes("sun")) {
+    if (pts.length && ok) {
       const f = pts[0], rr = Math.hypot(...f);
       const flon = ((Math.atan2(f[1], f[0]) / DEG) + 360) % 360, flat = Math.asin(f[2] / rr) / DEG;
-      const fs = bMag(m.G, cart(1, flon, flat), v) / bMag(m.G, cart(m.rss, lon, lat), v) / (m.rss * m.rss);
+      const fs = bMag(m.G, cart(1, flon, flat), v) / bMag(m.G, top, v) / (rTop * rTop);
       const d = dchb(m.bound, flon, flat);
       Object.assign(c, { foot: [+flon.toFixed(2), +flat.toFixed(2)], fs: +fs.toFixed(2), dchb: +d.toFixed(2), vwsa: +wsaSpeed(fs, d).toFixed(1) });
     }
-    return { c, line: lines ? (pts.length > 2 ? resample(pts, 0.03, 80) : pts) : null };
+    return { c, line: lines ? (pts.length > 2 ? resample(pts, 0.03, m.S ? 160 : 80) : pts) : null };
   };
   const connect = [], conn = [], foot = models.slice(1).map(() => []);
   for (const [key, b] of Object.entries(fleet)) {

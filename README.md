@@ -28,7 +28,7 @@ Then open <http://localhost:8811/>. How to use the viewer, and how everything
 is computed, is on the guide page: [`guide.html`](https://sr-dash.github.io/heliofield/guide.html).
 
 The URL holds the full state (`date`, `v`, `conn`, `layers`, `lines`, `ext`, `view` or
-`cam`, `rmax`, `scale`, `ss`, `rss`, `rotate`, `panel`, `theme`), so any view can be linked.
+`cam`, `rmax`, `scale`, `ss`, `rss`, `scs`, `rotate`, `panel`, `theme`), so any view can be linked.
 The round **Reset view** button on the scene (or `H`) returns the camera to the
 opening view without reloading, so a field computed in the browser is kept.
 
@@ -54,6 +54,17 @@ surfaces follow it (±0.5 R☉). At heights other than 2.5 R☉, the open-field
 footprints come from the browser solution. Daily products stay at 2.5 R☉, and
 the slider is inactive for them. The test suite checks the browser solution against
 sunkit-magex at 1.5, 2.0, 3.0 and 3.5 R☉ as well.
+
+**PFSS + SCS** (`scs=5|10|21.5`) couples the Schatten current-sheet model
+(Schatten 1972), as in WSA. PFSS runs to a cusp surface at 0.92 R<sub>ss</sub>. On
+that surface, |B<sub>r</sub>| is expanded in harmonics with the monopole included,
+and the exterior potential field is traced out to the chosen edge. Lines take back
+the sign of B<sub>r</sub> where they crossed the cusp surface. The current sheet
+between the cusp surface and the edge is traced from the cusp-surface neutral line.
+Spacecraft connect at the edge. The unsigned flux is conserved outward, and at
+21 R☉ |B<sub>r</sub>|r² is even in latitude to within 4%, as Ulysses observed.
+At the same height, PFSS alone varies by up to a factor of 27. Like the height
+slider, it is available for computed dates only.
 
 ## Solar-wind sources at the footpoints
 
@@ -124,7 +135,7 @@ code under test is the code the page runs.
 
 ```bash
 pip install -r requirements.txt -r requirements-test.txt
-python -m pytest tests -v                 # full suite, about a minute
+python -m pytest tests -v                 # full suite, under two minutes
 python -m pytest tests -v -m "not slow"   # exact solutions only, seconds
 ```
 
@@ -133,7 +144,11 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds
 - `test_vs_sunkit.py` (marked `slow`): the same HMI rotation maps (CR 2148, 2230,
   2300) solved by sunkit-magex and by the browser. It compares source-surface
   B<sub>r</sub>, the neutral line, open flux, the open/closed map, |B| with height,
-  and 116 spacecraft connections per map (footpoints, f<sub>s</sub>, DCHB, speed).
+  and 116 spacecraft connections per map (footpoints, f<sub>s</sub>, DCHB, speed),
+  plus the source surface at 1.5–3.5 R☉.
+- `test_scs.py`: the current-sheet model. It is checked against the series solution for a
+  dipole, and against an SCS field built in Python from the sunkit-magex PFSS solution. It
+  also checks flux conservation, latitude uniformity at 21 R☉ and the sheet's polarity split.
 
 The suite needs no downloads; the maps come from `data/history/`. The numbers of each
 run are written to `cache/validation/`. The **Validation** workflow runs the suite on
@@ -176,7 +191,7 @@ change. A date without a product snaps to the latest one on or before it:
 
 ```js
 frame.contentWindow.postMessage(
-  { type: "heliofield:set", date: "2014-03-12", v: 500, rss: 2.0, view: "earth" }, "*");
+  { type: "heliofield:set", date: "2014-03-12", v: 500, rss: 2.0, scs: 21.5, view: "earth" }, "*");
 addEventListener("message", (e) => {
   if (e.data?.type === "heliofield:state") console.log(e.data.date, e.data.source);
 });

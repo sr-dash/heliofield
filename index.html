@@ -155,16 +155,16 @@
     if (folded) h.classList.add("panel-closed");
   })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=75c069b1be">
+<link rel="stylesheet" href="css/style.css?v=7b3851488e">
 <!-- assets:start (written by scripts/stamp_assets.py) -->
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-  "./js/history.js": "./js/history.js?v=ca60986ad7",
-  "./js/main.js": "./js/main.js?v=a715b51824",
-  "./js/pfss-worker.js": "./js/pfss-worker.js?v=c9f94d2f30",
-  "./js/pfss.js": "./js/pfss.js?v=1d334a753e",
+  "./js/history.js": "./js/history.js?v=37368e7745",
+  "./js/main.js": "./js/main.js?v=02c83972be",
+  "./js/pfss-worker.js": "./js/pfss-worker.js?v=4ec021e2db",
+  "./js/pfss.js": "./js/pfss.js?v=a2831ccca6",
   "./js/series.js": "./js/series.js?v=9af40c674f",
   "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
   "./js/theme.js": "./js/theme.js?v=5abd830f82"
@@ -210,6 +210,16 @@
     <label><input type="checkbox" id="lyrSS"> <span>Source surface B<sub>r</sub></span></label>
     <label class="slider sub"><span>Opacity</span><input type="range" id="ssAlpha" min="0" max="1" step="0.05" value="0.25"></label>
     <label><input type="checkbox" id="lyrPIL" checked> <span><i class="key ln hcs"></i>Neutral line</span></label>
+  </details>
+
+  <details open>
+    <summary>Model <a class="help" href="guide.html#model" title="The coronal models and their settings">?</a></summary>
+    <div class="seg" role="group" aria-label="Coronal model">
+      <button id="modelPfss" class="on" aria-pressed="true" title="Potential field out to the source surface">PFSS</button><button id="modelScs" aria-pressed="false" title="PFSS to a cusp surface, then the Schatten current-sheet model further out">PFSS + SCS</button>
+    </div>
+    <div class="seg sub" role="group" aria-label="Outer edge of the current-sheet model" id="routSeg" hidden>
+      <button data-rout="5" aria-pressed="false">to 5 R<sub>☉</sub></button><button data-rout="10" aria-pressed="false">10 R<sub>☉</sub></button><button data-rout="21.5" class="on" aria-pressed="true">21.5 R<sub>☉</sub></button>
+    </div>
     <label class="slider"><span>Source-surface height <output id="rssOut">2.5</output> R<sub>☉</sub></span><input type="range" id="rss" min="1.5" max="3.5" step="0.1" value="2.5" aria-label="Source-surface height in solar radii" aria-describedby="rssNote"></label>
     <p class="note" id="rssNote"></p>
   </details>
@@ -321,6 +331,6 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js?v=a715b51824"></script>
+<script type="module" src="js/main.js?v=02c83972be"></script>
 </body>
 </html>

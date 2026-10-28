@@ -30,6 +30,9 @@ const state = {
   vsw: 400, rmaxAu: 1.2, logScale: true, rss: 2.5, nLines: 250, extMode: "spiral",
   connMode: "fixed",
   rssWant: 2.5,   // source surface for dates computed in the browser
+  routWant: 0,    // outer edge of the SCS model [R_sun], 0 for PFSS alone
+  rIn: 2.5,       // PFSS outer boundary drawn (cusp surface with SCS)
+  rTop: 2.5,      // where the heliosphere starts (source surface, or SCS edge)
 
 };
 const T = () => THEMES[currentTheme()];
@@ -83,6 +86,15 @@ for (const k of ["photo", "foot", "closed", "open", "ext", "ss", "pil", "hcs", "
 // 1 au lands near 25 R_sun; spirals and the sheet are computed in true r and
 // mapped afterwards, so their shape in longitude is unchanged.
 const mapR = (r) => (!state.logScale || r <= state.rss) ? r : state.rss * (1 + 2 * Math.log(r / state.rss));
+// The same mapping for a traced point given in true Cartesian R_sun (SCS
+// lines run beyond the source surface).
+function warp(q) {
+  const r = Math.hypot(q[0], q[1], q[2]);
+  if (!state.logScale || r <= state.rss) return q;
+  const f = mapR(r) / r;
+  return [q[0] * f, q[1] * f, q[2] * f];
+}
+const warpLine = (p) => (Math.hypot(...p[p.length - 1]) > state.rss || Math.hypot(...p[0]) > state.rss ? p.map(warp) : p);
 function sph(r, lonDeg, latDeg) {
   const R = mapR(r), lo = lonDeg * DEG, la = latDeg * DEG;
   return new THREE.Vector3(R * Math.cos(la) * Math.cos(lo), R * Math.cos(la) * Math.sin(lo), R * Math.sin(la));
@@ -237,7 +249,7 @@ async function loadFoot(p) {
   const nearest = (t) => { t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
   // The archived footprints are for 2.5 R_sun; at any other height the
   // browser's own open/closed map is used.
-  if (p.footTex && p.meta.model.rss !== DEFAULTS.rss) return (p.foot = { tex: nearest(dataTex(p.footTex)), cr: null, browser: true });
+  if (p.footTex && (p.meta.model.rss !== DEFAULTS.rss || p.meta.model.rout)) return (p.foot = { tex: nearest(dataTex(p.footTex)), cr: null, browser: true });
   if (!p.computed) {
     try { return (p.foot = { tex: nearest(await loadTex(`data/${p.day}/open.png`)), cr: null }); } catch (e) { /* none for this day */ }
   }
@@ -265,6 +277,7 @@ async function buildFoot() {
 function showProduct(p) {
   if (state.product && state.product !== p && state.product.brTex !== p.brTex) disposeProduct(state.product);
   state.product = p; state.day = p.day; state.rss = p.meta.model.rss;
+  state.rIn = p.meta.model.rcp || state.rss; state.rTop = p.meta.model.rout || state.rss;
   rssControl();
   buildSun(); buildHelio(); info();
   $("status").textContent = "";
@@ -289,12 +302,12 @@ function buildSun() {
   buildLines();
   buildFoot();
 
-  const ss = new THREE.Mesh(new THREE.SphereGeometry(state.rss, 96, 48), brShader(p.ssTex, +$("ssAlpha").value));
+  const ss = new THREE.Mesh(new THREE.SphereGeometry(state.rIn, 96, 48), brShader(p.ssTex, +$("ssAlpha").value));
   ss.renderOrder = 2;
   G.ss.add(ss);
   for (const h of m.hcs) {
     const pts = [];
-    for (let k = 0; k < h.length; k += 2) pts.push(sph(state.rss * 1.004, h[k], h[k + 1]));
+    for (let k = 0; k < h.length; k += 2) pts.push(sph(state.rIn * 1.004, h[k], h[k + 1]));
     G.pil.add(line(pts, th.hcs, 1, WIDTH.pil));
   }
   applyVisibility();
@@ -307,7 +320,7 @@ function buildLines() {
   p.order ??= lineOrder(nf);
   const keep = p.order.slice(0, Math.min(state.nLines, nf));
   const closed = [], open = [], openKind = [];
-  for (const i of keep) (kind[i] ? (open.push(p.polys[i]), openKind.push(kind[i])) : closed.push(p.polys[i]));
+  for (const i of keep) (kind[i] ? (open.push(warpLine(p.polys[i])), openKind.push(kind[i])) : closed.push(p.polys[i]));
   G.closed.add(segments(closed, () => th.closed, 0.85));
   G.open.add(segments(open, (i) => (openKind[i] > 0 ? th.pos : th.neg), 1));
   $("nlOut").textContent = keep.length;
@@ -326,7 +339,7 @@ function buildExt() {
   const p = state.product;
   if (!p || !$("lyrExt").checked) return applyVisibility();
   const kind = p.meta.lines.kind, nf = p.meta.lines.count, th = T(), v = state.vsw;
-  const rOut = Math.max(state.rmaxAu * AU_RS, state.rss * 1.01), N = 64;
+  const rOut = Math.max(state.rmaxAu * AU_RS, state.rTop * 1.01), N = 64;
   const wind = state.extMode === "spiral";
   const polys = [], pol = [];
   for (const i of p.order.slice(0, Math.min(state.nLines, nf))) {
@@ -334,13 +347,13 @@ function buildExt() {
     const q = p.polys[i], a = q[0], b = q[q.length - 1];
     const e = Math.hypot(...a) > Math.hypot(...b) ? a : b, r0 = Math.hypot(...e);
     // Server-traced lines end at 0.98 R_ss (their seeds), browser-traced
-    // ones at R_ss; the field is already all but radial in that last shell,
-    // so continue from wherever the line ends.
-    if (r0 < state.rss * 0.95) continue;
+    // ones at R_ss, or at the SCS edge; the field is already all but radial
+    // there, so continue from wherever the line ends.
+    if (r0 < state.rTop * 0.95) continue;
     const lon0 = Math.atan2(e[1], e[0]) / DEG, lat0 = Math.asin(e[2] / r0) / DEG, pts = [];
     for (let j = 0; j < N; j++) {
       const r = r0 * Math.pow(rOut / r0, j / (N - 1));
-      const lon = wind ? lon0 - (OMEGA * Math.max(0, r - state.rss) * RSUN_KM / v) / DEG : lon0;
+      const lon = wind ? lon0 - (OMEGA * Math.max(0, r - state.rTop) * RSUN_KM / v) / DEG : lon0;
       const s = sph(r, lon, lat0);
       pts.push([s.x, s.y, s.z]);
     }
@@ -448,20 +461,30 @@ function buildHelio() {
   const p = state.product, m = p.meta, v = state.vsw, th = T();
 
   // Heliospheric current sheet: the source-surface neutral line carried
-  // outward radially and wound back by rotation at speed v.
-  const rOut = Math.max(state.rmaxAu * AU_RS, state.rss * 1.01), NR = 90;
-  const radii = Array.from({ length: NR }, (_, j) => state.rss * Math.pow(rOut / state.rss, j / (NR - 1)));
-  for (const h of m.hcs) {
-    const n = h.length / 2, step = Math.max(1, Math.floor(n / 260)), idx = [];
-    for (let i = 0; i < n; i += step) idx.push(i);
-    if (idx[idx.length - 1] !== n - 1) idx.push(n - 1);
-    const pos = [], tri = [];
-    for (const i of idx) for (const r of radii) {
-      const q = sph(r, h[2 * i] - (OMEGA * (r - state.rss) * RSUN_KM / v) / DEG, h[2 * i + 1]);
-      pos.push(q.x, q.y, q.z);
-    }
-    for (let a = 0; a + 1 < idx.length; a++) for (let j = 0; j + 1 < NR; j++) {
-      const s0 = a * NR + j, s1 = (a + 1) * NR + j;
+  // outward radially and wound back by rotation at speed v. With SCS, the
+  // sheet first follows the traced ribs from the cusp surface to the SCS
+  // edge, and is wound up beyond that.
+  const rOut = Math.max(state.rmaxAu * AU_RS, state.rTop * 1.01), NR = 90;
+  const radii = Array.from({ length: NR }, (_, j) => state.rTop * Math.pow(rOut / state.rTop, j / (NR - 1)));
+  const wound = (lon, lat) => radii.map((r) => sph(r, lon - (OMEGA * (r - state.rTop) * RSUN_KM / v) / DEG, lat));
+  const sheets = m.hcs_ribs
+    ? m.hcs_ribs.map((ribs) => ribs.map((rib) => {
+      const inner = [];
+      for (let k = 0; k < rib.length - 3; k += 3) inner.push(sph(rib[k + 2], rib[k], rib[k + 1]));
+      return inner.concat(wound(rib[rib.length - 3], rib[rib.length - 2]));
+    }))
+    : m.hcs.map((h) => {
+      const n = h.length / 2, step = Math.max(1, Math.floor(n / 260)), cols = [];
+      for (let i = 0; i < n; i += step) cols.push(wound(h[2 * i], h[2 * i + 1]));
+      if ((n - 1) % step) cols.push(wound(h[2 * n - 2], h[2 * n - 1]));
+      return cols;
+    });
+  for (const cols of sheets) {
+    if (cols.length < 2) continue;
+    const H = cols[0].length, pos = [], tri = [];
+    for (const col of cols) for (const q of col) pos.push(q.x, q.y, q.z);
+    for (let a = 0; a + 1 < cols.length; a++) for (let j = 0; j + 1 < H; j++) {
+      const s0 = a * H + j, s1 = (a + 1) * H + j;
       tri.push(s0, s1, s0 + 1, s0 + 1, s1, s1 + 1);
     }
     const g = new THREE.BufferGeometry();
@@ -499,12 +522,12 @@ function buildHelio() {
     if (ci < 0) continue;
     const c = m.connect[ci], pts = [];
     for (let j = 0; j <= 160; j++) {
-      const r = state.rss * Math.pow(rRs / state.rss, j / 160);
-      pts.push(sph(r, c.ss[0] - (OMEGA * (r - state.rss) * RSUN_KM / vb) / DEG, c.ss[1]));
+      const r = state.rTop * Math.pow(rRs / state.rTop, j / 160);
+      pts.push(sph(r, c.ss[0] - (OMEGA * (r - state.rTop) * RSUN_KM / vb) / DEG, c.ss[1]));
     }
     G.spiral.add(line(pts, color, 0.95));
     const cor = p.polys[nf + ci];
-    if (cor?.length > 1) G.spiral.add(line(cor.map((q) => new THREE.Vector3(...q)), color));
+    if (cor?.length > 1) G.spiral.add(line(warpLine(cor).map((q) => new THREE.Vector3(...q)), color));
   }
   // Labels wear text colours; the marker colour sits in a dot beside them.
   for (const o of labelled) {
@@ -570,7 +593,8 @@ addEventListener("message", (e) => {
 });
 
 // ------------------------------------------------------------- panel
-const DEFAULTS = { v: 400, rmax: 1.2, ss: 0.25, lines: 250, rss: 2.5 };
+const DEFAULTS = { v: 400, rmax: 1.2, ss: 0.25, lines: 250, rss: 2.5, rout: 21.5 };
+const ROUTS = [5, 10, 21.5];
 const LAYERS = { photo: "lyrPhoto", foot: "lyrFoot", closed: "lyrClosed", open: "lyrOpen", ext: "lyrExt", ss: "lyrSS",
   pil: "lyrPIL", hcs: "lyrHCS", fleet: "lyrFleet", spiral: "lyrSpiral", cloud: "lyrCloud" };
 // Layers shown on a first visit; links list layers only when they differ.
@@ -648,13 +672,35 @@ $("rmax").addEventListener("input", (e) => { setRmax(+e.target.value); syncUrl()
 const RSS_MIN = 1.5, RSS_MAX = 3.5;
 function rssControl() {
   const daily = !!state.product && !state.product.computed;
+  const rout = daily ? 0 : state.routWant;
+  for (const [id, on] of [["modelPfss", !rout], ["modelScs", !!rout]]) {
+    $(id).classList.toggle("on", on); $(id).setAttribute("aria-pressed", on); $(id).disabled = daily;
+  }
+  $("routSeg").hidden = !rout;
+  for (const b of $("routSeg").querySelectorAll("button")) {
+    const on = +b.dataset.rout === rout;
+    b.classList.toggle("on", on); b.setAttribute("aria-pressed", on);
+  }
   $("rss").disabled = daily;
   const r = daily ? state.rss : state.rssWant;
   $("rss").value = r; $("rssOut").textContent = r.toFixed(1);
   $("rssNote").innerHTML = daily
-    ? `This daily product is solved at 2.5 R<sub>☉</sub>. Pick a date with the HMI badge to change it. <a href="guide.html#rss">More</a>`
-    : `Re-solves this rotation in your browser. <a href="guide.html#rss">What it changes</a>`;
+    ? `This daily product is PFSS at 2.5 R<sub>☉</sub>, solved on the server. Pick a date with the HMI badge to change the model. <a href="guide.html#model">More</a>`
+    : rout
+      ? `PFSS to the cusp surface at ${(0.92 * state.rssWant).toFixed(2)} R<sub>☉</sub>, then the current-sheet model to ${rout} R<sub>☉</sub>. Changes re-solve this rotation in your browser. <a href="guide.html#scs">More</a>`
+      : `Changes re-solve this rotation in your browser. <a href="guide.html#rss">What the height changes</a>`;
 }
+// The coronal model for computed dates: PFSS alone (rout 0) or coupled to
+// the Schatten current-sheet model out to rout.
+async function setModel(rout) {
+  state.routWant = ROUTS.includes(+rout) ? +rout : 0;
+  rssControl();
+  if (state.product?.computed && (state.product.meta.model.rout || 0) !== state.routWant) await openDate(state.day, { ask: false });
+  else { syncUrl(); postState(); }
+}
+$("modelPfss").onclick = () => setModel(0);
+$("modelScs").onclick = () => setModel(state.routWant || DEFAULTS.rout);
+for (const b of $("routSeg").querySelectorAll("button")) b.onclick = () => setModel(+b.dataset.rout);
 async function setRss(r) {
   r = +Math.min(RSS_MAX, Math.max(RSS_MIN, r)).toFixed(1);
   state.rssWant = r; rssControl();
@@ -667,7 +713,7 @@ function setScale(log) {
   for (const [id, on] of [["scaleLog", log], ["scaleTrue", !log]]) {
     $(id).classList.toggle("on", on); $(id).setAttribute("aria-pressed", on);
   }
-  if (state.product) buildHelio();
+  if (state.product) { buildLines(); buildHelio(); }
 }
 $("scaleLog").onclick = () => { setScale(true); syncUrl(); };
 $("scaleTrue").onclick = () => { setScale(false); syncUrl(); };
@@ -683,10 +729,13 @@ function info() {
   rows.push(
     ["Carrington rotation", m.carrington_rotation],
     ["Earth L<sub>0</sub>, B<sub>0</sub>", `${m.L0.toFixed(1)}°, ${m.B0.toFixed(1)}°`],
-    ["Source surface", `${state.rss.toFixed(1)} R<sub>☉</sub>`],
+    ...(m.model.rout
+      ? [["Model", "PFSS + Schatten current sheet"], ["Cusp surface", `${m.model.rcp.toFixed(2)} R<sub>☉</sub> (PFSS to ${state.rss.toFixed(1)})`],
+        ["SCS out to", `${m.model.rout} R<sub>☉</sub>`]]
+      : [["Model", "PFSS"], ["Source surface", `${state.rss.toFixed(1)} R<sub>☉</sub>`]]),
     ["Open flux", `${flux} × 10<sup>22</sup> Mx`],
     ...(state.product.foot && $("lyrFoot").checked
-      ? [["Footprints from", state.product.foot.browser ? `this solution, R<sub>ss</sub> ${state.rss.toFixed(1)} R☉`
+      ? [["Footprints from", state.product.foot.browser ? "this solution"
         : state.product.foot.cr ? `rotation map CR ${state.product.foot.cr}` : "this map"]] : []),
     ["Field lines", m.lines.count],
     ["Computed", state.product.computed ? "in your browser" : "daily, on the server"],
@@ -820,6 +869,7 @@ function stateParams() {
   if (+$("ssAlpha").value !== DEFAULTS.ss) p.set("ss", $("ssAlpha").value);
   if (state.nLines !== DEFAULTS.lines) p.set("lines", state.nLines);
   if (state.product?.computed && state.rssWant !== DEFAULTS.rss) p.set("rss", state.rssWant);
+  if (state.product?.computed && state.routWant) p.set("scs", state.routWant);
   if (view) p.set("view", view); else p.set("cam", camParam());
   if (controls.autoRotate) p.set("rotate", "1");
   return p;
@@ -884,7 +934,7 @@ function snapshotCanvas() {
     renderer, scene, camera, stage, legend,
     title: `HelioField · ${state.day}`,
     lines: [
-      `${m.source.name}${state.product.computed ? ` (CR ${m.map_cr})` : ""} · PFSS, source surface ${state.rss.toFixed(1)} R☉ · ${state.connMode === "sc" ? `self-consistent WSA-type wind (from ${state.vsw} km/s)` : `solar wind ${state.vsw} km/s`} · open flux ${(m.open_flux_Mx / 1e22).toFixed(2)} × 10²² Mx`,
+      `${m.source.name}${state.product.computed ? ` (CR ${m.map_cr})` : ""} · ${m.model.rout ? `PFSS + SCS, cusp ${m.model.rcp.toFixed(2)} R☉, to ${m.model.rout} R☉` : `PFSS, source surface ${state.rss.toFixed(1)} R☉`} · ${state.connMode === "sc" ? `self-consistent WSA-type wind (from ${state.vsw} km/s)` : `solar wind ${state.vsw} km/s`} · open flux ${(m.open_flux_Mx / 1e22).toFixed(2)} × 10²² Mx`,
       viewCaption(),
       `Earth: L0 ${m.L0.toFixed(1)}°, B0 ${m.B0.toFixed(1)}° (Carrington longitude and latitude of the Sun–Earth line)`,
     ],
@@ -970,7 +1020,8 @@ async function openDate(day, { ask = true } = {}) {
   try {
     const idx = await historyIndex();
     const { rot, exact } = rotationFor(idx, day);
-    const sameRot = state.product?.computed && state.product.meta.map_cr === rot.cr && state.product.meta.model.rss === state.rssWant;
+    const sameRot = state.product?.computed && state.product.meta.map_cr === rot.cr && state.product.meta.model.rss === state.rssWant
+      && (state.product.meta.model.rout || 0) === state.routWant;
     if (ask && askAgain && !sameRot && !(await confirmCompute(day, rot, exact))) { $("day").value = state.day || ""; return false; }
     if (!sameRot) {
       fallbackDay = state.product && !state.product.computed ? state.day : state.dates[state.dates.length - 1];
@@ -978,7 +1029,7 @@ async function openDate(day, { ask = true } = {}) {
       showProgress(true, day);
     }
     const pos = await fleetFor(day);
-    const res = await compute({ url: `data/history/${rot.file}`, key: rot.cr, scale: idx.scale_G, shape: idx.shape, fleet: pos.fleet, reuse: sameRot, rss: state.rssWant },
+    const res = await compute({ url: `data/history/${rot.file}`, key: rot.cr, scale: idx.scale_G, shape: idx.shape, fleet: pos.fleet, reuse: sameRot, rss: state.rssWant, rout: state.routWant },
       (stage, f) => { $("busyStage").textContent = STAGES[stage] || stage; $("busyBar").value = f; });
     if (ticket !== loading) return false;
     let product;
@@ -1058,11 +1109,11 @@ addEventListener("keydown", (e) => {
 
 // ------------------------------------------------------------- embedding
 // A host page can drive an embedded copy:
-//   frame.contentWindow.postMessage({ type: "heliofield:set", date: "2014-03-12", v: 500, rss: 2.0, view: "earth" }, "*")
-// and hears { type: "heliofield:state", date, v, rss, source, computed } after every change.
+//   frame.contentWindow.postMessage({ type: "heliofield:set", date: "2014-03-12", v: 500, rss: 2.0, scs: 21.5, view: "earth" }, "*")
+// and hears { type: "heliofield:state", date, v, rss, scs, source, computed } after every change.
 function postState() {
   if (window.parent === window || !state.product) return;
-  window.parent.postMessage({ type: "heliofield:state", date: state.day, v: state.vsw, rss: state.rss, conn: state.connMode,
+  window.parent.postMessage({ type: "heliofield:state", date: state.day, v: state.vsw, rss: state.rss, scs: state.product.meta.model.rout || 0, conn: state.connMode,
     source: state.product.meta.source.short || "GONG", computed: !!state.product.computed,
     obstime: state.product.meta.obstime }, "*");
 }
@@ -1075,9 +1126,13 @@ addEventListener("message", async (e) => {
   if (d.view) view = d.view;
   if (d.rss != null && Number.isFinite(+d.rss)) {
     state.rssWant = +Math.min(RSS_MAX, Math.max(RSS_MIN, +d.rss)).toFixed(1);
-    rssControl();
     if (!d.date && state.product?.computed) d.date = state.day;
   }
+  if (d.scs != null) {
+    state.routWant = ROUTS.includes(+d.scs) ? +d.scs : 0;
+    if (!d.date && state.product?.computed) d.date = state.day;
+  }
+  rssControl();
   if (d.date) await openDate(d.date, { ask: false });   // reports its own state
   else postState();
   if (d.view) setView(d.view);
@@ -1107,8 +1162,10 @@ async function start() {
     const a = params.get("ss");
     if (a !== null && +a >= 0 && +a <= 1) $("ssAlpha").value = a;
     setSpin(params.get("rotate") === "1");
+    if (params.has("scs")) state.routWant = ROUTS.includes(+params.get("scs")) ? +params.get("scs") : 0;
     const rs = +params.get("rss");
-    if (rs >= RSS_MIN && rs <= RSS_MAX) { state.rssWant = +rs.toFixed(1); rssControl(); }
+    if (rs >= RSS_MIN && rs <= RSS_MAX) state.rssWant = +rs.toFixed(1);
+    rssControl();
     const nl = +params.get("lines");
     if (nl >= 20 && nl <= 2000) setNLines(nl);
     if (VIEWS[params.get("view")]) view = params.get("view");

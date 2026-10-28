@@ -146,6 +146,7 @@ a.help:hover { color: var(--text); border-color: var(--text); }
 output { font-weight: 650; font-variant-numeric: tabular-nums; }
 .seg { display: flex; flex-wrap: wrap; gap: 5px; margin: 7px 0 4px; }
 .seg button { flex: 1 1 auto; font-size: 13.5px; padding: 5px 7px; }
+.seg[hidden] { display: none; }
 .seg button.on { border-color: var(--text); background: var(--control-hover); font-weight: 650; }
 .key { margin-right: 7px; vertical-align: middle; }
 .note { margin: 4px 0; color: var(--muted); font-size: 13px; }

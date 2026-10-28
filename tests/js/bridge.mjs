@@ -7,11 +7,13 @@
 //   { "cmd": "trace", "br": ..., "ny", "nx", "L", "rss", "seeds": [[x,y,z], ...] }
 //   { "cmd": "solve", "br": ..., "ny", "nx", "rss", "fleet": { key: { lon, lat, r, planet } } }
 //   { "cmd": "wsa", "pairs": [[fs, dchb], ...] }
+//   { "cmd": "scsfield", "br", "ny", "nx", "rss", "rout", "points": [[x,y,z], ...] }   SCS field
+//   { "cmd": "scspolarity", "br", "ny", "nx", "rss", "rout", "r", "lonlat": [[lon,lat], ...] }
 //
 // Map files are little-endian float32, ny rows uniform in sin(latitude)
 // from the south, column j centred on Carrington longitude (j + 0.5) 360/nx.
 import fs from "node:fs";
-import { alf, analyse, fieldGrid, sample, trace, solve, surfaceBr, zeroContour, chBoundary, wsaSpeed } from "../../js/pfss.js";
+import { alf, analyse, fieldGrid, sample, trace, solve, surfaceBr, zeroContour, chBoundary, wsaSpeed, model, scsPolarity } from "../../js/pfss.js";
 
 const req = JSON.parse(fs.readFileSync(0, "utf8"));
 const readMap = (p) => { const b = fs.readFileSync(p); return new Float32Array(b.buffer, b.byteOffset, b.byteLength / 4); };
@@ -40,7 +42,7 @@ switch (req.cmd) {
   }
   case "solve": {
     const br = readMap(req.br), t0 = Date.now();
-    const res = solve(br, req.ny, req.nx, { fleet: req.fleet || {}, rss: req.rss ?? 2.5 });
+    const res = solve(br, req.ny, req.nx, { fleet: req.fleet || {}, rss: req.rss ?? 2.5, rout: req.rout ?? 0 });
     const rss = res.meta.model.rss;
     out = {
       seconds: (Date.now() - t0) / 1000,
@@ -54,11 +56,22 @@ switch (req.cmd) {
       open: Array.from(res.models[0].open),
       connect: res.meta.connect,
       ensemble: res.meta.ensemble,
+      model: res.meta.model,
+      hcs_out: res.meta.hcs_out,
+      hcs_ribs: res.meta.hcs_ribs,
     };
     break;
   }
   case "contour": {
     out = zeroContour(Float32Array.from(req.field), req.nlat, req.nlon);
+    break;
+  }
+  case "scsfield":
+  case "scspolarity": {
+    const m = model(analyse(readMap(req.br), req.ny, req.nx, req.L ?? 40), req.rss ?? 2.5, { rout: req.rout ?? 21.5 });
+    if (req.cmd === "scsfield") { const v = [0, 0, 0]; out = req.points.map((p) => sample(m.S, p[0], p[1], p[2], v).slice()); }
+    else out = req.lonlat.map(([lo, la]) => scsPolarity(m, req.r, lo, la));
+    out = { rcp: m.rcp, values: out };
     break;
   }
   case "wsa": {

@@ -5,7 +5,7 @@ tests/js/bridge.mjs, against exact solutions and against the Python pipeline
 (sunkit-magex). Run it with
 
     pip install -r requirements.txt -r requirements-test.txt
-    python -m pytest tests -v          # everything (about a minute)
+    python -m pytest tests -v          # everything (under two minutes)
     python -m pytest tests -v -m "not slow"   # exact solutions only (seconds)
 
 Node.js 22.12 or newer must be on PATH. Nothing is downloaded: the maps come

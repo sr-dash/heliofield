@@ -80,11 +80,13 @@
   <a href="#panel">The panel</a>
   <a href="#themes">Themes</a>
   <a href="#save">Saving snapshots</a>
+  <a href="#model">Model choices</a>
   <a href="#embed">Links and embedding</a>
   <h2>Methods</h2>
   <a href="#methods">Overview</a>
   <a href="#data">Magnetograms</a>
   <a href="#pfss">PFSS model</a>
+  <a href="#scs">Current-sheet model</a>
   <a href="#fieldlines">Field lines</a>
   <a href="#hcs">Current sheet</a>
   <a href="#history">Past dates</a>
@@ -165,7 +167,17 @@
     <tr><td>Lines drawn</td><td>How many of the day's traced field lines are drawn, from 50 to all of them (usually 740). The default of 250 keeps the corona readable. The subset is fixed for each day, so moving the slider adds or removes lines without the others changing, and closed and open lines keep their proportions.</td></tr>
     <tr><td>Source surface B<sub>r</sub></td><td>Off by default. The radial field on the outer boundary of the model, at 2.5 solar radii unless the height is changed below. Use the opacity slider to see through it. Its scale is set per day, because this field is far weaker than at the surface.</td></tr>
     <tr><td>Neutral line</td><td>Rose. Where the source-surface field changes sign. This is the base of the heliospheric current sheet.</td></tr>
-    <tr><td>Source-surface height</td><td>For dates computed in your browser (the source badge reads <b>HMI CR …</b>), from 1.5 to 3.5 R<sub>☉</sub>, default 2.5. Releasing the slider re-solves the rotation map at the new height in a second or two; the map is not downloaded again. Everything is redrawn from the new solution: field lines, footprints, neutral line, current sheet and spacecraft connections. Daily products are solved on the server at 2.5 R<sub>☉</sub>, so the slider is inactive for them. See <a href="#rss">choosing the height</a>.</td></tr>
+  </table>
+</section>
+
+<section id="model">
+  <h3>The Model section</h3>
+  <p>These settings apply to dates computed in your browser, whose source badge reads <b>HMI CR …</b>. Daily products are solved on the server with PFSS at 2.5 R<sub>☉</sub>, so the controls are inactive for them. Each change re-solves the rotation map in a second or two; the map is not downloaded again.</p>
+  <table>
+    <tr><th>Control</th><th>What it does</th></tr>
+    <tr><td>PFSS</td><td>The potential-field source-surface model alone (the default). Open field lines end at the source surface, and everything beyond it is drawn as a Parker spiral from there. See <a href="#pfss">PFSS model</a>.</td></tr>
+    <tr><td>PFSS + SCS</td><td>PFSS out to a cusp surface just below the source surface, then the Schatten current-sheet model out to 5, 10 or 21.5 R<sub>☉</sub> (default 21.5, 0.1 au). Open field lines continue through it. The current sheet between the cusp surface and the outer edge is traced from the solution itself, and the spacecraft connect at the outer edge. Beyond it, the heliosphere is drawn as before. See <a href="#scs">the current-sheet model</a>.</td></tr>
+    <tr><td>Source-surface height</td><td>From 1.5 to 3.5 R<sub>☉</sub>, default 2.5. With SCS, the cusp surface follows it at 0.92 times the height. Everything is redrawn from the new solution: field lines, footprints, neutral line, current sheet and spacecraft connections. See <a href="#rss">choosing the height</a>.</td></tr>
   </table>
 </section>
 
@@ -174,9 +186,9 @@
   <table>
     <tr><th>Layer</th><th>What it shows</th></tr>
     <tr><td>Out to</td><td>How far the current sheet and the extended open field lines reach, from 0.1 to 1.8 au.</td></tr>
-    <tr><td>Current sheet</td><td>Off by default. The heliospheric current sheet: the neutral line carried outward by the solar wind and wound into a spiral by solar rotation. With extended open lines on, it runs along the boundary between gold and cerulean spirals.</td></tr>
+    <tr><td>Current sheet</td><td>Off by default. The heliospheric current sheet: the neutral line carried outward by the solar wind and wound into a spiral by solar rotation. With extended open lines on, it runs along the boundary between gold and cerulean spirals. With the current-sheet model, its inner part, from the cusp surface to the outer edge, follows the model's own sheet.</td></tr>
     <tr><td>Planets and spacecraft</td><td>Positions at the time of the map. The seven Sun–Earth L1 monitors share one marker beside Earth.</td></tr>
-    <tr><td>Connection to the Sun</td><td>For each spacecraft, the Parker spiral back to the source surface and the model field line from there to the photosphere. The end of that line is the spacecraft's magnetic footpoint.</td></tr>
+    <tr><td>Connection to the Sun</td><td>For each spacecraft, the Parker spiral back to the source surface (or the outer edge of the current-sheet model) and the model field line from there to the photosphere. The end of that line is the spacecraft's magnetic footpoint.</td></tr>
     <tr><td>Footpoint spread</td><td>Off by default. A cloud of dots in each spacecraft's colour on the Sun: its footpoints for wind speeds up to 100 km/s either side of the one used, on source surfaces 0.5 R<sub>☉</sub> below and above the one used (2.0, 2.5 and 3.0 R<sub>☉</sub> by default). A tight cloud means a robust connection; a cloud split between two regions means the source is uncertain. See <a href="#sources">solar-wind sources</a>.</td></tr>
   </table>
   <p><b>Solar wind</b> sets the speed used for the current sheet and the spirals. A faster wind gives a more open spiral and moves footpoints less far from the spacecraft's own longitude.</p>
@@ -218,6 +230,7 @@
     <tr><td><code>rotate</code></td><td><code>1</code> to rotate slowly</td><td>off</td></tr>
     <tr><td><code>lines</code></td><td>Number of field lines drawn</td><td>250</td></tr>
     <tr><td><code>rss</code></td><td>Source-surface height for dates computed in the browser, 1.5–3.5 R<sub>☉</sub></td><td>2.5</td></tr>
+    <tr><td><code>scs</code></td><td>Couple the Schatten current-sheet model for dates computed in the browser, out to <code>5</code>, <code>10</code> or <code>21.5</code> R<sub>☉</sub></td><td>off</td></tr>
     <tr><td><code>panel</code></td><td><code>0</code> or <code>1</code> to start with the menu closed or open</td><td>last choice</td></tr>
     <tr><td><code>series</code></td><td><code>0</code> or <code>1</code> to hide or show the solar-cycle panel</td><td>shown on wide screens</td></tr>
     <tr><td><code>embed</code></td><td><code>1</code> for the embedded layout</td><td>off</td></tr>
@@ -242,13 +255,13 @@
   <p>A page that embeds HelioField can change its date, wind speed, layers and view without reloading the frame. It does this with <code>postMessage</code>:</p>
 <pre><code>const frame = document.querySelector("iframe");
 frame.contentWindow.postMessage(
-  { type: "heliofield:set", date: "2014-03-12", v: 500, rss: 2.0, view: "earth" }, "*");
+  { type: "heliofield:set", date: "2014-03-12", v: 500, rss: 2.0, scs: 21.5, view: "earth" }, "*");
 
 // HelioField answers after every change:
 addEventListener("message", (e) =&gt; {
   if (e.data?.type === "heliofield:state") console.log(e.data.date, e.data.source);
 });</code></pre>
-  <p>Every field of the <code>set</code> message is optional. <code>layers</code> takes the same comma list as the URL, <code>conn</code> is <code>"sc"</code> or <code>"fixed"</code>, and <code>rss</code> sets the source-surface height for computed dates (alone, it re-solves the date on screen). The reply carries <code>date</code>, <code>v</code>, <code>rss</code>, <code>conn</code>, <code>source</code>, <code>computed</code> (true for a date computed in the browser) and <code>obstime</code>. A host showing any date since 2010, such as <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, can pass it directly. Embeds and host messages compute past dates without asking; only the page itself shows the confirmation.</p>
+  <p>Every field of the <code>set</code> message is optional. <code>layers</code> takes the same comma list as the URL, <code>conn</code> is <code>"sc"</code> or <code>"fixed"</code>, <code>rss</code> sets the source-surface height for computed dates, and <code>scs</code> the outer edge of the current-sheet model (<code>0</code> for PFSS alone). Either one alone re-solves the date on screen. The reply carries <code>date</code>, <code>v</code>, <code>rss</code>, <code>scs</code>, <code>conn</code>, <code>source</code>, <code>computed</code> (true for a date computed in the browser) and <code>obstime</code>. A host showing any date since 2010, such as <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, can pass it directly. Embeds and host messages compute past dates without asking; only the page itself shows the confirmation.</p>
 </section>
 
 <h2 class="part" id="methods">Methods</h2>
@@ -294,6 +307,22 @@ addEventListener("message", (e) =&gt; {
   <p>The open flux is the unsigned radial flux through the source surface:</p>
   <div class="eq">Φ<sub>open</sub> = R<sub>ss</sub><sup>2</sup> ∮ |<i>B<sub>r</sub></i>(R<sub>ss</sub>, θ, φ)| dΩ</div>
   <p>It is a standard summary of how much field the Sun opens into the heliosphere. PFSS with GONG or HMI input commonly underestimates the open flux measured in situ near 1 au. Treat it as a relative measure from day to day, not an absolute one.</p>
+</section>
+
+<section id="scs">
+  <h3>Schatten current-sheet model</h3>
+  <p>PFSS forces the field to be radial at the source surface, but it keeps the latitude structure of the field there. Beyond it, |B<sub>r</sub>| r<sup>2</sup> stays strong over the poles and weak near the neutral line. Ulysses found the opposite: far from the Sun, |B<sub>r</sub>| r<sup>2</sup> hardly depends on latitude (Smith &amp; Balogh 1995). The open flux spreads out sideways until the magnetic pressure evens out, and it is separated into the two polarities by a thin current sheet. The Schatten current-sheet model (Schatten 1972) builds that state while keeping the field potential everywhere except in the sheets. It is the outer part of the WSA model (Arge &amp; Pizzo 2000).</p>
+  <ol>
+    <li><b>PFSS inside.</b> The PFSS solution is used up to a cusp surface at R<sub>cp</sub> = 0.92 R<sub>ss</sub> (2.3 R<sub>☉</sub> for the default 2.5). The cusp surface sits below the source surface, where the PFSS field is not yet forced radial. This reduces the kink in field lines at the interface (McGregor et al. 2008). A line that reaches the cusp surface is open.</li>
+    <li><b>Reorient.</b> On the cusp surface, take |B<sub>r</sub>|. The field now points outward everywhere, so there are no neutral lines to anchor closed loops.</li>
+    <li><b>Solve outward.</b> Expand |B<sub>r</sub>(R<sub>cp</sub>)| in spherical harmonics up to degree 40, including the monopole term. The potential field outside the sphere that vanishes at infinity is then
+      <div class="eq"><i>B<sub>r</sub></i>(<i>r</i>, θ, φ) = Σ <i>a<sub>lm</sub></i> (R<sub>cp</sub> / <i>r</i>)<sup><i>l</i>+2</sup> <i>Y<sub>lm</sub></i>(θ, φ),</div>
+      with the horizontal components from the same potential. The higher degrees fade quickly with distance, so the field tends to the monopole: radial, and even in latitude.</li>
+    <li><b>Restore the sign.</b> Each field line takes the polarity of B<sub>r</sub> where it left the cusp surface. Lines from opposite polarities lie side by side above each cusp-surface neutral line, and the current sheet sits between them. HelioField traces the sheet directly, by following field lines outward from the cusp-surface neutral line.</li>
+  </ol>
+  <p>The unsigned flux through every sphere outside the cusp surface is the same: the open flux shown is measured on the cusp surface. With SCS, the expansion factor <i>f</i><sub>s</sub> is measured between the photosphere and the cusp surface, and a spacecraft connects to the model at its outer edge. Its Parker spiral then starts from the outer edge rather than from the source surface. The outer edge can be 5 R<sub>☉</sub> (as in WSA), 10 R<sub>☉</sub>, or 21.5 R<sub>☉</sub> (0.1 au, where heliospheric models such as ENLIL usually start). The SCS field is close to radial by then: on average within 0.6° at 21 R<sub>☉</sub> on the test maps. Beyond the edge, the extended lines, the current sheet and the spirals continue as before.</p>
+  <p>On the HMI map at the 2020 minimum (CR 2230), PFSS |B<sub>r</sub>| r<sup>2</sup> at 2.5 R<sub>☉</sub> varies by a factor of 27 between 10° latitude bands. The SCS field at 21 R<sub>☉</sub> varies by 3%.</p>
+  <p>SCS is still a static, current-free model outside the sheets. It does not include the solar wind's acceleration or stream interactions. The field is continuous across the cusp surface, but its direction changes there.</p>
 </section>
 
 <section id="fieldlines">
@@ -450,7 +479,7 @@ addEventListener("message", (e) =&gt; {
   <h3>Validation</h3>
   <p>The browser solver is tested independently of the page, from Python, by a test suite in the repository (<code>tests/</code>). The suite runs <code>js/pfss.js</code> itself under Node.js, so the code it checks is the code the page runs. Anyone can rerun it. It is not part of routine updates; it runs by hand or from the repository's <b>Validation</b> workflow.</p>
 <pre><code>pip install -r requirements.txt -r requirements-test.txt
-python -m pytest tests -v                 # everything, about a minute
+python -m pytest tests -v                 # everything, under two minutes
 python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code></pre>
   <p><b>Exact solutions.</b> The associated Legendre functions match SciPy to round-off. A dipole on the photosphere has a closed-form PFSS solution, and the solver reproduces it: the field within 2% everywhere between the photosphere and the source surface, traced field lines that keep the dipole's flux function constant to 1%, open flux within 1%, and a neutral line on the equator to 0.6°. The speed formula matches the Python pipeline's to round-off. The harmonic analysis of a single high-degree term leaks about 4% of its amplitude into other degrees, because the latitude integral uses the map's own uniform rows rather than Gauss–Legendre points. The test keeps that limit in view.</p>
   <p><b>Against sunkit-magex.</b> Three HMI rotation maps from the archive, one near the cycle-24 maximum (CR 2148, March 2014), one at the 2019–20 minimum (CR 2230, May 2020) and one in cycle 25 (CR 2300, July 2025), are solved by both codes at a source surface of 2.5 R<sub>☉</sub>. Four synthetic spacecraft at 0.3–1 au are connected at every speed from 200 to 900 km/s, 116 connections per map.</p>
@@ -469,6 +498,12 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
     <tr><td>Expansion factor, median browser / server</td><td>0.60</td><td>0.42</td><td>0.59</td></tr>
   </table>
   <p>For the source-surface slider, the same two codes also solve CR 2148 and CR 2230 at 1.5, 2.0, 3.0 and 3.5 R<sub>☉</sub>. At every height the source-surface field correlates at 0.9998 or better, and the open flux agrees within 2.1%.</p>
+  <p><b>The current-sheet model</b> (<code>tests/test_scs.py</code>) is checked in three ways.</p>
+  <ul>
+    <li><b>Dipole.</b> The SCS field of a dipole has a series solution, |cos θ| expanded in Legendre polynomials. The browser's field matches it within 2% from 2.6 to 21 R<sub>☉</sub>, and its current sheet lies on the equator at every height.</li>
+    <li><b>Against Python.</b> For CR 2148 and CR 2230, an independent SCS field is built in Python from the sunkit-magex PFSS field at the cusp surface. At 3 to 20 R<sub>☉</sub>, B<sub>r</sub> correlates at 0.9997 or better with a median difference of 1.4%.</li>
+    <li><b>Physical checks.</b> The unsigned flux through spheres from the cusp surface to 21 R<sub>☉</sub> is constant within 0.05%. |B<sub>r</sub>| r<sup>2</sup> at 21 R<sub>☉</sub> varies by less than 4% between latitude bands. At 3° either side of the traced current sheet, the polarities are opposite at 100% (2020) and 92% (2014) of the points; near maximum the sheet folds, and some points fall on another fold.</li>
+  </ul>
   <p>The field strength agrees to about 1% (median) everywhere above 1.1 R<sub>☉</sub>. At the photosphere the degree-40 expansion on a 2° grid misses small-scale field that the finite-difference solution keeps at the map's 1° resolution, so the browser's |<b>B</b>| there is 10–50% smaller in median. That one difference explains the rest. The expansion factor scales with the photospheric field, so it is about half the server's. Open area depends on the smallest open regions, so it differs by up to 20%. The speed depends on (1 + <i>f</i><sub>s</sub>)<sup>2/9</sup>, so it barely moves. The values come from the version of each code that the tests ran. Each run writes them to <code>cache/validation/</code>, and the tests fail if they leave these ranges.</p>
 </section>
 
@@ -476,6 +511,7 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
   <h3>Limitations</h3>
   <ul>
     <li><b>No currents.</b> PFSS cannot represent sheared or twisted fields, such as those in filament channels or before eruptions. Active-region loops are less twisted than in reality.</li>
+    <li><b>Static, potential models.</b> PFSS and SCS hold no currents outside the current sheets and no solar-wind dynamics. The current-sheet model is available only for dates computed in the browser.</li>
     <li><b>A spherical source surface.</b> The real boundary between closed and open field is neither spherical nor at one height. Its height changes the open flux and the shape of the neutral line; for past dates it can be varied, but daily products use 2.5 R<sub>☉</sub>.</li>
     <li><b>Old data away from Earth.</b> A synoptic map shows some longitudes as they were up to about four weeks earlier. New active regions there are missing until they rotate into view.</li>
     <li><b>Poorly observed poles.</b> The polar fields are seen at a grazing angle. They strongly influence the open field, and so the current sheet.</li>
@@ -523,6 +559,10 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
     <li>Linker, J. A. et al. 2017, The open flux problem, <i>The Astrophysical Journal</i>, 848, 70.</li>
     <li>Lee, C. O., Luhmann, J. G., Hoeksema, J. T., Sun, X., Arge, C. N. &amp; de Pater, I. 2011, Coronal field opens at lower height during the solar cycles 22 and 23 minimum periods, <i>Solar Physics</i>, 269, 367.</li>
     <li>Badman, S. T. et al. 2020, Magnetic connectivity of the ecliptic plane within 0.5 au: potential field source surface modeling of the first Parker Solar Probe encounter, <i>The Astrophysical Journal Supplement Series</i>, 246, 23.</li>
+    <li>Schatten, K. H. 1972, Current sheet magnetic model for the solar corona, in <i>Solar Wind</i>, NASA SP-308, 44.</li>
+    <li>Arge, C. N. &amp; Pizzo, V. J. 2000, Improvement in the prediction of solar wind conditions using near-real time solar magnetic field updates, <i>Journal of Geophysical Research</i>, 105, 10465.</li>
+    <li>McGregor, S. L., Hughes, W. J., Arge, C. N. &amp; Owens, M. J. 2008, Analysis of the magnetic field discontinuity at the potential field source surface and Schatten current sheet interface in the Wang–Sheeley–Arge model, <i>Journal of Geophysical Research</i>, 113, A08112.</li>
+    <li>Smith, E. J. &amp; Balogh, A. 1995, Ulysses observations of the radial magnetic field, <i>Geophysical Research Letters</i>, 22, 3317.</li>
     <li>Scherrer, P. H. et al. 2012, The Helioseismic and Magnetic Imager (HMI) investigation for the Solar Dynamics Observatory (SDO), <i>Solar Physics</i>, 275, 207.</li>
   </ol>
   <p class="muted">Magnetograms courtesy of NSO/GONG and of NASA/SDO and the HMI science team. PFSS by sunkit-magex (SunPy project). Ephemerides from JPL Horizons via HelioFleet.</p>
