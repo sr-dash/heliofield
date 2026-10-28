@@ -2,7 +2,8 @@
 """Plot the surface maps of a HelioField result file, as PNG and PDF.
 
 Three panels in the viewer's colours:
-  1. photospheric B_r (the input map),
+  1. photospheric B_r as the model uses it (the input map expanded to
+     degree 40 with zero net flux), or with --input the input map itself,
   2. B_r on the source surface (or the cusp surface with SCS), with the
      neutral line, and the current sheet at the outer edge with SCS,
   3. the open-field footprints (the model's coronal holes), with the
@@ -14,6 +15,9 @@ Three panels in the viewer's colours:
 Needs numpy, scipy and matplotlib.
 """
 from __future__ import annotations
+
+import heliofield_update                 # first: package-version notes, and an update if the script fails
+heliofield_update.install()
 
 import argparse
 import textwrap
@@ -47,6 +51,7 @@ def main(argv=None):
     ap.add_argument("--out", help="output name without extension (default: <file>_surface)")
     ap.add_argument("--dpi", type=int, default=200)
     ap.add_argument("--v", type=float, help="wind speed [km/s] for the footpoints (default: that of the saved view)")
+    ap.add_argument("--input", action="store_true", help="show the input map (br_input) instead of the model's smoothed boundary (br_phot)")
     a = ap.parse_args(argv)
 
     res = load(a.file)
@@ -73,8 +78,11 @@ def main(argv=None):
 
     # 1. Photosphere: the viewer's ±20 G scale.
     ax = axes[0]
-    m = ax.pcolormesh(lon_e, lat_e, res["br_phot"], cmap=cmap, vmin=-20, vmax=20, shading="flat", rasterized=True)
-    frame(ax, "Photospheric $B_r$ (model input)")
+    raw = a.input and "br_input" in res
+    m = ax.pcolormesh(lon_e, lat_e, res["br_input"] if raw else res["br_phot"], cmap=cmap, vmin=-20, vmax=20, shading="flat", rasterized=True)
+    lmax = res.attrs.get("lmax", 40)
+    frame(ax, "Photospheric $B_r$: input map" if raw or "br_input" not in res
+          else f"Photospheric $B_r$ as used by the model (degree {int(float(lmax))}, zero net flux)")
     fig.colorbar(m, ax=ax, label="$B_r$ [G]", shrink=0.85, pad=0.01)
 
     # 2. Source or cusp surface, scaled to its 99.5th percentile like the viewer.

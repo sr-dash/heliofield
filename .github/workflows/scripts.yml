@@ -1,0 +1,77 @@
+# Download scripts against new package releases.
+#
+# The Python scripts that come with every download (download/) are run once a
+# month against the newest NumPy, SciPy, Matplotlib and xarray: export, read,
+# plot, and recompute the corona (tests/test_export.py).
+#  - If they pass, the versions become the new "tested" ones in
+#    download/requirements-tested.txt, and download/manifest.json is refreshed.
+#  - If they fail, an issue is opened (or commented on) so the scripts get
+#    fixed. Users' copies then pick up the fix the next time a script fails
+#    (download/heliofield_update.py).
+
+name: Scripts vs new packages
+
+on:
+  schedule:
+    - cron: "17 6 3 * *"       # 06:17 UTC on the 3rd of each month
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  latest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Newest packages
+        run: |
+          pip install --upgrade pip
+          pip install --upgrade numpy scipy matplotlib xarray pytest
+          python -c "import numpy, scipy, matplotlib, xarray; print('numpy', numpy.__version__, 'scipy', scipy.__version__, 'matplotlib', matplotlib.__version__, 'xarray', xarray.__version__)"
+
+      - name: Run the download tests
+        id: tests
+        run: python -m pytest tests/test_export.py -v -rA -p no:cacheprovider 2>&1 | tee pytest.log; exit ${PIPESTATUS[0]}
+
+      - name: Record the versions as tested
+        if: success()
+        run: |
+          python - <<'EOF'
+          from importlib import metadata
+          from pathlib import Path
+          lines = ["# The versions the HelioField scripts were last tested with (Python 3.13).",
+                   "# Updated automatically by the monthly package check when newer releases pass."]
+          lines += [f"{p}=={metadata.version(p)}" for p in ("numpy", "scipy", "matplotlib")]
+          Path("download/requirements-tested.txt").write_text("\n".join(lines) + "\n")
+          EOF
+          python scripts/stamp_assets.py
+          git config user.name "Soumyaranjan Dash"
+          git config user.email "sdash@nso.edu"
+          git add download/requirements-tested.txt download/manifest.json
+          if git diff --cached --quiet; then echo "versions unchanged"; exit 0; fi
+          git commit -m "Download scripts pass with $(grep -h '==' download/requirements-tested.txt | tr '\n' ' ')"
+          git push
+
+      - name: Report a failure
+        if: failure() && steps.tests.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Download scripts fail with new package versions"
+          body=$(printf 'The monthly check of the download scripts failed (%s).\n\nVersions:\n```\n%s\n```\n\nLast lines of the test log:\n```\n%s\n```\n' \
+            "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            "$(pip list 2>/dev/null | grep -Ei '^(numpy|scipy|matplotlib|xarray) ')" "$(tail -n 60 pytest.log)")
+          n=$(gh issue list --state open --search "in:title \"$title\"" --json number -q '.[0].number')
+          if [ -n "$n" ]; then gh issue comment "$n" --body "$body"; else gh issue create --title "$title" --body "$body"; fi

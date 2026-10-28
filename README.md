@@ -75,20 +75,32 @@ slider, it is available for computed dates only.
 **Save & share → Download results…** zips the model behind a computed date.
 The zip holds the results as NetCDF-3, written in the browser by `js/netcdf.js`
 and `js/export.js`. A `_header.json` describes every variable, its units, the
-model settings and the saved view, and a README and Python scripts from
-`download/` come with it. There are three choices:
+preprocessing, the model settings and the saved view. A README and all the Python
+scripts from `download/` come with it, and 3D zips also carry the surface-map file.
+Names carry the model date and the day of download, as in
+`heliofield_model-2014-03-12_saved-2026-10-28_pfss.nc`. There are three choices:
 
-| Choice | Contents | Scripts | Size |
-|---|---|---|---|
-| Surface maps | input B<sub>r</sub>, source- (and cusp-) surface B<sub>r</sub>, open-field footprints, neutral line, spacecraft footpoints | `plot_surface.py`, `compute_corona.py` | ~0.4 MB |
-| Full 3D, PFSS | + B on the 36 × 90 × 180 grid, field lines, connections | `plot_surface.py`, `plot_3d.py` | ~7 MB |
-| Full 3D, PFSS + SCS | + the SCS field, traced current sheet, polarity at the outer edge | `plot_surface.py`, `plot_3d.py` | ~17 MB |
+| Choice | Contents | Size |
+|---|---|---|
+| Surface maps | input and model photospheric B<sub>r</sub>, source- (and cusp-) surface B<sub>r</sub>, open-field footprints, neutral line, spacecraft footpoints | ~0.4 MB |
+| Full 3D, PFSS | + B on the 36 × 90 × 180 grid, field lines, connections | ~7 MB |
+| Full 3D, PFSS + SCS | + the SCS field, traced current sheet, polarity at the outer edge | ~18 MB |
+
+`br_input` is the archived map: averaged to 180 × 360, with its mean removed.
+`br_phot` is what the model uses: its harmonic expansion to degree 40 without the
+monopole, a low-pass filter of about 4.5° that keeps the net flux at zero.
 
 The plot scripts write PNG and PDF in the viewer's colours and view.
 `compute_corona.py` is `js/pfss.js` rewritten in NumPy: it computes the 3D field
 from the surface maps (`--rss`, `--scs`, `--lmax`) and writes a 3D result file.
 `tests/test_export.py` checks that it reproduces the browser to within 10⁻⁵, and
 that every script runs. The scripts need only NumPy, SciPy and Matplotlib.
+They were tested with the versions in `download/requirements-tested.txt`. If a
+script fails, `heliofield_update.py` fetches the published scripts, checks them
+against `download/manifest.json` (written by `scripts/stamp_assets.py`), and
+runs again. The monthly **Scripts vs new packages** workflow runs the download
+tests against the newest NumPy, SciPy, Matplotlib and xarray. If they pass, it
+records those versions as tested; if not, it opens an issue.
 
 ## Solar-wind sources at the footpoints
 

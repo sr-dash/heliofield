@@ -9,9 +9,9 @@ name: Asset stamps
 
 on:
   push:
-    paths: ["css/**", "js/**", "*.html", "scripts/stamp_assets.py", ".github/workflows/assets.yml"]
+    paths: ["css/**", "js/**", "download/**", "*.html", "scripts/stamp_assets.py", ".github/workflows/assets.yml"]
   pull_request:
-    paths: ["css/**", "js/**", "*.html", "scripts/stamp_assets.py", ".github/workflows/assets.yml"]
+    paths: ["css/**", "js/**", "download/**", "*.html", "scripts/stamp_assets.py", ".github/workflows/assets.yml"]
 
 permissions:
   contents: read

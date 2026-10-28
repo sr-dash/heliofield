@@ -17,6 +17,9 @@ Needs numpy, scipy and matplotlib.
 """
 from __future__ import annotations
 
+import heliofield_update                 # first: package-version notes, and an update if the script fails
+heliofield_update.install()
+
 import argparse
 import sys
 import textwrap
@@ -73,7 +76,7 @@ class Camera:
         return ~hidden & (np.linalg.norm(p, axis=-1) >= 0.999)
 
 
-def sun_image(cam, res, lut, mu_floor=0.55):
+def sun_image(cam, res, lut, key="br_phot", mu_floor=0.55):
     """RGBA image of the photosphere, B_r on the viewer's ±20 G scale, with the
     viewer's limb shading: colour * mix(0.55, 1, sqrt(mu))."""
     ys, xs = np.mgrid[0:cam.h, 0:cam.w] + 0.5
@@ -88,10 +91,10 @@ def sun_image(cam, res, lut, mu_floor=0.55):
     p = cam.pos + t[..., None] * d
     lon = np.degrees(np.arctan2(p[..., 1], p[..., 0])) % 360
     sinlat = np.clip(p[..., 2], -1, 1)
-    ny, nx = res["br_phot"].shape
+    ny, nx = res[key].shape
     i = np.clip(((sinlat + 1) / 2 * ny).astype(int), 0, ny - 1)
     j = np.clip((lon / 360 * nx).astype(int), 0, nx - 1)
-    s = np.clip(res["br_phot"][i, j] / 20.0, -1, 1)
+    s = np.clip(res[key][i, j] / 20.0, -1, 1)
     rgb = lut[np.round((s + 1) / 2 * 255).astype(int)]
     mu = np.clip(-(p * d).sum(-1), 0, 1)
     rgb = rgb * (mu_floor + (1 - mu_floor) * np.sqrt(mu))[..., None]
@@ -123,6 +126,8 @@ def main(argv=None):
     ap.add_argument("--v", type=float, help="wind speed for the spacecraft spirals [km/s]")
     ap.add_argument("--rmax", type=float, default=None, help="draw spirals out to this distance [au] (default 1.2)")
     ap.add_argument("--true-distance", action="store_true", help="no log compression beyond the source surface")
+    ap.add_argument("--model-surface", action="store_true",
+                    help="colour the Sun with the model's smoothed boundary (br_phot) instead of the input map, as the web page does")
     ap.add_argument("--all-lines", action="store_true", help="draw every traced line, not only the ones drawn in the viewer")
     ap.add_argument("--size", default="1600x1200", help="image size in pixels, WxH")
     ap.add_argument("--dpi", type=int, default=200)
@@ -145,7 +150,8 @@ def main(argv=None):
     fig = plt.figure(figsize=(w / a.dpi, h / a.dpi), dpi=a.dpi, facecolor=th["bg"])
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_xlim(0, w); ax.set_ylim(0, h); ax.set_axis_off(); ax.set_facecolor(th["bg"])
-    ax.imshow(sun_image(cam, res, lut), origin="lower", extent=(0, w, 0, h), zorder=2, interpolation="bilinear")
+    surface = "br_input" if "br_input" in res and not a.model_surface else "br_phot"
+    ax.imshow(sun_image(cam, res, lut, surface), origin="lower", extent=(0, w, 0, h), zorder=2, interpolation="bilinear")
 
     lw = 1.1 * w / 1600
     lines, kinds = polylines(res), res["line_kind"]

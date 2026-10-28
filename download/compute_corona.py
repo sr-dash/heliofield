@@ -26,6 +26,9 @@ Method and validation: https://sr-dash.github.io/heliofield/guide.html#methods
 """
 from __future__ import annotations
 
+import heliofield_update                 # first: package-version notes, and an update if the script fails
+heliofield_update.install()
+
 import argparse
 import json
 import math
@@ -44,7 +47,24 @@ AU_RS = 149597870.7 / RSUN_KM
 OMEGA = TAU / (25.38 * 86400)
 VGRID = [200 + 25 * i for i in range(29)]
 CUSP_FRAC = 0.92
-FORMAT = "heliofield-export-1"
+FORMAT = "heliofield-export-2"
+PREP_INPUT = ("SDO/HMI Carrington-rotation synoptic map (hmi.Synoptic_Mr_small, or hmi.Synoptic_Mr averaged), averaged in blocks "
+              "to 180 x 360 (rows uniform in sine latitude), missing pixels set to 0, mean removed so the net flux is zero")
+
+
+def prep_model(L):
+    return (f"br_input expanded in spherical harmonics up to degree {L} with the monopole (l = 0) removed: a low-pass filter "
+            f"(resolution about {180 / L:.1f} degrees) that also guarantees zero net flux. This is the boundary condition of the PFSS solution.")
+
+
+def input_map(src):
+    """The map to solve from: br_input (files saved since the format-2
+    release), or br_phot in older files, where it was the input map."""
+    return np.asarray(src["br_input"] if "br_input" in src else src["br_phot"], float)
+
+
+def today():
+    return datetime.now().strftime("%Y-%m-%d")
 
 
 # ------------------------------------------------------------- harmonics
@@ -573,7 +593,10 @@ def write(out, src, sol, args, view):
 
     var("lat", ("lat",), src["lat"], units="degrees_north", long_name="Carrington latitude of the map rows (uniform in sine latitude, south first)")
     var("lon", ("lon",), src["lon"], units="degrees_east", long_name="Carrington longitude of the map columns")
-    var("br_phot", ("lat", "lon"), src["br_phot"], units="G", long_name="Photospheric radial field: the input magnetogram (model boundary condition)")
+    var("br_input", ("lat", "lon"), input_map(src), units="G", long_name="Input map: the archived magnetogram before the harmonic expansion",
+        preprocessing=PREP_INPUT)
+    var("br_phot", ("lat", "lon"), surface_br(sol["coef"], 1.0, sol["rss"], *src["br_phot"].shape, sinlat=True), units="G",
+        long_name="Photospheric radial field as used by the model (its boundary condition)", preprocessing=prep_model(sol["L"]))
     var("br_ss", ("lat", "lon"), surface_br(sol["coef"], sol["rss"], sol["rss"], *src["br_phot"].shape, sinlat=True), units="G",
         long_name="PFSS radial field on the source surface", radius_rsun=sol["rss"])
     if scs:
@@ -665,7 +688,8 @@ def write(out, src, sol, args, view):
     attrs = dict(title=a.get("title"), format=FORMAT, product="scs" if scs else "pfss", source=a.get("source"), source_file=a.get("source_file"),
                  source_url=a.get("source_url"), date=a.get("date"), obstime=a.get("obstime"), carrington_rotation=a.get("carrington_rotation"),
                  L0_deg=a.get("L0_deg"), B0_deg=a.get("B0_deg"), model=model, rss_rsun=sol["rss"], rcp_rsun=sol["rcp"], rout_rsun=sol["rout"],
-                 lmax=sol["L"], frame=a.get("frame"), length_unit=a.get("length_unit"), open_flux_Mx=sol["flux"],
+                 lmax=sol["L"], saved_date=a.get("saved_date"), computed_date=today(),
+                 preprocessing=f"{PREP_INPUT}. {prep_model(sol['L'])}", frame=a.get("frame"), length_unit=a.get("length_unit"), open_flux_Mx=sol["flux"],
                  software="HelioField compute_corona.py (NumPy port of js/pfss.js)", references=a.get("references"),
                  history=f"Computed {datetime.now(timezone.utc).isoformat(timespec='seconds')} from {Path(args.file).name}")
     for k, x in attrs.items():
@@ -675,6 +699,8 @@ def write(out, src, sol, args, view):
     nc.close()
     header = dict(format=FORMAT, product=attrs["product"], title=attrs["title"], created=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                   software=attrs["software"], citation=src.header.get("citation"), date=a.get("date"), obstime=a.get("obstime"),
+                  saved_date=a.get("saved_date"), computed_date=today(),
+                  preprocessing=dict(br_input=PREP_INPUT, br_phot=prep_model(sol["L"])),
                   source=src.header.get("source"),
                   model=dict(name="PFSS + SCS" if scs else "PFSS", rss_rsun=sol["rss"], rcp_rsun=sol["rcp"], rout_rsun=sol["rout"], lmax=sol["L"],
                              grid=dict(pfss=[G["nr"], G["nth"], G["nph"]], scs=[len(r_scs), G["nth"], G["nph"]] if scs else None),
@@ -707,8 +733,9 @@ def main(argv=None):
     fleet = {k: dict(lon=float(src["body_lon"][i]), lat=float(src["body_lat"][i]), r=float(src["body_r"][i]), planet=bool(src["body_planet"][i]))
              for i, k in enumerate(keys)}
     print(f"{attrs.get('date', '')}: {'PFSS + SCS to ' + format(rout, 'g') if rout else 'PFSS'}, R_ss {rss:g}, lmax {a.lmax}")
-    sol = solve(np.asarray(src["br_phot"], float), rss=rss, rout=rout, L=a.lmax, fleet=fleet, v_draw=v)
-    out = a.out or str(Path(a.file).with_suffix("")).replace("_surface", "") + ("_scs" if rout else "_pfss") + "_computed"
+    sol = solve(input_map(src), rss=rss, rout=rout, L=a.lmax, fleet=fleet, v_draw=v)
+    # heliofield_model-<model date>_computed-<today>_<model>, next to the input file
+    out = a.out or str(Path(a.file).with_name(f"heliofield_model-{attrs.get('date', 'unknown')}_computed-{today()}_{'scs' if rout else 'pfss'}"))
     write(out, src, sol, a, view)
     print(f"wrote {out}.nc and {out}_header.json")
 

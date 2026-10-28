@@ -161,11 +161,11 @@
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-  "./js/export.js": "./js/export.js?v=8ecc7c1f32",
-  "./js/history.js": "./js/history.js?v=a57b38d8f9",
-  "./js/main.js": "./js/main.js?v=e5ad154fbc",
+  "./js/export.js": "./js/export.js?v=5bc999e2f9",
+  "./js/history.js": "./js/history.js?v=79086579d5",
+  "./js/main.js": "./js/main.js?v=1bd769a818",
   "./js/netcdf.js": "./js/netcdf.js?v=b9a0a32cc2",
-  "./js/pfss-worker.js": "./js/pfss-worker.js?v=de7f550859",
+  "./js/pfss-worker.js": "./js/pfss-worker.js?v=54b9a1f7ad",
   "./js/pfss.js": "./js/pfss.js?v=b541db08ad",
   "./js/series.js": "./js/series.js?v=9af40c674f",
   "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
@@ -314,12 +314,13 @@
   <fieldset class="dl-opts" id="dlOpts">
     <legend>What to download</legend>
     <label class="dl-opt"><input type="radio" name="dlKind" value="surface" checked><span><b>Surface maps</b> <small>about 0.4 MB</small>
-      Photospheric and source-surface B<sub>r</sub>, open-field footprints, neutral line, spacecraft footpoints. Scripts plot the maps and compute the 3D field from them.</span></label>
+      The input map and the model's smoothed photospheric B<sub>r</sub>, source-surface B<sub>r</sub>, open-field footprints, neutral line, spacecraft footpoints. The scripts plot them and can compute the 3D field from them.</span></label>
     <label class="dl-opt"><input type="radio" name="dlKind" value="pfss"><span><b>Full 3D, PFSS</b> <small>about 7 MB</small>
-      Adds the 3D field on its grid, the field lines and the spacecraft connections. Scripts plot the maps and the 3D view.</span></label>
-    <label class="dl-opt"><input type="radio" name="dlKind" value="scs"><span><b>Full 3D, PFSS + SCS</b> <small>about 17 MB</small>
+      The 3D field on its grid, the field lines and the spacecraft connections, plus the surface-map file.</span></label>
+    <label class="dl-opt"><input type="radio" name="dlKind" value="scs"><span><b>Full 3D, PFSS + SCS</b> <small>about 18 MB</small>
       Adds the Schatten current-sheet field out to <span id="dlRout">21.5</span> R<sub>☉</sub>, the traced current sheet and the polarity at the outer edge.</span></label>
   </fieldset>
+  <p class="note">Every zip has the Python scripts (plot the maps, plot the 3D view, recompute the corona) and a README. File names carry the model date and today's date.</p>
   <p class="note" id="dlNote" aria-live="polite"></p>
   <p class="more"><a href="guide.html#download" target="_blank" rel="noopener">What is in the files</a></p>
   <div class="dlg-actions">
@@ -356,6 +357,6 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js?v=e5ad154fbc"></script>
+<script type="module" src="js/main.js?v=1bd769a818"></script>
 </body>
 </html>

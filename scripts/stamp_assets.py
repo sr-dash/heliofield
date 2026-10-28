@@ -13,7 +13,10 @@ js/history.js and the worker's imports (./pfss.js, ./export.js, and the
 modules export.js loads). Those are
 stamped first, so the hashes in the import map cover the stamped files.
 
-Run it after changing anything in css/ or js/:
+It also writes download/manifest.json, the checksums of the Python scripts
+that downloads include, which those scripts use to update themselves.
+
+Run it after changing anything in css/, js/ or download/:
     python3 scripts/stamp_assets.py
     python3 scripts/stamp_assets.py --check   # exit 1 if any stamp is stale
 """
@@ -87,12 +90,22 @@ def stamped_page(page, entry, sources):
     return html
 
 
+def scripts_manifest():
+    """download/manifest.json: the SHA-256 of every script users download, which
+    their heliofield_update.py checks updates against."""
+    files = sorted([*(ROOT / "download").glob("*.py"), *(ROOT / "download").glob("requirements*.txt")])
+    digests = {f.name: hashlib.sha256(f.read_bytes()).hexdigest() for f in files}
+    version = hashlib.sha256(json.dumps(digests, sort_keys=True).encode()).hexdigest()[:12]
+    return json.dumps({"version": version, "files": digests}, indent=1) + "\n"
+
+
 def main():
     check = "--check" in sys.argv
     sources = stamped_sources()
     targets = {ROOT / "js" / n: t for n, t in sources.items()}
+    targets[ROOT / "download" / "manifest.json"] = scripts_manifest()
     targets.update({ROOT / p: stamped_page(p, e, sources) for p, e in PAGES.items()})
-    stale = [path for path, text in targets.items() if text != path.read_text()]
+    stale = [path for path, text in targets.items() if not path.exists() or text != path.read_text()]
     if not check:
         for path in stale:
             path.write_text(targets[path])

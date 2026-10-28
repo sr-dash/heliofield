@@ -40,6 +40,8 @@ python scripts/make_icons.py                      # icons and the social-preview
   python -m pytest tests -v
   ```
 
+  The scripts in `download/` reach users' machines and update themselves from this site, so keep them reading every file format they ever wrote (`heliofield-export-1` and later). After changing one, run `python3 scripts/stamp_assets.py` to refresh `download/manifest.json`.
+
   `download/compute_corona.py` is the same solver rewritten in NumPy, which users get with their downloads. A change to the method in `js/pfss.js` must be made there as well; `tests/test_export.py` fails when the two disagree.
 
   Each run writes its numbers to `cache/validation/`. If a deliberate change moves them, update the tolerances in `tests/` and the table in the guide's Validation section in the same pull request, and say why.

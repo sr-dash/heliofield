@@ -966,6 +966,8 @@ $("savePDF").onclick = async (e) => {
 // The results of a date computed in the browser, zipped with Python scripts
 // that plot them (and, for the surface maps, recompute the 3D field). The
 // model is the one asked for: the view switches to it first if needed.
+// The browser's own calendar date, for the "saved" stamp in file names.
+const localDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const KIND_ROUT = (kind) => (kind === "scs" ? state.routWant || DEFAULTS.rout : kind === "pfss" ? 0 : null);
 function dlNote() {
   const p = state.product, kind = document.querySelector('input[name="dlKind"]:checked')?.value;
@@ -1017,7 +1019,7 @@ $("dlGo").onclick = async () => {
     try { version = JSON.parse(ld.textContent).softwareVersion || ""; } catch (e) {}
     const res = await exportResults({
       kind, meta: JSON.parse(JSON.stringify(m)), xyz, counts, shape: (await historyIndex()).shape,
-      drawn: (p.order ?? []).slice(0, Math.min(state.nLines, nf)), connIdx, version,
+      drawn: (p.order ?? []).slice(0, Math.min(state.nLines, nf)), connIdx, version, saved: localDate(),
       view: { lon, lat, dist, fov: camera.fov, logScale: state.logScale, theme: currentTheme(), vsw: state.vsw, connMode: state.connMode, nLines: state.nLines },
     });
     const url = URL.createObjectURL(new Blob([res.zip], { type: "application/zip" }));

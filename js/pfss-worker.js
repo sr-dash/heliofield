@@ -3,7 +3,7 @@
 // its map and harmonic coefficients so another source-surface height only
 // re-solves the field. The same holds for switching the SCS model on or off.
 import { solve, connectOnly } from "./pfss.js?v=b541db08ad";
-import { buildExport, bundleName, readme, SCRIPTS } from "./export.js?v=8ecc7c1f32";
+import { buildExport, bundleName, readme, SCRIPTS } from "./export.js?v=5bc999e2f9";
 
 let last = null;   // { key, rss, rout, br, coef, models }
 
@@ -28,18 +28,23 @@ async function exportZip(req) {
     for (let k = 0; k < req.counts[i]; k++, o += 3) p.push([req.xyz[o], req.xyz[o + 1], req.xyz[o + 2]]);
     (i < req.meta.lines.count ? lines : conn).push(p);
   }
-  const { nc, header } = buildExport({
-    kind: req.kind, br: last.br, ny: req.shape[0], nx: req.shape[1], coef: last.coef, model: last.models[0], meta: req.meta,
+  const ctx = {
+    br: last.br, ny: req.shape[0], nx: req.shape[1], coef: last.coef, model: last.models[0], meta: req.meta,
     lines, drawn: req.drawn, conn: req.connIdx.map((c) => ({ ...c, pts: conn[c.i] })), view: req.view,
-    version: req.version, created: new Date().toISOString().slice(0, 19) + "Z",
-  });
+    version: req.version, created: new Date().toISOString().slice(0, 19) + "Z", saved: req.saved,
+  };
+  const { nc, header } = buildExport({ ...ctx, kind: req.kind });
   const stem = bundleName(header), base = new URL("../download/", import.meta.url);
   const get = async (f) => { const r = await fetch(new URL(f, base), { cache: "no-cache" }); if (!r.ok) throw new Error(`${f}: ${r.status}`); return r.text(); };
-  const scripts = SCRIPTS[req.kind];
-  const texts = await Promise.all([...scripts, "README.txt"].map(get));
+  const texts = await Promise.all([...SCRIPTS, "README.txt"].map(get));
   const { zipSync } = await import("https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js");
   const files = { [`${stem}/${stem}.nc`]: nc, [`${stem}/${stem}_header.json`]: enc.encode(JSON.stringify(header, null, 1)) };
-  scripts.forEach((f, i) => { files[`${stem}/${f}`] = enc.encode(texts[i]); });
+  if (req.kind !== "surface") {
+    const s = buildExport({ ...ctx, kind: "surface" }), ss = bundleName(s.header);
+    files[`${stem}/${ss}.nc`] = s.nc;
+    files[`${stem}/${ss}_header.json`] = enc.encode(JSON.stringify(s.header, null, 1));
+  }
+  SCRIPTS.forEach((f, i) => { files[`${stem}/${f}`] = enc.encode(texts[i]); });
   files[`${stem}/README.txt`] = enc.encode(readme(texts[texts.length - 1], header));
   return { zip: zipSync(files, { level: 6 }), name: `${stem}.zip` };
 }

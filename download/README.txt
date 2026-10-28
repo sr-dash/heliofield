@@ -1,10 +1,12 @@
 HelioField results: {{TITLE}}
 {{RULE}}
 
-Model:   {{MODEL}}
-Input:   {{SOURCE}}
-Saved:   {{CREATED}} from https://sr-dash.github.io/heliofield/
-Product: {{PRODUCT}}
+Model date: {{MODELDATE}}   (the date the field is computed for)
+Saved:      {{SAVED}}   (the date it was computed and downloaded in your browser,
+            {{CREATED}} UTC, https://sr-dash.github.io/heliofield/)
+Model:      {{MODEL}}
+Input:      {{SOURCE}}
+Product:    {{PRODUCT}}
 
 Files
 -----
@@ -18,15 +20,49 @@ Python 3.9 or newer with NumPy, SciPy and Matplotlib:
 
 {{STEPS}}
 
-Each plot script writes both a PNG and a PDF next to the result file. Run a
-script with --help for its options (camera, theme, wind speed, which lines).
+Each plot script writes both a PNG and a PDF next to the file it reads. Run
+a script with --help for its options (camera, theme, wind speed, which lines).
+
+Preprocessing of the magnetogram
+--------------------------------
+The files hold two photospheric maps:
+
+  br_input  {{PREP_INPUT}}.
+
+  br_phot   {{PREP_MODEL}}
+
+The field lines, the source surface and everything above come from br_phot,
+not from the finer-grained br_input. plot_surface.py shows br_phot by
+default; --input shows br_input instead. plot_3d.py colours the Sun with
+br_input, as the web page does; --model-surface uses br_phot instead.
+
+Package versions: please read
+-----------------------------
+The scripts were tested with the versions in requirements-tested.txt. Newer
+releases of NumPy, SciPy and Matplotlib usually work, but they can change or
+remove functions that the scripts use. If a script fails:
+
+  1. It looks for an updated copy of the scripts on the HelioField site,
+     checks it against the published checksums, keeps your copy as
+     <name>.py.bak, and runs again with the update. The scripts are checked
+     against the newest package releases every month and fixed when needed.
+     To turn this off, set HELIOFIELD_NO_UPDATE=1.
+  2. If there is no update yet, install the tested versions in a fresh
+     environment:
+         python -m venv hf && . hf/bin/activate
+         pip install -r requirements-tested.txt
+     and please report the problem: https://github.com/sr-dash/heliofield/issues
+
+You can also update the scripts at any time with:
+    python heliofield_update.py
 
 The results file
 ----------------
 {{NCNAME}} is a NetCDF-3 (classic) file. Any NetCDF reader opens it: xarray,
 netCDF4, SciPy, Panoply, ParaView. The header file {{HEADERNAME}} lists every
-variable with its dimensions, units and meaning, and records the model
-settings and the view that was on screen when the file was saved.
+variable with its dimensions, units and meaning, and records the
+preprocessing, the model settings and the view that was on screen when the
+file was saved.
 
     import xarray as xr
     ds = xr.open_dataset("{{NCNAME}}", engine="scipy")

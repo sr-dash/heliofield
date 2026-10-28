@@ -9,7 +9,13 @@
 import { surfaceBr, scsPolarity } from "./pfss.js?v=b541db08ad";
 import { writeNetCDF } from "./netcdf.js?v=b9a0a32cc2";
 
-export const FORMAT = "heliofield-export-1";
+export const FORMAT = "heliofield-export-2";
+
+// What happens to the map before and during the extrapolation.
+const PREP = {
+  input: "SDO/HMI Carrington-rotation synoptic map (hmi.Synoptic_Mr_small, or hmi.Synoptic_Mr averaged), averaged in blocks to 180 x 360 (rows uniform in sine latitude), missing pixels set to 0, mean removed so the net flux is zero",
+  model: (L) => `br_input expanded in spherical harmonics up to degree ${L} with the monopole (l = 0) removed: a low-pass filter (resolution about ${(180 / L).toFixed(1)} degrees) that also guarantees zero net flux. This is the boundary condition of the PFSS solution.`,
+};
 const TAU = 2 * Math.PI;
 
 // Grid values as spherical components (B_r, B_theta, B_phi) for the given
@@ -67,8 +73,15 @@ export function buildExport(ctx) {
     { units: "degrees_north", long_name: "Carrington latitude of the map rows (uniform in sine latitude, south first)" });
   add("lon", ["lon"], "float", Float32Array.from({ length: nx }, (_, j) => (j + 0.5) * 360 / nx),
     { units: "degrees_east", long_name: "Carrington longitude of the map columns" });
-  add("br_phot", ["lat", "lon"], "float", Float32Array.from(br),
-    { units: "G", long_name: "Photospheric radial field: the input magnetogram (model boundary condition)" });
+  // The archived map, and what the model actually uses: the harmonic
+  // expansion to degree lmax without the monopole, which smooths it
+  // (resolution about 180/lmax degrees) and leaves zero net flux.
+  add("br_input", ["lat", "lon"], "float", Float32Array.from(br),
+    { units: "G", long_name: "Input map: the archived magnetogram before the harmonic expansion",
+      preprocessing: PREP.input });
+  add("br_phot", ["lat", "lon"], "float", surfaceBr(coef, 1, rss, ny, nx, true),
+    { units: "G", long_name: "Photospheric radial field as used by the model (its boundary condition)",
+      preprocessing: PREP.model(coef.L) });
   add("br_ss", ["lat", "lon"], "float", surfaceBr(coef, rss, rss, ny, nx, true),
     { units: "G", long_name: "PFSS radial field on the source surface", radius_rsun: rss });
   if (scs) add("br_cusp", ["lat", "lon"], "float", surfaceBr(coef, rcp, rss, ny, nx, true),
@@ -193,7 +206,7 @@ export function buildExport(ctx) {
   }
 
   // --- global attributes and header
-  const date = meta.date || ctx.day;
+  const date = meta.date || ctx.day, saved = ctx.saved || (ctx.created || new Date().toISOString()).slice(0, 10);
   const model = scs ? `PFSS + Schatten current sheet (cusp ${rcp} R_sun, outer edge ${rout} R_sun)` : `PFSS (source surface ${rss} R_sun)`;
   const attrs = {
     title: `HelioField coronal magnetic field for ${date}`,
@@ -205,6 +218,7 @@ export function buildExport(ctx) {
     frame: "Carrington heliographic (rotating with the Sun); x towards longitude 0, z along the rotation axis",
     length_unit: "R_sun = 695700 km",
     open_flux_Mx: meta.open_flux_Mx,
+    saved_date: saved, preprocessing: `${PREP.input}. ${PREP.model(coef.L)}`,
     software: `HelioField ${ctx.version || ""} in-browser solver (js/pfss.js)`.replace("  ", " "),
     references: "https://doi.org/10.5281/zenodo.23487231; https://sr-dash.github.io/heliofield/guide.html#methods",
     history: `Created ${ctx.created || new Date().toISOString()} in the browser`,
@@ -212,7 +226,8 @@ export function buildExport(ctx) {
   const nc = writeNetCDF({ dims, attrs, vars });
   const header = {
     format: FORMAT, product: kind, title: attrs.title,
-    created: ctx.created, software: attrs.software, citation: "Dash, S. HelioField: the Sun's coronal magnetic field in 3D. Zenodo. https://doi.org/10.5281/zenodo.23487231",
+    created: ctx.created, saved_date: saved, software: attrs.software,
+    preprocessing: { br_input: PREP.input, br_phot: PREP.model(coef.L) }, citation: "Dash, S. HelioField: the Sun's coronal magnetic field in 3D. Zenodo. https://doi.org/10.5281/zenodo.23487231",
     date, obstime: meta.obstime,
     source: { name: meta.source?.name, file: meta.source?.file, url: meta.source?.url, carrington_rotation_of_map: meta.map_cr, map_covers: [meta.map_start, meta.map_stop] },
     model: { name: scs ? "PFSS + SCS" : "PFSS", rss_rsun: rss, rcp_rsun: rcp, rout_rsun: rout, lmax: meta.model?.lmax,
@@ -230,49 +245,57 @@ export function buildExport(ctx) {
 }
 
 // The files that go with each product, and the README filled in for them.
-export const SCRIPTS = {
-  surface: ["heliofield_io.py", "plot_surface.py", "compute_corona.py", "requirements.txt"],
-  pfss: ["heliofield_io.py", "plot_surface.py", "plot_3d.py", "requirements.txt"],
-  scs: ["heliofield_io.py", "plot_surface.py", "plot_3d.py", "requirements.txt"],
-};
+// Every bundle has all the scripts; a 3D bundle also has the surface-map
+// file, from which compute_corona.py can recompute the corona.
+export const SCRIPTS = ["heliofield_io.py", "heliofield_update.py", "plot_surface.py", "plot_3d.py", "compute_corona.py",
+  "requirements.txt", "requirements-tested.txt"];
 const PRODUCT = {
-  surface: "surface maps (photospheric and source-surface B_r, open-field footprints, neutral line, spacecraft footpoints)",
-  pfss: "full 3D PFSS (surface maps, the 3D field, field lines, spacecraft connections)",
-  scs: "full 3D PFSS + Schatten current sheet (as PFSS, plus the SCS field, the traced current sheet and the polarity at the outer edge)",
+  surface: "surface maps (the input map and the model's smoothed photospheric B_r, source-surface B_r, open-field footprints, neutral line, spacecraft footpoints)",
+  pfss: "full 3D PFSS (the 3D field, field lines, spacecraft connections), with the surface maps",
+  scs: "full 3D PFSS + Schatten current sheet (as PFSS, plus the SCS field, the traced current sheet and the polarity at the outer edge), with the surface maps",
 };
 const ABOUT = {
   "heliofield_io.py": "reads the results; colours and helpers shared by the scripts",
+  "heliofield_update.py": "checks package versions and fetches fixed scripts (see below)",
   "plot_surface.py": "surface maps as PNG and PDF",
   "plot_3d.py": "the 3D view as PNG and PDF, as the viewer draws it",
-  "compute_corona.py": "computes the 3D field from the surface map, PFSS or PFSS + SCS (same method as the web page)",
-  "requirements.txt": "Python packages needed",
+  "compute_corona.py": "computes the 3D field from the surface maps, PFSS or PFSS + SCS (same method as the web page)",
+  "requirements.txt": "Python packages needed (lowest supported versions)",
+  "requirements-tested.txt": "the exact versions the scripts were tested with",
 };
 
-export function bundleName(header) {
-  return `heliofield_${header.date}_${header.product}`;
+// heliofield_model-<model date>_saved-<date saved in the browser>_<product>
+export function bundleName(header, product = header.product) {
+  return `heliofield_model-${header.date}_saved-${header.saved_date}_${product}`;
 }
 
 export function readme(template, header) {
   const stem = bundleName(header), nc = `${stem}.nc`, hd = `${stem}_header.json`;
-  const files = [[nc, "results (NetCDF-3)"], [hd, "header: variables, units, model settings, saved view"],
-    ...SCRIPTS[header.product].map((f) => [f, ABOUT[f]]), ["README.txt", "this file"]];
+  const surf = bundleName(header, "surface"), three = header.product !== "surface";
+  const files = [[nc, "results (NetCDF-3)"], [hd, "its header: variables, units, preprocessing, model settings, saved view"],
+    ...(three ? [[`${surf}.nc`, "the surface maps alone (NetCDF-3)"], [`${surf}_header.json`, "their header"]] : []),
+    ...SCRIPTS.map((f) => [f, ABOUT[f]]), ["README.txt", "this file"]];
   const w = Math.max(...files.map(([f]) => f.length));
-  const steps = header.product === "surface"
-    ? [`    python plot_surface.py ${nc}`,
-      `    python compute_corona.py ${nc}                 # PFSS, as on the page`,
-      `    python compute_corona.py ${nc} --scs 21.5      # or PFSS + SCS`,
-      `    python plot_3d.py ${stem.replace("_surface", "")}_${header.model.rout_rsun ? "scs" : "pfss"}_computed.nc`,
+  const model = header.model.rout_rsun ? "scs" : "pfss", out = `heliofield_model-${header.date}_computed-YYYY-MM-DD_${model}.nc`;
+  const steps = (three
+    ? [`    python plot_3d.py ${nc}`,
+      `    python plot_surface.py ${surf}.nc`,
       "",
-      "compute_corona.py takes a few seconds (PFSS) to about a minute (SCS) and",
-      "writes a 3D result file in the same format as a full 3D download."].join("\n")
-    : [`    python plot_3d.py ${nc}`, `    python plot_surface.py ${nc}`].join("\n");
+      "To recompute the corona yourself, for example with another source surface:",
+      "",
+      `    python compute_corona.py ${surf}.nc --rss 2.0${header.model.rout_rsun ? ` --scs ${header.model.rout_rsun}` : ""}`]
+    : [`    python plot_surface.py ${nc}`,
+      `    python compute_corona.py ${nc}                 # PFSS, as on the page`,
+      `    python compute_corona.py ${nc} --scs 21.5      # or PFSS + SCS`])
+    .concat(["", `compute_corona.py writes ${out}`, "(YYYY-MM-DD is the day you run it) in the format of a 3D download; then", `    python plot_3d.py ${out.replace("YYYY-MM-DD", "<that date>")}`]).join("\n");
   const fill = {
     TITLE: header.title, RULE: "=".repeat(Math.min(78, `HelioField results: ${header.title}`.length)),
     MODEL: header.model.name + (header.model.rout_rsun ? `, cusp ${header.model.rcp_rsun} R_sun, outer edge ${header.model.rout_rsun} R_sun` : `, source surface ${header.model.rss_rsun} R_sun`),
     SOURCE: [header.source?.name, header.source?.carrington_rotation_of_map ? `Carrington rotation ${header.source.carrington_rotation_of_map}` : null].filter(Boolean).join(", "),
-    CREATED: header.created, PRODUCT: PRODUCT[header.product],
+    MODELDATE: header.date, SAVED: header.saved_date, CREATED: header.created, PRODUCT: PRODUCT[header.product],
     FILES: files.map(([f, d]) => `  ${f.padEnd(w)}  ${d}`).join("\n"),
     STEPS: steps, NCNAME: nc, HEADERNAME: hd, CITATION: header.citation,
+    PREP_INPUT: header.preprocessing?.br_input, PREP_MODEL: header.preprocessing?.br_phot,
   };
   return template.replace(/\{\{(\w+)\}\}/g, (_, k) => fill[k] ?? "");
 }
