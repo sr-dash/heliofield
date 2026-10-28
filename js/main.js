@@ -29,6 +29,8 @@ const state = {
   dates: [], day: null, product: null,
   vsw: 400, rmaxAu: 1.2, logScale: true, rss: 2.5, nLines: 250, extMode: "spiral",
   connMode: "fixed",
+  rssWant: 2.5,   // source surface for dates computed in the browser
+
 };
 const T = () => THEMES[currentTheme()];
 
@@ -233,6 +235,9 @@ function disposeProduct(p) {
 async function loadFoot(p) {
   if (p.foot) return p.foot;
   const nearest = (t) => { t.magFilter = t.minFilter = THREE.NearestFilter; return t; };
+  // The archived footprints are for 2.5 R_sun; at any other height the
+  // browser's own open/closed map is used.
+  if (p.footTex && p.meta.model.rss !== DEFAULTS.rss) return (p.foot = { tex: nearest(dataTex(p.footTex)), cr: null, browser: true });
   if (!p.computed) {
     try { return (p.foot = { tex: nearest(await loadTex(`data/${p.day}/open.png`)), cr: null }); } catch (e) { /* none for this day */ }
   }
@@ -260,6 +265,7 @@ async function buildFoot() {
 function showProduct(p) {
   if (state.product && state.product !== p && state.product.brTex !== p.brTex) disposeProduct(state.product);
   state.product = p; state.day = p.day; state.rss = p.meta.model.rss;
+  rssControl();
   buildSun(); buildHelio(); info();
   $("status").textContent = "";
   $("day").value = p.day;
@@ -564,7 +570,7 @@ addEventListener("message", (e) => {
 });
 
 // ------------------------------------------------------------- panel
-const DEFAULTS = { v: 400, rmax: 1.2, ss: 0.25, lines: 250 };
+const DEFAULTS = { v: 400, rmax: 1.2, ss: 0.25, lines: 250, rss: 2.5 };
 const LAYERS = { photo: "lyrPhoto", foot: "lyrFoot", closed: "lyrClosed", open: "lyrOpen", ext: "lyrExt", ss: "lyrSS",
   pil: "lyrPIL", hcs: "lyrHCS", fleet: "lyrFleet", spiral: "lyrSpiral", cloud: "lyrCloud" };
 // Layers shown on a first visit; links list layers only when they differ.
@@ -636,6 +642,26 @@ function setRmax(r) {
   if (state.product) buildHelio();
 }
 $("rmax").addEventListener("input", (e) => { setRmax(+e.target.value); syncUrl(); });
+// Source-surface height. Only a date computed in the browser can be
+// re-solved; daily products are solved on the server at 2.5 R_sun. The
+// value is kept for the next computed date either way.
+const RSS_MIN = 1.5, RSS_MAX = 3.5;
+function rssControl() {
+  const daily = !!state.product && !state.product.computed;
+  $("rss").disabled = daily;
+  const r = daily ? state.rss : state.rssWant;
+  $("rss").value = r; $("rssOut").textContent = r.toFixed(1);
+  $("rssNote").innerHTML = daily
+    ? `This daily product is solved at 2.5 R<sub>☉</sub>. Pick a date with the HMI badge to change it. <a href="guide.html#rss">More</a>`
+    : `Re-solves this rotation in your browser. <a href="guide.html#rss">What it changes</a>`;
+}
+async function setRss(r) {
+  r = +Math.min(RSS_MAX, Math.max(RSS_MIN, r)).toFixed(1);
+  state.rssWant = r; rssControl();
+  if (state.product?.computed && state.product.meta.model.rss !== r) await openDate(state.day, { ask: false });
+}
+$("rss").addEventListener("input", (e) => { $("rssOut").textContent = (+e.target.value).toFixed(1); });
+$("rss").addEventListener("change", (e) => { setRss(+e.target.value); });
 function setScale(log) {
   state.logScale = log;
   for (const [id, on] of [["scaleLog", log], ["scaleTrue", !log]]) {
@@ -657,9 +683,11 @@ function info() {
   rows.push(
     ["Carrington rotation", m.carrington_rotation],
     ["Earth L<sub>0</sub>, B<sub>0</sub>", `${m.L0.toFixed(1)}°, ${m.B0.toFixed(1)}°`],
+    ["Source surface", `${state.rss.toFixed(1)} R<sub>☉</sub>`],
     ["Open flux", `${flux} × 10<sup>22</sup> Mx`],
     ...(state.product.foot && $("lyrFoot").checked
-      ? [["Footprints from", state.product.foot.cr ? `rotation map CR ${state.product.foot.cr}` : "this map"]] : []),
+      ? [["Footprints from", state.product.foot.browser ? `this solution, R<sub>ss</sub> ${state.rss.toFixed(1)} R☉`
+        : state.product.foot.cr ? `rotation map CR ${state.product.foot.cr}` : "this map"]] : []),
     ["Field lines", m.lines.count],
     ["Computed", state.product.computed ? "in your browser" : "daily, on the server"],
   );
@@ -680,7 +708,7 @@ function feet() {
       const u = (q) => [Math.cos(q[1] * DEG) * Math.cos(q[0] * DEG), Math.cos(q[1] * DEG) * Math.sin(q[0] * DEG), Math.sin(q[1] * DEG)];
       const c = u(f), far = Math.max(...ens.map((x) => { const w = u(x.foot); return Math.acos(Math.min(1, c[0] * w[0] + c[1] * w[1] + c[2] * w[2])) / DEG; }));
       const vs = ens.map((x) => x.vwsa);
-      tip += `. Over ${Math.max(S.vgrid[0], sp.v - 100)}–${Math.min(S.vgrid[S.nv - 1], sp.v + 100)} km/s and source surfaces ${[state.rss, ...(m.ensemble?.rss || [])].sort().join(", ")} R☉: `
+      tip += `. Over ${Math.max(S.vgrid[0], sp.v - 100)}–${Math.min(S.vgrid[S.nv - 1], sp.v + 100)} km/s and source surfaces ${[state.rss, ...(m.ensemble?.rss || [])].sort((a, b) => a - b).map((r) => r.toFixed(1)).join(", ")} R☉: `
         + `footpoints within ${far.toFixed(0)}°, estimated speed ${Math.min(...vs).toFixed(0)}–${Math.max(...vs).toFixed(0)} km/s`;
     }
     const flag = sc && !sp.ok ? "*" : "";
@@ -791,6 +819,7 @@ function stateParams() {
   if (!state.logScale) p.set("scale", "true");
   if (+$("ssAlpha").value !== DEFAULTS.ss) p.set("ss", $("ssAlpha").value);
   if (state.nLines !== DEFAULTS.lines) p.set("lines", state.nLines);
+  if (state.product?.computed && state.rssWant !== DEFAULTS.rss) p.set("rss", state.rssWant);
   if (view) p.set("view", view); else p.set("cam", camParam());
   if (controls.autoRotate) p.set("rotate", "1");
   return p;
@@ -855,7 +884,7 @@ function snapshotCanvas() {
     renderer, scene, camera, stage, legend,
     title: `HelioField · ${state.day}`,
     lines: [
-      `${m.source.name}${state.product.computed ? ` (CR ${m.map_cr})` : ""} · PFSS, source surface ${state.rss} R☉ · ${state.connMode === "sc" ? `self-consistent WSA-type wind (from ${state.vsw} km/s)` : `solar wind ${state.vsw} km/s`} · open flux ${(m.open_flux_Mx / 1e22).toFixed(2)} × 10²² Mx`,
+      `${m.source.name}${state.product.computed ? ` (CR ${m.map_cr})` : ""} · PFSS, source surface ${state.rss.toFixed(1)} R☉ · ${state.connMode === "sc" ? `self-consistent WSA-type wind (from ${state.vsw} km/s)` : `solar wind ${state.vsw} km/s`} · open flux ${(m.open_flux_Mx / 1e22).toFixed(2)} × 10²² Mx`,
       viewCaption(),
       `Earth: L0 ${m.L0.toFixed(1)}°, B0 ${m.B0.toFixed(1)}° (Carrington longitude and latitude of the Sun–Earth line)`,
     ],
@@ -941,7 +970,7 @@ async function openDate(day, { ask = true } = {}) {
   try {
     const idx = await historyIndex();
     const { rot, exact } = rotationFor(idx, day);
-    const sameRot = state.product?.computed && state.product.meta.map_cr === rot.cr;
+    const sameRot = state.product?.computed && state.product.meta.map_cr === rot.cr && state.product.meta.model.rss === state.rssWant;
     if (ask && askAgain && !sameRot && !(await confirmCompute(day, rot, exact))) { $("day").value = state.day || ""; return false; }
     if (!sameRot) {
       fallbackDay = state.product && !state.product.computed ? state.day : state.dates[state.dates.length - 1];
@@ -949,7 +978,7 @@ async function openDate(day, { ask = true } = {}) {
       showProgress(true, day);
     }
     const pos = await fleetFor(day);
-    const res = await compute({ url: `data/history/${rot.file}`, key: rot.cr, scale: idx.scale_G, shape: idx.shape, fleet: pos.fleet, reuse: sameRot },
+    const res = await compute({ url: `data/history/${rot.file}`, key: rot.cr, scale: idx.scale_G, shape: idx.shape, fleet: pos.fleet, reuse: sameRot, rss: state.rssWant },
       (stage, f) => { $("busyStage").textContent = STAGES[stage] || stage; $("busyBar").value = f; });
     if (ticket !== loading) return false;
     let product;
@@ -967,7 +996,7 @@ async function openDate(day, { ask = true } = {}) {
         counts: polys.map((q) => q.length), _src: undefined } };
     } else {
       product = { day, computed: true, polys: unflatten(res.xyz, res.counts),
-        brTex: dataTex(res.brTex), ssTex: dataTex(res.ssTex), meta: { ...res.meta, ...sourceMeta } };
+        brTex: dataTex(res.brTex), ssTex: dataTex(res.ssTex), footTex: res.footTex, meta: { ...res.meta, ...sourceMeta } };
     }
     showProgress(false);
     showProduct(product);
@@ -1029,11 +1058,11 @@ addEventListener("keydown", (e) => {
 
 // ------------------------------------------------------------- embedding
 // A host page can drive an embedded copy:
-//   frame.contentWindow.postMessage({ type: "heliofield:set", date: "2014-03-12", v: 500, view: "earth" }, "*")
-// and hears { type: "heliofield:state", date, v, source, computed } after every change.
+//   frame.contentWindow.postMessage({ type: "heliofield:set", date: "2014-03-12", v: 500, rss: 2.0, view: "earth" }, "*")
+// and hears { type: "heliofield:state", date, v, rss, source, computed } after every change.
 function postState() {
   if (window.parent === window || !state.product) return;
-  window.parent.postMessage({ type: "heliofield:state", date: state.day, v: state.vsw, conn: state.connMode,
+  window.parent.postMessage({ type: "heliofield:state", date: state.day, v: state.vsw, rss: state.rss, conn: state.connMode,
     source: state.product.meta.source.short || "GONG", computed: !!state.product.computed,
     obstime: state.product.meta.obstime }, "*");
 }
@@ -1044,6 +1073,11 @@ addEventListener("message", async (e) => {
   if (d.conn) setConnMode(d.conn);
   if (d.layers) setLayers(d.layers);
   if (d.view) view = d.view;
+  if (d.rss != null && Number.isFinite(+d.rss)) {
+    state.rssWant = +Math.min(RSS_MAX, Math.max(RSS_MIN, +d.rss)).toFixed(1);
+    rssControl();
+    if (!d.date && state.product?.computed) d.date = state.day;
+  }
   if (d.date) await openDate(d.date, { ask: false });   // reports its own state
   else postState();
   if (d.view) setView(d.view);
@@ -1073,6 +1107,8 @@ async function start() {
     const a = params.get("ss");
     if (a !== null && +a >= 0 && +a <= 1) $("ssAlpha").value = a;
     setSpin(params.get("rotate") === "1");
+    const rs = +params.get("rss");
+    if (rs >= RSS_MIN && rs <= RSS_MAX) { state.rssWant = +rs.toFixed(1); rssControl(); }
     const nl = +params.get("lines");
     if (nl >= 20 && nl <= 2000) setNLines(nl);
     if (VIEWS[params.get("view")]) view = params.get("view");

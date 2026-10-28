@@ -52,7 +52,7 @@ export async function fleetFor(day) {
 let worker = null, seq = 0, pending = null;
 function getWorker() {
   if (!worker) {
-    worker = new Worker(new URL("./pfss-worker.js?v=7648e5cd34", import.meta.url), { type: "module" });
+    worker = new Worker(new URL("./pfss-worker.js?v=c9f94d2f30", import.meta.url), { type: "module" });
     worker.onmessage = (e) => {
       const m = e.data;
       if (!pending || m.id !== pending.id) return;
@@ -64,11 +64,11 @@ function getWorker() {
   }
   return worker;
 }
-export function compute({ url, key, scale, shape, fleet, reuse }, onProgress) {
+export function compute({ url, key, scale, shape, fleet, reuse, rss }, onProgress) {
   cancel();
   return new Promise((resolve, reject) => {
     pending = { id: ++seq, resolve, reject, onProgress };
-    getWorker().postMessage({ id: seq, url: new URL(url, location.href).href, key, scale, shape, fleet, reuse });
+    getWorker().postMessage({ id: seq, url: new URL(url, location.href).href, key, scale, shape, fleet, reuse, rss });
   });
 }
 export function cancel() {

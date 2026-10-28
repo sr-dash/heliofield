@@ -161,10 +161,10 @@
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-  "./js/history.js": "./js/history.js?v=bdddf429af",
-  "./js/main.js": "./js/main.js?v=03133bd215",
-  "./js/pfss-worker.js": "./js/pfss-worker.js?v=7648e5cd34",
-  "./js/pfss.js": "./js/pfss.js?v=3f651b8b64",
+  "./js/history.js": "./js/history.js?v=ca60986ad7",
+  "./js/main.js": "./js/main.js?v=a715b51824",
+  "./js/pfss-worker.js": "./js/pfss-worker.js?v=c9f94d2f30",
+  "./js/pfss.js": "./js/pfss.js?v=1d334a753e",
   "./js/series.js": "./js/series.js?v=9af40c674f",
   "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
   "./js/theme.js": "./js/theme.js?v=5abd830f82"
@@ -210,6 +210,8 @@
     <label><input type="checkbox" id="lyrSS"> <span>Source surface B<sub>r</sub></span></label>
     <label class="slider sub"><span>Opacity</span><input type="range" id="ssAlpha" min="0" max="1" step="0.05" value="0.25"></label>
     <label><input type="checkbox" id="lyrPIL" checked> <span><i class="key ln hcs"></i>Neutral line</span></label>
+    <label class="slider"><span>Source-surface height <output id="rssOut">2.5</output> R<sub>☉</sub></span><input type="range" id="rss" min="1.5" max="3.5" step="0.1" value="2.5" aria-label="Source-surface height in solar radii" aria-describedby="rssNote"></label>
+    <p class="note" id="rssNote"></p>
   </details>
 
   <details open>
@@ -218,7 +220,7 @@
     <label><input type="checkbox" id="lyrHCS"> <span>Current sheet</span></label>
     <label><input type="checkbox" id="lyrFleet" checked> <span>Planets and spacecraft</span></label>
     <label class="sub"><input type="checkbox" id="lyrSpiral" checked> <span>Connection to the Sun</span></label>
-    <label class="sub"><input type="checkbox" id="lyrCloud"> <span>Footpoint spread (±100 km/s, R<sub>ss</sub> 2–3)</span></label>
+    <label class="sub"><input type="checkbox" id="lyrCloud"> <span>Footpoint spread (±100 km/s, R<sub>ss</sub> ±0.5)</span></label>
     <label class="slider"><span>Solar wind <output id="vOut">400</output> km/s</span><input type="range" id="vsw" min="300" max="800" step="100" value="400"></label>
     <div class="seg" role="group" aria-label="Wind speed for the connections" id="connMode">
       <button id="connFixed" class="on" aria-pressed="true" title="Every body connects at the slider speed">Fixed speed</button><button id="connSC" aria-pressed="false" title="Each body connects at the WSA-type speed of its own footpoint, iterated from the slider speed">Self-consistent</button>
@@ -319,6 +321,6 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js?v=03133bd215"></script>
+<script type="module" src="js/main.js?v=a715b51824"></script>
 </body>
 </html>

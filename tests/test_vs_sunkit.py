@@ -167,3 +167,29 @@ def test_footpoints(pair):
     assert -1.2 < np.median(fs) < 0
     assert np.median(dd) < 1.0
     assert np.median(dv) < 20
+
+
+@pytest.mark.parametrize("rss", [1.5, 2.0, 3.0, 3.5])
+def test_other_source_surfaces(js, rss):
+    """The viewer's source-surface slider (1.5-3.5 R_sun) re-solves past dates
+    in the browser. One map at the minimum (CR 2230) and one near maximum
+    (CR 2148), solved by both codes at each height."""
+    import rotations
+    import sunkit_magex.pfss as pfss
+    stats = {}
+    for cr in (2148, 2230):
+        start = next(r["start"] for r in rotations.rotation_index() if r["cr"] == cr)
+        br = rotations.load_cr(cr)
+        out = pfss.pfss(pfss.Input(rotations.sinlat_map(br, start.rstrip("Z")), rotations.NR, rss))
+        ss = out.source_surface_br.data
+        flux = float(np.nansum(np.abs(ss)) * 4 * np.pi * (rss * rotations.RSUN_KM * 1e5) ** 2 / ss.size)
+        j = js("solve", map=br.astype(np.float32), rss=rss)
+        a, b = to_equirect(ss).ravel(), np.asarray(j["ss"])
+        stats[f"cr{cr}"] = dict(corr=round(float(np.corrcoef(a, b)[0, 1]), 5),
+                                open_flux_ratio=round(float(j["open_flux_Mx"] / flux), 4),
+                                spread=j["ensemble"]["rss"])
+    report(f"rss{rss}", dict(rss=rss, **{f"{k}_{q}": v[q] for k, v in stats.items() for q in ("corr", "open_flux_ratio")}))
+    for v in stats.values():
+        assert v["corr"] > 0.995
+        assert abs(v["open_flux_ratio"] - 1) < 0.05
+        assert v["spread"] == [round(max(1.3, rss - 0.5), 2), round(rss + 0.5, 2)]

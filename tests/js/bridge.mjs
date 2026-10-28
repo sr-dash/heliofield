@@ -5,7 +5,7 @@
 //   { "cmd": "analyse", "br": "path.f32", "ny": 180, "nx": 360, "L": 40 }
 //   { "cmd": "field", "br": "path.f32", "ny", "nx", "L", "rss", "points": [[x,y,z], ...] }
 //   { "cmd": "trace", "br": ..., "ny", "nx", "L", "rss", "seeds": [[x,y,z], ...] }
-//   { "cmd": "solve", "br": ..., "ny", "nx", "fleet": { key: { lon, lat, r, planet } } }
+//   { "cmd": "solve", "br": ..., "ny", "nx", "rss", "fleet": { key: { lon, lat, r, planet } } }
 //   { "cmd": "wsa", "pairs": [[fs, dchb], ...] }
 //
 // Map files are little-endian float32, ny rows uniform in sin(latitude)
@@ -40,7 +40,7 @@ switch (req.cmd) {
   }
   case "solve": {
     const br = readMap(req.br), t0 = Date.now();
-    const res = solve(br, req.ny, req.nx, { fleet: req.fleet || {} });
+    const res = solve(br, req.ny, req.nx, { fleet: req.fleet || {}, rss: req.rss ?? 2.5 });
     const rss = res.meta.model.rss;
     out = {
       seconds: (Date.now() - t0) / 1000,

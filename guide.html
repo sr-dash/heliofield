@@ -163,8 +163,9 @@
     <tr><td>Open field lines</td><td>Lines that reach the source surface and are carried into the solar wind. Gold lines leave outward-polarity regions and cerulean lines inward ones. They root in coronal holes.</td></tr>
     <tr><td>Extend into the heliosphere</td><td>Off by default. It carries every drawn open line beyond the source surface, out to the distance set by <b>Out to</b> in the Heliosphere section. <b>Parker spiral</b> winds the extension up with solar rotation at the chosen wind speed, the same way the current sheet and the spacecraft connections are drawn. <b>Radial</b> continues each line straight out. See <a href="#extension">how open lines are extended</a>.</td></tr>
     <tr><td>Lines drawn</td><td>How many of the day's traced field lines are drawn, from 50 to all of them (usually 740). The default of 250 keeps the corona readable. The subset is fixed for each day, so moving the slider adds or removes lines without the others changing, and closed and open lines keep their proportions.</td></tr>
-    <tr><td>Source surface B<sub>r</sub></td><td>Off by default. The radial field on the outer boundary of the model, at 2.5 solar radii. Use the opacity slider to see through it. Its scale is set per day, because this field is far weaker than at the surface.</td></tr>
+    <tr><td>Source surface B<sub>r</sub></td><td>Off by default. The radial field on the outer boundary of the model, at 2.5 solar radii unless the height is changed below. Use the opacity slider to see through it. Its scale is set per day, because this field is far weaker than at the surface.</td></tr>
     <tr><td>Neutral line</td><td>Rose. Where the source-surface field changes sign. This is the base of the heliospheric current sheet.</td></tr>
+    <tr><td>Source-surface height</td><td>For dates computed in your browser (the source badge reads <b>HMI CR …</b>), from 1.5 to 3.5 R<sub>☉</sub>, default 2.5. Releasing the slider re-solves the rotation map at the new height in a second or two; the map is not downloaded again. Everything is redrawn from the new solution: field lines, footprints, neutral line, current sheet and spacecraft connections. Daily products are solved on the server at 2.5 R<sub>☉</sub>, so the slider is inactive for them. See <a href="#rss">choosing the height</a>.</td></tr>
   </table>
 </section>
 
@@ -176,7 +177,7 @@
     <tr><td>Current sheet</td><td>Off by default. The heliospheric current sheet: the neutral line carried outward by the solar wind and wound into a spiral by solar rotation. With extended open lines on, it runs along the boundary between gold and cerulean spirals.</td></tr>
     <tr><td>Planets and spacecraft</td><td>Positions at the time of the map. The seven Sun–Earth L1 monitors share one marker beside Earth.</td></tr>
     <tr><td>Connection to the Sun</td><td>For each spacecraft, the Parker spiral back to the source surface and the model field line from there to the photosphere. The end of that line is the spacecraft's magnetic footpoint.</td></tr>
-    <tr><td>Footpoint spread</td><td>Off by default. A cloud of dots in each spacecraft's colour on the Sun: its footpoints for wind speeds up to 100 km/s either side of the one used, on source surfaces at 2.0, 2.5 and 3.0 R<sub>☉</sub>. A tight cloud means a robust connection; a cloud split between two regions means the source is uncertain. See <a href="#sources">solar-wind sources</a>.</td></tr>
+    <tr><td>Footpoint spread</td><td>Off by default. A cloud of dots in each spacecraft's colour on the Sun: its footpoints for wind speeds up to 100 km/s either side of the one used, on source surfaces 0.5 R<sub>☉</sub> below and above the one used (2.0, 2.5 and 3.0 R<sub>☉</sub> by default). A tight cloud means a robust connection; a cloud split between two regions means the source is uncertain. See <a href="#sources">solar-wind sources</a>.</td></tr>
   </table>
   <p><b>Solar wind</b> sets the speed used for the current sheet and the spirals. A faster wind gives a more open spiral and moves footpoints less far from the spacecraft's own longitude.</p>
   <p><b>Fixed speed</b> connects every spacecraft at that speed. <b>Self-consistent</b> lets each spacecraft find its own: starting from the slider speed, the footpoint's estimated wind speed is fed back into the spiral until it stops changing. The current sheet and extended lines keep the slider speed.</p>
@@ -216,6 +217,7 @@
     <tr><td><code>ss</code></td><td>Source-surface opacity, 0–1</td><td>0.25</td></tr>
     <tr><td><code>rotate</code></td><td><code>1</code> to rotate slowly</td><td>off</td></tr>
     <tr><td><code>lines</code></td><td>Number of field lines drawn</td><td>250</td></tr>
+    <tr><td><code>rss</code></td><td>Source-surface height for dates computed in the browser, 1.5–3.5 R<sub>☉</sub></td><td>2.5</td></tr>
     <tr><td><code>panel</code></td><td><code>0</code> or <code>1</code> to start with the menu closed or open</td><td>last choice</td></tr>
     <tr><td><code>series</code></td><td><code>0</code> or <code>1</code> to hide or show the solar-cycle panel</td><td>shown on wide screens</td></tr>
     <tr><td><code>embed</code></td><td><code>1</code> for the embedded layout</td><td>off</td></tr>
@@ -240,13 +242,13 @@
   <p>A page that embeds HelioField can change its date, wind speed, layers and view without reloading the frame. It does this with <code>postMessage</code>:</p>
 <pre><code>const frame = document.querySelector("iframe");
 frame.contentWindow.postMessage(
-  { type: "heliofield:set", date: "2026-10-17", v: 500, view: "earth" }, "*");
+  { type: "heliofield:set", date: "2014-03-12", v: 500, rss: 2.0, view: "earth" }, "*");
 
 // HelioField answers after every change:
 addEventListener("message", (e) =&gt; {
   if (e.data?.type === "heliofield:state") console.log(e.data.date, e.data.source);
 });</code></pre>
-  <p>Every field of the <code>set</code> message is optional. <code>layers</code> takes the same comma list as the URL, and <code>conn</code> is <code>"sc"</code> or <code>"fixed"</code>. The reply carries <code>date</code>, <code>v</code>, <code>conn</code>, <code>source</code>, <code>computed</code> (true for a date computed in the browser) and <code>obstime</code>. A host showing any date since 2010, such as <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, can pass it directly. Embeds and host messages compute past dates without asking; only the page itself shows the confirmation.</p>
+  <p>Every field of the <code>set</code> message is optional. <code>layers</code> takes the same comma list as the URL, <code>conn</code> is <code>"sc"</code> or <code>"fixed"</code>, and <code>rss</code> sets the source-surface height for computed dates (alone, it re-solves the date on screen). The reply carries <code>date</code>, <code>v</code>, <code>rss</code>, <code>conn</code>, <code>source</code>, <code>computed</code> (true for a date computed in the browser) and <code>obstime</code>. A host showing any date since 2010, such as <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, can pass it directly. Embeds and host messages compute past dates without asking; only the page itself shows the confirmation.</p>
 </section>
 
 <h2 class="part" id="methods">Methods</h2>
@@ -277,8 +279,17 @@ addEventListener("message", (e) =&gt; {
     <li>At the photosphere, the radial field matches the magnetogram: <span class="math"><i>B<sub>r</sub></i>(R<sub>☉</sub>, θ, φ) = <i>B</i><sub>obs</sub>(θ, φ)</span>.</li>
     <li>At the source surface, the field is purely radial: <span class="math">Φ(R<sub>ss</sub>, θ, φ) = 0</span>. This mimics the solar wind, which drags the field out radially beyond a few solar radii.</li>
   </ul>
-  <p>The source surface sits at R<sub>ss</sub> = 2.5 R<sub>☉</sub>, the conventional value. Field lines that reach it are open. All others close back on the Sun.</p>
+  <p>The source surface sits at R<sub>ss</sub> = 2.5 R<sub>☉</sub>, the conventional value, unless you change it for a past date. Field lines that reach it are open. All others close back on the Sun.</p>
   <p>The equation is solved with <a href="https://github.com/sunpy/sunkit-magex">sunkit-magex</a>, the SunPy-affiliated successor to pfsspy. It uses a finite-difference scheme on a grid uniform in ln <i>r</i>, cos θ and φ. The horizontal grid matches the magnetogram, and there are 40 radial shells. One day's solve and trace takes about ten seconds.</p>
+  <h4 id="rss">Choosing the source-surface height</h4>
+  <p>R<sub>ss</sub> is the model's one free parameter, and 2.5 R<sub>☉</sub> is a convention rather than a measurement. Lowering it lets more of the field reach the boundary:</p>
+  <ul>
+    <li><b>Open flux rises.</b> On the March 2014 rotation map (CR 2148) it is 2.8 × 10<sup>22</sup> Mx at 1.8 R<sub>☉</sub> and 1.0 × 10<sup>22</sup> Mx at 3.0 R<sub>☉</sub>.</li>
+    <li><b>Coronal holes grow.</b> Lines that closed under a high boundary now open, so the <a href="#openfield">footprints</a> spread and new small holes appear.</li>
+    <li><b>The neutral line warps.</b> A low source surface keeps more of the photospheric structure, so the current sheet reaches higher latitudes. A high one leaves mostly the dipole, so the sheet flattens towards the equator.</li>
+    <li><b>Spacecraft connections move.</b> Footpoints can jump to another coronal hole when its open field changes.</li>
+  </ul>
+  <p>No single height fits all conditions. Comparisons with in-situ field polarity have favoured lower heights near solar minimum (Lee et al. 2011), and with Parker Solar Probe close to the Sun, about 2.0 R<sub>☉</sub> (Badman et al. 2020). Moving the slider and watching which features persist is a simple test of how much a result depends on this choice. The <b>footpoint spread</b> layer does the same for the connections, at 0.5 R<sub>☉</sub> either side of the chosen height. The open-field footprints for past dates normally come from the full sunkit-magex solution at 2.5 R<sub>☉</sub>. At any other height they come from the browser's own solution, traced the same way on a 1° grid.</p>
   <h4>Open flux</h4>
   <p>The open flux is the unsigned radial flux through the source surface:</p>
   <div class="eq">Φ<sub>open</sub> = R<sub>ss</sub><sup>2</sup> ∮ |<i>B<sub>r</sub></i>(R<sub>ss</sub>, θ, φ)| dΩ</div>
@@ -457,6 +468,7 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
     <tr><td>Estimated speed, median difference</td><td>3 km/s</td><td>1 km/s</td><td>2 km/s</td></tr>
     <tr><td>Expansion factor, median browser / server</td><td>0.60</td><td>0.42</td><td>0.59</td></tr>
   </table>
+  <p>For the source-surface slider, the same two codes also solve CR 2148 and CR 2230 at 1.5, 2.0, 3.0 and 3.5 R<sub>☉</sub>. At every height the source-surface field correlates at 0.9998 or better, and the open flux agrees within 2.1%.</p>
   <p>The field strength agrees to about 1% (median) everywhere above 1.1 R<sub>☉</sub>. At the photosphere the degree-40 expansion on a 2° grid misses small-scale field that the finite-difference solution keeps at the map's 1° resolution, so the browser's |<b>B</b>| there is 10–50% smaller in median. That one difference explains the rest. The expansion factor scales with the photospheric field, so it is about half the server's. Open area depends on the smallest open regions, so it differs by up to 20%. The speed depends on (1 + <i>f</i><sub>s</sub>)<sup>2/9</sup>, so it barely moves. The values come from the version of each code that the tests ran. Each run writes them to <code>cache/validation/</code>, and the tests fail if they leave these ranges.</p>
 </section>
 
@@ -464,7 +476,7 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
   <h3>Limitations</h3>
   <ul>
     <li><b>No currents.</b> PFSS cannot represent sheared or twisted fields, such as those in filament channels or before eruptions. Active-region loops are less twisted than in reality.</li>
-    <li><b>A fixed spherical source surface.</b> The real boundary between closed and open field is neither spherical nor at one height. Its height changes the open flux and the shape of the neutral line.</li>
+    <li><b>A spherical source surface.</b> The real boundary between closed and open field is neither spherical nor at one height. Its height changes the open flux and the shape of the neutral line; for past dates it can be varied, but daily products use 2.5 R<sub>☉</sub>.</li>
     <li><b>Old data away from Earth.</b> A synoptic map shows some longitudes as they were up to about four weeks earlier. New active regions there are missing until they rotate into view.</li>
     <li><b>Poorly observed poles.</b> The polar fields are seen at a grazing angle. They strongly influence the open field, and so the current sheet.</li>
     <li><b>Constant, radial solar wind.</b> The spirals and current sheet ignore acceleration, stream interactions and transients such as coronal mass ejections.</li>
@@ -509,6 +521,8 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
     <li>Harvey, J. W. et al. 1996, The Global Oscillation Network Group (GONG) project, <i>Science</i>, 272, 1284.</li>
     <li>Hoeksema, J. T. 1984, Structure and evolution of the large scale solar and heliospheric magnetic fields, PhD thesis, Stanford University (CSSA-ASTRO-84-07).</li>
     <li>Linker, J. A. et al. 2017, The open flux problem, <i>The Astrophysical Journal</i>, 848, 70.</li>
+    <li>Lee, C. O., Luhmann, J. G., Hoeksema, J. T., Sun, X., Arge, C. N. &amp; de Pater, I. 2011, Coronal field opens at lower height during the solar cycles 22 and 23 minimum periods, <i>Solar Physics</i>, 269, 367.</li>
+    <li>Badman, S. T. et al. 2020, Magnetic connectivity of the ecliptic plane within 0.5 au: potential field source surface modeling of the first Parker Solar Probe encounter, <i>The Astrophysical Journal Supplement Series</i>, 246, 23.</li>
     <li>Scherrer, P. H. et al. 2012, The Helioseismic and Magnetic Imager (HMI) investigation for the Solar Dynamics Observatory (SDO), <i>Solar Physics</i>, 275, 207.</li>
   </ol>
   <p class="muted">Magnetograms courtesy of NSO/GONG and of NASA/SDO and the HMI science team. PFSS by sunkit-magex (SunPy project). Ephemerides from JPL Horizons via HelioFleet.</p>

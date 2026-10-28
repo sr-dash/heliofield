@@ -28,7 +28,7 @@ Then open <http://localhost:8811/>. How to use the viewer, and how everything
 is computed, is on the guide page: [`guide.html`](https://sr-dash.github.io/heliofield/guide.html).
 
 The URL holds the full state (`date`, `v`, `conn`, `layers`, `lines`, `ext`, `view` or
-`cam`, `rmax`, `scale`, `ss`, `rotate`, `panel`, `theme`), so any view can be linked.
+`cam`, `rmax`, `scale`, `ss`, `rss`, `rotate`, `panel`, `theme`), so any view can be linked.
 The round **Reset view** button on the scene (or `H`) returns the camera to the
 opening view without reloading, so a field computed in the browser is kept.
 
@@ -47,6 +47,14 @@ source-surface correlation of 0.9998, a neutral line within 0.6°, open flux wit
 2%, and footpoints within about 1°. The page asks before computing, because the
 current field is cleared first.
 
+The **source-surface height** slider (1.5–3.5 R☉, `rss=`) re-solves a computed
+date at another height. The worker keeps the rotation's map and harmonic
+coefficients, so this takes a second or two and downloads nothing. The spread
+surfaces follow it (±0.5 R☉). At heights other than 2.5 R☉, the open-field
+footprints come from the browser solution. Daily products stay at 2.5 R☉, and
+the slider is inactive for them. The test suite checks the browser solution against
+sunkit-magex at 1.5, 2.0, 3.0 and 3.5 R☉ as well.
+
 ## Solar-wind sources at the footpoints
 
 Each connection is mapped at 200–900 km/s in 25 km/s steps, and each footpoint
@@ -57,7 +65,8 @@ v = 285 + 625 / (1 + f<sub>s</sub>)<sup>2/9</sup> × [1 − 0.8 exp(−(DCHB/2°
 with illustrative, untuned coefficients. They are listed in the Footpoints panel.
 **Self-consistent** connectivity (`conn=sc`) iterates the ballistic mapping with
 that speed instead of the slider's. The **footpoint spread** layer (`cloud`) shows
-the footpoints for ±100 km/s on source surfaces at 2.0, 2.5 and 3.0 R☉. Both
+the footpoints for ±100 km/s on source surfaces 0.5 R☉ either side of the one used
+(2.0, 2.5 and 3.0 R☉ by default). Both
 `build_day.py` and `js/pfss.js` compute all of it; on the 2026-10-17 GONG map they
 agree on DCHB to a median 0.23° and on speed to a median 4 km/s (within 50 km/s for
 84% of 341 connections); f<sub>s</sub> agrees in median but scatters by a factor of
@@ -167,7 +176,7 @@ change. A date without a product snaps to the latest one on or before it:
 
 ```js
 frame.contentWindow.postMessage(
-  { type: "heliofield:set", date: "2026-10-17", v: 500, view: "earth" }, "*");
+  { type: "heliofield:set", date: "2014-03-12", v: 500, rss: 2.0, view: "earth" }, "*");
 addEventListener("message", (e) => {
   if (e.data?.type === "heliofield:state") console.log(e.data.date, e.data.source);
 });

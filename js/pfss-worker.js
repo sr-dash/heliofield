@@ -1,8 +1,10 @@
 // Solves PFSS off the main thread. Keeps the last rotation's field so a new
-// date inside the same rotation only re-traces spacecraft connectivity.
-import { solve, connectOnly } from "./pfss.js?v=3f651b8b64";
+// date inside the same rotation only re-traces spacecraft connectivity, and
+// its map and harmonic coefficients so another source-surface height only
+// re-solves the field.
+import { solve, connectOnly } from "./pfss.js?v=1d334a753e";
 
-let last = null;   // { key, models }
+let last = null;   // { key, rss, br, coef, models }
 
 function flatten(polys) {
   const counts = new Int32Array(polys.length);
@@ -15,28 +17,35 @@ function flatten(polys) {
 }
 
 self.onmessage = async (e) => {
-  const { id, url, key, scale, shape, fleet, reuse } = e.data;
+  const { id, url, key, scale, shape, fleet, reuse, rss = 2.5 } = e.data;
   const progress = (stage, f) => self.postMessage({ id, type: "progress", stage, f });
   try {
     // Only when the page still shows this rotation's field.
-    if (reuse && last && last.key === key) {
+    if (reuse && last && last.key === key && last.rss === rss) {
       const { connect, conn, ensemble } = connectOnly(last.models, fleet);
       const { xyz, counts } = flatten(conn);
       self.postMessage({ id, type: "connect", connect, ensemble, xyz, counts }, [xyz.buffer, counts.buffer]);
       return;
     }
-    last = null;                       // release the previous rotation's field first
-    progress("download", 0);
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`map download failed (${res.status})`);
-    const raw = await new Response(res.body.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
-    const q = new Int16Array(raw), br = new Float32Array(q.length);
-    for (let i = 0; i < q.length; i++) br[i] = q[i] * scale;
-    const out = solve(br, shape[0], shape[1], { fleet, progress });
-    last = { key, models: out.models };
+    let br, coef = null;
+    if (last && last.key === key) {
+      ({ br, coef } = last);           // same map, another source surface
+      last.models = null;
+    } else {
+      last = null;                     // release the previous rotation's field first
+      progress("download", 0);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`map download failed (${res.status})`);
+      const raw = await new Response(res.body.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+      const q = new Int16Array(raw);
+      br = new Float32Array(q.length);
+      for (let i = 0; i < q.length; i++) br[i] = q[i] * scale;
+    }
+    const out = solve(br, shape[0], shape[1], { rss, coef, fleet, progress });
+    last = { key, rss, br, coef: out.coef, models: out.models };
     const { xyz, counts } = flatten(out.polys);
-    self.postMessage({ id, type: "done", meta: out.meta, xyz, counts, brTex: out.brTex, ssTex: out.ssTex },
-      [xyz.buffer, counts.buffer, out.brTex.buffer, out.ssTex.buffer]);
+    self.postMessage({ id, type: "done", meta: out.meta, xyz, counts, brTex: out.brTex, ssTex: out.ssTex, footTex: out.footTex },
+      [xyz.buffer, counts.buffer, out.brTex.buffer, out.ssTex.buffer, out.footTex.buffer]);
   } catch (err) {
     self.postMessage({ id, type: "error", message: err.message || String(err) });
   }

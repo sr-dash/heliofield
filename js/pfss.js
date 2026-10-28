@@ -322,6 +322,9 @@ function textureFromEquirect(F, scale) {
 // same, so both paths produce the same product.
 export const VGRID = Array.from({ length: 29 }, (_, i) => 200 + 25 * i);
 export const RSS_ENS = [2.0, 3.0];
+// The spread's source surfaces for any main one: 0.5 R_sun either side
+// (RSS_ENS at the default 2.5), never below 1.3.
+export const rssSpread = (rss) => [Math.max(1.3, rss - 0.5), rss + 0.5].map((r) => +r.toFixed(2));
 const CH_STEP = 1;   // open/closed map resolution for DCHB [deg]
 
 // WSA-type wind speed [km/s] from the expansion factor and the distance to
@@ -331,6 +334,7 @@ export const wsaSpeed = (fs, dchb) => 285 + 625 / Math.pow(1 + fs, 2 / 9) * Math
 
 // Whether the field line from (lon, lat) just above the photosphere reaches
 // the source surface: traced one way, outward along the local B_r, by RK2.
+// Returns the footpoint's B_r sign (1 or -1) when open, 0 when closed.
 function isOpen(G, lon, lat, v) {
   let [x, y, z] = cart(1.001, lon, lat);
   sample(G, x, y, z, v);
@@ -342,22 +346,25 @@ function isOpen(G, lon, lat, v) {
     sample(G, mx, my, mz, v); n = Math.hypot(v[0], v[1], v[2]) || 1;
     x += h * s * v[0] / n; y += h * s * v[1] / n; z += h * s * v[2] / n;
     const r = Math.hypot(x, y, z);
-    if (r >= G.rss) return true;
-    if (r < 1) return false;
+    if (r >= G.rss) return s;
+    if (r < 1) return 0;
   }
-  return false;
+  return 0;
 }
 
 // Coronal-hole boundary as unit vectors: midpoints between neighbouring
 // cells of a 1-degree photospheric grid where one cell is open and the other
-// closed (longitude wraps). Also returns the open fraction.
+// closed (longitude wraps). Also returns the open/closed map, the polarity
+// of the open cells (1 outward, -1 inward) and the open fraction.
 export function chBoundary(G) {
-  const nlat = 180 / CH_STEP, nlon = 360 / CH_STEP, op = new Uint8Array(nlat * nlon), v = [0, 0, 0];
+  const nlat = 180 / CH_STEP, nlon = 360 / CH_STEP, op = new Uint8Array(nlat * nlon), pol = new Int8Array(nlat * nlon), v = [0, 0, 0];
   let aOpen = 0, aAll = 0;   // area-weighted: rows are uniform in latitude
   for (let i = 0; i < nlat; i++) {
     const w = Math.cos((-90 + (i + 0.5) * CH_STEP) * DEG);
     for (let j = 0; j < nlon; j++) {
-      aOpen += w * (op[i * nlon + j] = isOpen(G, (j + 0.5) * CH_STEP, -90 + (i + 0.5) * CH_STEP, v) ? 1 : 0);
+      const o = isOpen(G, (j + 0.5) * CH_STEP, -90 + (i + 0.5) * CH_STEP, v);
+      pol[i * nlon + j] = o;
+      aOpen += w * (op[i * nlon + j] = o ? 1 : 0);
       aAll += w;
     }
   }
@@ -367,7 +374,7 @@ export function chBoundary(G) {
     if (op[i * nlon + j] !== op[i * nlon + (j + 1) % nlon]) pts.push(...cart(1, lon + CH_STEP / 2, lat));
     if (i + 1 < nlat && op[i * nlon + j] !== op[(i + 1) * nlon + j]) pts.push(...cart(1, lon, lat + CH_STEP / 2));
   }
-  return { bound: Float64Array.from(pts), open: op, openFraction: aOpen / aAll };
+  return { bound: Float64Array.from(pts), open: op, pol, openFraction: aOpen / aAll };
 }
 
 // Angle [deg] from (lon, lat) to the nearest boundary point.
@@ -388,11 +395,13 @@ export function model(coef, rss, progress = () => {}) {
 
 // Everything the viewer draws, in the same shape as a daily product.
 // fleet: { key: { name, planet, lon, lat, r } } at the requested time.
-// Returns the solved models too ([main, ...RSS_ENS]) for connectOnly.
-export function solve(br, ny, nx, { rss = 2.5, L = 40, vsw = [300, 400, 500, 600, 700, 800], fleet = {}, progress = () => {} } = {}) {
+// Returns the solved models too ([main, ...spread]) for connectOnly, and the
+// harmonic coefficients, which a re-solve of the same map at another source
+// surface can pass back in as `coef` to skip the expansion.
+export function solve(br, ny, nx, { rss = 2.5, L = 40, vsw = [300, 400, 500, 600, 700, 800], fleet = {}, coef = null, progress = () => {} } = {}) {
   const t0 = Date.now();
   progress("harmonics", 0);
-  const coef = analyse(br, ny, nx, L);
+  coef ??= analyse(br, ny, nx, L);
   progress("field", 0.05);
   const G = fieldGrid(coef, { rss, progress: (f) => progress("field", 0.05 + 0.3 * f) });
 
@@ -426,7 +435,7 @@ export function solve(br, ny, nx, { rss = 2.5, L = 40, vsw = [300, 400, 500, 600
   // diagnostics and their spread.
   progress("holes", 0.55);
   const models = [{ G, rss, ...chBoundary(G) }];
-  RSS_ENS.forEach((r, k) => {
+  rssSpread(rss).forEach((r, k) => {
     progress("holes", 0.65 + 0.15 * k);
     models.push(model(coef, r));
   });
@@ -444,6 +453,9 @@ export function solve(br, ny, nx, { rss = 2.5, L = 40, vsw = [300, 400, 500, 600
     },
     brTex: textureFromSinLat(br, ny, nx, 20),
     ssTex: textureFromEquirect(ss, ssScale),
+    // Open-field footprints in the daily products' classes (0 closed,
+    // 128 open inward, 255 open outward), 1-degree rows south first.
+    footTex: Uint8Array.from(models[0].pol, (p) => (p > 0 ? 255 : p < 0 ? 128 : 0)),
     models, coef,
   };
 }
