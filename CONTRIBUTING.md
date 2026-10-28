@@ -40,6 +40,8 @@ python scripts/make_icons.py                      # icons and the social-preview
   python -m pytest tests -v
   ```
 
+  `download/compute_corona.py` is the same solver rewritten in NumPy, which users get with their downloads. A change to the method in `js/pfss.js` must be made there as well; `tests/test_export.py` fails when the two disagree.
+
   Each run writes its numbers to `cache/validation/`. If a deliberate change moves them, update the tolerances in `tests/` and the table in the guide's Validation section in the same pull request, and say why.
 - Colours are not chosen by eye. Any new or changed colour in `js/theme.js` must keep colour-vision separation and at least 3:1 contrast against the background in both themes; the file explains how they were validated.
 - New controls, link parameters or methods go into the README and the [guide](https://sr-dash.github.io/heliofield/guide.html).

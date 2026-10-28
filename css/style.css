@@ -234,7 +234,7 @@ output { font-weight: 650; font-variant-numeric: tabular-nums; }
 
 /* ---------- compute dialog and progress ---------- */
 dialog {
-  max-width: min(560px, calc(100vw - 32px)); padding: 22px 24px 18px; border-radius: 14px;
+  max-width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 22px 24px 18px; border-radius: 14px;
   color: var(--text); background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow);
   font-size: 15px;
 }
@@ -244,6 +244,15 @@ dialog p { margin: 0 0 10px; }
 dialog ul { margin: 0 0 10px; padding-left: 20px; }
 dialog li { margin-bottom: 6px; }
 dialog .more { font-size: 14px; }
+dialog .dl-opts { border: 0; padding: 0; margin: 0 0 8px; display: grid; gap: 8px; }
+dialog .dl-opts legend { font-weight: 650; margin-bottom: 6px; padding: 0; }
+dialog .dl-opts[hidden] { display: none; }
+.dl-opt { display: flex; gap: 10px; align-items: flex-start; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; font-size: 14px; line-height: 1.45; }
+.dl-opt:has(input:checked) { border-color: var(--text); background: var(--control-hover); }
+.dl-opt input { margin-top: 3px; }
+.dl-opt b { font-size: 15px; }
+.dl-opt small { color: var(--muted); margin-left: 4px; }
+.dl-opt b + small::after { content: ""; display: block; }
 dialog .noask { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 14px; margin: 6px 0 14px; }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .busy {

@@ -70,6 +70,26 @@ Spacecraft connect at the edge. The unsigned flux is conserved outward, and at
 At the same height, PFSS alone varies by up to a factor of 27. Like the height
 slider, it is available for computed dates only.
 
+## Downloading results
+
+**Save & share → Download results…** zips the model behind a computed date.
+The zip holds the results as NetCDF-3, written in the browser by `js/netcdf.js`
+and `js/export.js`. A `_header.json` describes every variable, its units, the
+model settings and the saved view, and a README and Python scripts from
+`download/` come with it. There are three choices:
+
+| Choice | Contents | Scripts | Size |
+|---|---|---|---|
+| Surface maps | input B<sub>r</sub>, source- (and cusp-) surface B<sub>r</sub>, open-field footprints, neutral line, spacecraft footpoints | `plot_surface.py`, `compute_corona.py` | ~0.4 MB |
+| Full 3D, PFSS | + B on the 36 × 90 × 180 grid, field lines, connections | `plot_surface.py`, `plot_3d.py` | ~7 MB |
+| Full 3D, PFSS + SCS | + the SCS field, traced current sheet, polarity at the outer edge | `plot_surface.py`, `plot_3d.py` | ~17 MB |
+
+The plot scripts write PNG and PDF in the viewer's colours and view.
+`compute_corona.py` is `js/pfss.js` rewritten in NumPy: it computes the 3D field
+from the surface maps (`--rss`, `--scs`, `--lmax`) and writes a 3D result file.
+`tests/test_export.py` checks that it reproduces the browser to within 10⁻⁵, and
+that every script runs. The scripts need only NumPy, SciPy and Matplotlib.
+
 ## Solar-wind sources at the footpoints
 
 Each connection is mapped at 200–900 km/s in 25 km/s steps, and each footpoint
@@ -139,7 +159,7 @@ code under test is the code the page runs.
 
 ```bash
 pip install -r requirements.txt -r requirements-test.txt
-python -m pytest tests -v                 # full suite, under two minutes
+python -m pytest tests -v                 # full suite, about two minutes
 python -m pytest tests -v -m "not slow"   # exact solutions only, seconds
 ```
 
@@ -153,6 +173,9 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds
 - `test_scs.py`: the current-sheet model. It is checked against the series solution for a
   dipole, and against an SCS field built in Python from the sunkit-magex PFSS solution. It
   also checks flux conservation, latitude uniformity at 21 R☉ and the sheet's polarity split.
+- `test_export.py`: the download. NetCDF readers open each product, the header describes
+  every variable, the plot scripts write PNG and PDF, and `compute_corona.py`
+  reproduces the browser's PFSS and SCS results from the surface maps alone.
 
 The suite needs no downloads; the maps come from `data/history/`. The numbers of each
 run are written to `cache/validation/`. The **Validation** workflow runs the suite on

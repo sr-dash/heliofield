@@ -52,7 +52,7 @@ export async function fleetFor(day) {
 let worker = null, seq = 0, pending = null;
 function getWorker() {
   if (!worker) {
-    worker = new Worker(new URL("./pfss-worker.js?v=0ca193a04a", import.meta.url), { type: "module" });
+    worker = new Worker(new URL("./pfss-worker.js?v=de7f550859", import.meta.url), { type: "module" });
     worker.onmessage = (e) => {
       const m = e.data;
       if (!pending || m.id !== pending.id) return;
@@ -69,6 +69,15 @@ export function compute({ url, key, scale, shape, fleet, reuse, rss, rout }, onP
   return new Promise((resolve, reject) => {
     pending = { id: ++seq, resolve, reject, onProgress };
     getWorker().postMessage({ id: seq, url: new URL(url, location.href).href, key, scale, shape, fleet, reuse, rss, rout });
+  });
+}
+// Ask the worker for a zip of the results of the field it solved last.
+// Unlike compute(), this never cancels: that would discard the field.
+export function exportResults(req) {
+  if (pending) return Promise.reject(new Error("a computation is still running"));
+  return new Promise((resolve, reject) => {
+    pending = { id: ++seq, resolve, reject };
+    getWorker().postMessage({ id: seq, type: "export", ...req });
   });
 }
 export function cancel() {

@@ -7,9 +7,10 @@ script adds ?v=<hash> to every stylesheet and entry module in the pages, and
 writes an import map that gives every module in js/ its own hashed URL, so a
 visitor gets either the whole old set or the whole new set.
 
-Import maps do not reach into a worker or a new URL(...), so the two links
-that bypass the map are stamped in the source instead: the worker URL in
-js/history.js and the import of ./pfss.js in js/pfss-worker.js. Those are
+Import maps do not reach into a worker or a new URL(...), so the links that
+bypass the map are stamped in the source instead: the worker URL in
+js/history.js and the worker's imports (./pfss.js, ./export.js, and the
+modules export.js loads). Those are
 stamped first, so the hashes in the import map cover the stamped files.
 
 Run it after changing anything in css/ or js/:
@@ -36,7 +37,10 @@ LIBRARIES = {
 # Links inside js/ that the import map cannot reach, in dependency order:
 # (file, the module it points to, the pattern that holds the link)
 IN_SOURCE = [
+    ("export.js", "pfss.js", r'from "\./pfss\.js(\?v=[0-9a-f]*)?"'),
+    ("export.js", "netcdf.js", r'from "\./netcdf\.js(\?v=[0-9a-f]*)?"'),
     ("pfss-worker.js", "pfss.js", r'from "\./pfss\.js(\?v=[0-9a-f]*)?"'),
+    ("pfss-worker.js", "export.js", r'from "\./export\.js(\?v=[0-9a-f]*)?"'),
     ("history.js", "pfss-worker.js", r'new URL\("\./pfss-worker\.js(\?v=[0-9a-f]*)?"'),
 ]
 

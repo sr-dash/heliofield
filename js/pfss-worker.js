@@ -3,6 +3,7 @@
 // its map and harmonic coefficients so another source-surface height only
 // re-solves the field. The same holds for switching the SCS model on or off.
 import { solve, connectOnly } from "./pfss.js?v=b541db08ad";
+import { buildExport, bundleName, readme, SCRIPTS } from "./export.js?v=8ecc7c1f32";
 
 let last = null;   // { key, rss, rout, br, coef, models }
 
@@ -16,9 +17,45 @@ function flatten(polys) {
   return { xyz, counts };
 }
 
+// A zip of the results of the field solved last: the NetCDF file, its
+// header, the README and the Python scripts. fflate is loaded only now.
+async function exportZip(req) {
+  if (!last?.models) throw new Error("no field solved in this session");
+  const enc = new TextEncoder();
+  const lines = [], conn = [];
+  for (let i = 0, o = 0; i < req.counts.length; i++) {
+    const p = [];
+    for (let k = 0; k < req.counts[i]; k++, o += 3) p.push([req.xyz[o], req.xyz[o + 1], req.xyz[o + 2]]);
+    (i < req.meta.lines.count ? lines : conn).push(p);
+  }
+  const { nc, header } = buildExport({
+    kind: req.kind, br: last.br, ny: req.shape[0], nx: req.shape[1], coef: last.coef, model: last.models[0], meta: req.meta,
+    lines, drawn: req.drawn, conn: req.connIdx.map((c) => ({ ...c, pts: conn[c.i] })), view: req.view,
+    version: req.version, created: new Date().toISOString().slice(0, 19) + "Z",
+  });
+  const stem = bundleName(header), base = new URL("../download/", import.meta.url);
+  const get = async (f) => { const r = await fetch(new URL(f, base), { cache: "no-cache" }); if (!r.ok) throw new Error(`${f}: ${r.status}`); return r.text(); };
+  const scripts = SCRIPTS[req.kind];
+  const texts = await Promise.all([...scripts, "README.txt"].map(get));
+  const { zipSync } = await import("https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js");
+  const files = { [`${stem}/${stem}.nc`]: nc, [`${stem}/${stem}_header.json`]: enc.encode(JSON.stringify(header, null, 1)) };
+  scripts.forEach((f, i) => { files[`${stem}/${f}`] = enc.encode(texts[i]); });
+  files[`${stem}/README.txt`] = enc.encode(readme(texts[texts.length - 1], header));
+  return { zip: zipSync(files, { level: 6 }), name: `${stem}.zip` };
+}
+
 self.onmessage = async (e) => {
   const { id, url, key, scale, shape, fleet, reuse, rss = 2.5, rout = 0 } = e.data;
   const progress = (stage, f) => self.postMessage({ id, type: "progress", stage, f });
+  if (e.data.type === "export") {
+    try {
+      const { zip, name } = await exportZip(e.data);
+      self.postMessage({ id, type: "zip", zip, name }, [zip.buffer]);
+    } catch (err) {
+      self.postMessage({ id, type: "error", message: err.message || String(err) });
+    }
+    return;
+  }
   try {
     // Only when the page still shows this rotation's field.
     if (reuse && last && last.key === key && last.rss === rss && last.rout === rout) {

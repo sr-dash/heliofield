@@ -80,6 +80,7 @@
   <a href="#panel">The panel</a>
   <a href="#themes">Themes</a>
   <a href="#save">Saving snapshots</a>
+  <a href="#download">Downloading results</a>
   <a href="#model">Model choices</a>
   <a href="#embed">Links and embedding</a>
   <h2>Methods</h2>
@@ -210,6 +211,23 @@
 <section id="save">
   <h3>Saving snapshots</h3>
   <p><b>Save &amp; share → Save PNG</b> saves what you see at twice screen resolution, in the current theme. The image carries a title band and a legend. The title band gives the date, the magnetogram, the model, the wind speed and the open flux. It also gives the <b>viewpoint of the saved view</b>: the preset name, or "Custom view" after you rotate the scene, and the Carrington longitude and latitude it is seen from. Its Stonyhurst longitude, the angle from the Earth view, comes next, then the distance from Sun centre at true scale. Earth's L<sub>0</sub> and B<sub>0</sub> are listed separately for reference, so a view from anywhere can be placed relative to Earth. Spacecraft labels are drawn in the image at a size made for reading in a document. <b>Save PDF</b> puts the same picture on a single page sized to it, ready to drop into a document or a slide. The menu is never part of the image.</p>
+</section>
+
+<section id="download">
+  <h3>Downloading results</h3>
+  <p><b>Save &amp; share → Download results…</b> saves the model behind the view as a zip. It holds the results in a NetCDF file, a header file (<code>_header.json</code>) that describes every variable, its units and the model settings, a README, and Python scripts. The scripts draw the same pictures as the viewer, as PNG and PDF. They need only NumPy, SciPy and Matplotlib. Downloads are available for dates computed in your browser (source badge <b>HMI CR …</b>); daily products are solved on the server, and the page holds only their images.</p>
+  <table>
+    <tr><th>Choice</th><th>Contents</th><th>Scripts</th><th>Size</th></tr>
+    <tr><td>Surface maps</td><td>Photospheric B<sub>r</sub> (the input map), source-surface B<sub>r</sub> (and cusp-surface B<sub>r</sub> with SCS), the open-field footprints, the neutral line, spacecraft positions, and footpoints with f<sub>s</sub>, DCHB and speed for every wind speed</td><td><code>plot_surface.py</code>, <code>compute_corona.py</code></td><td>~0.4 MB</td></tr>
+    <tr><td>Full 3D, PFSS</td><td>The above, plus B<sub>r</sub>, B<sub>θ</sub>, B<sub>φ</sub> on the 36 × 90 × 180 grid (1 to R<sub>ss</sub>, uniform in ln r), all traced field lines, and the drawn spacecraft connections</td><td><code>plot_surface.py</code>, <code>plot_3d.py</code></td><td>~7 MB</td></tr>
+    <tr><td>Full 3D, PFSS + SCS</td><td>The above, plus the SCS field from the cusp surface to the outer edge (including the transition shell), the traced current sheet, and the polarity near the outer edge</td><td><code>plot_surface.py</code>, <code>plot_3d.py</code></td><td>~17 MB</td></tr>
+  </table>
+  <p>The download uses the model on screen. Choosing the other 3D model switches the view to it first. <code>compute_corona.py</code> is the browser solver rewritten in NumPy. Given only the surface maps, it computes the 3D field, PFSS or PFSS + SCS, and writes a file in the format of a 3D download for <code>plot_3d.py</code>. The test suite checks that it reproduces the browser's results to within 10<sup>−5</sup>. It also lets you change the model: another source-surface height (<code>--rss</code>), another outer edge (<code>--scs</code>) or another harmonic degree (<code>--lmax</code>).</p>
+<pre><code>pip install -r requirements.txt
+python plot_surface.py heliofield_2014-03-12_surface.nc
+python compute_corona.py heliofield_2014-03-12_surface.nc --scs 21.5
+python plot_3d.py heliofield_2014-03-12_scs_computed.nc --theme light</code></pre>
+  <p>The NetCDF file is in the classic format, which every NetCDF reader opens: xarray (<code>engine="scipy"</code>), netCDF4, Panoply, ParaView. Coordinates are Carrington; lengths are in solar radii and fields in gauss. The header file also records the camera, theme and wind speed on screen when the file was saved, so <code>plot_3d.py</code> starts from the same view.</p>
 </section>
 
 <section id="embed">
@@ -480,7 +498,7 @@ addEventListener("message", (e) =&gt; {
   <h3>Validation</h3>
   <p>The browser solver is tested independently of the page, from Python, by a test suite in the repository (<code>tests/</code>). The suite runs <code>js/pfss.js</code> itself under Node.js, so the code it checks is the code the page runs. Anyone can rerun it. It is not part of routine updates; it runs by hand or from the repository's <b>Validation</b> workflow.</p>
 <pre><code>pip install -r requirements.txt -r requirements-test.txt
-python -m pytest tests -v                 # everything, under two minutes
+python -m pytest tests -v                 # everything, about two minutes
 python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code></pre>
   <p><b>Exact solutions.</b> The associated Legendre functions match SciPy to round-off. A dipole on the photosphere has a closed-form PFSS solution, and the solver reproduces it: the field within 2% everywhere between the photosphere and the source surface, traced field lines that keep the dipole's flux function constant to 1%, open flux within 1%, and a neutral line on the equator to 0.6°. The speed formula matches the Python pipeline's to round-off. The harmonic analysis of a single high-degree term leaks about 4% of its amplitude into other degrees, because the latitude integral uses the map's own uniform rows rather than Gauss–Legendre points. The test keeps that limit in view.</p>
   <p><b>Against sunkit-magex.</b> Three HMI rotation maps from the archive, one near the cycle-24 maximum (CR 2148, March 2014), one at the 2019–20 minimum (CR 2230, May 2020) and one in cycle 25 (CR 2300, July 2025), are solved by both codes at a source surface of 2.5 R<sub>☉</sub>. Four synthetic spacecraft at 0.3–1 au are connected at every speed from 200 to 900 km/s, 116 connections per map.</p>

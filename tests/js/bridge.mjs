@@ -9,10 +9,14 @@
 //   { "cmd": "wsa", "pairs": [[fs, dchb], ...] }
 //   { "cmd": "scsfield", "br", "ny", "nx", "rss", "rout", "points": [[x,y,z], ...] }   SCS field
 //   { "cmd": "scspolarity", "br", "ny", "nx", "rss", "rout", "r", "lonlat": [[lon,lat], ...] }
+//   { "cmd": "export", "br", "ny", "nx", "rss", "rout", "kind", "fleet", "date", "out": "path stem" }
+//      writes <stem>.nc and <stem>_header.json as the download would
 //
 // Map files are little-endian float32, ny rows uniform in sin(latitude)
 // from the south, column j centred on Carrington longitude (j + 0.5) 360/nx.
 import fs from "node:fs";
+import { buildExport, readme } from "../../js/export.js";
+import { lineOrder } from "./line-order.mjs";
 import { alf, analyse, fieldGrid, sample, trace, solve, surfaceBr, zeroContour, chBoundary, wsaSpeed, model, scsPolarity } from "../../js/pfss.js";
 
 const req = JSON.parse(fs.readFileSync(0, "utf8"));
@@ -72,6 +76,24 @@ switch (req.cmd) {
     if (req.cmd === "scsfield") { const v = [0, 0, 0]; out = req.points.map((p) => sample(m.S, p[0], p[1], p[2], v).slice()); }
     else out = req.lonlat.map(([lo, la]) => scsPolarity(m, req.r, lo, la));
     out = { rcp: m.rcp, values: out };
+    break;
+  }
+  case "export": {
+    const br = readMap(req.br), fleet = req.fleet || {};
+    const res = solve(br, req.ny, req.nx, { rss: req.rss ?? 2.5, rout: req.rout ?? 0, fleet });
+    const nf = res.meta.lines.count, v = req.v ?? 400;
+    const conn = res.meta.connect.map((c, i) => ({ ...c, i })).filter((c) => c.v === v)
+      .map((c) => ({ body: c.body, v, pts: res.polys[nf + c.i] })).filter((c) => c.pts?.length > 1);
+    const meta = { ...res.meta, date: req.date, obstime: `${req.date}T12:00:00Z`, L0: 0, B0: 0,
+      source: { name: "SDO/HMI rotation map", file: req.file || "test" }, map_cr: req.cr };
+    const { nc, header } = buildExport({ kind: req.kind, br, ny: req.ny, nx: req.nx, coef: res.coef, model: res.models[0], meta,
+      lines: res.polys.slice(0, nf), drawn: lineOrder(nf).slice(0, 250), conn,
+      view: { lon: 306, lat: 12.8, dist: 9, fov: 35, logScale: true, theme: "dark", vsw: v, connMode: "fixed", nLines: 250 },
+      version: "test", created: "2026-10-28T00:00:00Z" });
+    fs.writeFileSync(`${req.out}.nc`, nc);
+    fs.writeFileSync(`${req.out}_header.json`, JSON.stringify(header, null, 1));
+    fs.writeFileSync(`${req.out}_README.txt`, readme(fs.readFileSync(new URL("../../download/README.txt", import.meta.url), "utf8"), header));
+    out = { bytes: nc.length, variables: Object.keys(header.variables).length };
     break;
   }
   case "wsa": {

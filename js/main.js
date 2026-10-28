@@ -12,7 +12,7 @@ import { Line2 } from "three/addons/lines/Line2.js";
 import { LineGeometry } from "three/addons/lines/LineGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { THEMES, divergingLUT, lutColor, currentTheme } from "./theme.js";
-import { historyIndex, rotationFor, sourceUrl, fleetFor, compute, cancel, unflatten } from "./history.js";
+import { historyIndex, rotationFor, sourceUrl, fleetFor, compute, cancel, unflatten, exportResults } from "./history.js";
 import { compose, savePNG, savePDF } from "./snapshot.js";
 
 const RSUN_KM = 695700, AU_RS = 149597870.7 / RSUN_KM;
@@ -960,6 +960,78 @@ $("savePDF").onclick = async (e) => {
   try { await savePDF(snapshotCanvas(), fileBase(), `HelioField ${state.day}`); flash(e.target, "Saved"); }
   catch (err) { $("status").textContent = err.message; setTimeout(() => { $("status").textContent = ""; }, 4000); }
   finally { e.target.disabled = false; }
+};
+
+// ------------------------------------------------------------- download
+// The results of a date computed in the browser, zipped with Python scripts
+// that plot them (and, for the surface maps, recompute the 3D field). The
+// model is the one asked for: the view switches to it first if needed.
+const KIND_ROUT = (kind) => (kind === "scs" ? state.routWant || DEFAULTS.rout : kind === "pfss" ? 0 : null);
+function dlNote() {
+  const p = state.product, kind = document.querySelector('input[name="dlKind"]:checked')?.value;
+  if (!p?.computed) { $("dlNote").textContent = ""; return; }
+  const want = KIND_ROUT(kind), now = p.meta.model.rout || 0;
+  $("dlRout").textContent = state.routWant || DEFAULTS.rout;
+  $("dlNote").textContent = want !== null && want !== now
+    ? `The view will switch to ${want ? `PFSS + SCS (to ${want} R☉)` : "PFSS"} first, which takes a few seconds.`
+    : kind === "surface" ? `The maps are from the model on screen: ${now ? `PFSS + SCS to ${now} R☉` : "PFSS"}, source surface ${state.rss.toFixed(1)} R☉.` : "";
+}
+$("dlResults").onclick = () => {
+  const p = state.product;
+  if (!p) return;
+  $("dlDate").textContent = p.day;
+  $("dlOpts").hidden = !p.computed;
+  $("dlGo").disabled = !p.computed;
+  $("dlIntro").innerHTML = p.computed
+    ? "A zip with the results (a NetCDF file), a header file that describes them, and Python scripts that draw the same pictures as PNG and PDF."
+    : "Results can be downloaded for dates computed in your browser, whose source badge reads <b>HMI CR …</b>. This daily product was solved on the server. Pick an earlier date to compute its rotation map; the download then becomes available.";
+  dlNote();
+  $("dlDlg").showModal();
+};
+for (const r of document.querySelectorAll('input[name="dlKind"]')) r.addEventListener("change", dlNote);
+$("dlCancel").onclick = () => $("dlDlg").close();
+$("dlGo").onclick = async () => {
+  const kind = document.querySelector('input[name="dlKind"]:checked').value, btn = $("dlGo");
+  btn.disabled = true; btn.textContent = "Preparing…";
+  try {
+    const want = KIND_ROUT(kind);
+    if (want !== null && (state.product.meta.model.rout || 0) !== want) {
+      $("dlNote").textContent = "Switching the model…";
+      await setModel(want);
+    }
+    const p = state.product, m = p.meta, nf = m.lines.count;
+    if (!p.computed) throw new Error("this date is no longer a computed one");
+    $("dlNote").textContent = "Writing the files…";
+    let n = 0;
+    for (const q of p.polys) n += q.length;
+    const xyz = new Float32Array(3 * n), counts = new Int32Array(p.polys.length);
+    let o = 0;
+    p.polys.forEach((q, i) => { counts[i] = q.length; for (const v of q) { xyz[o++] = v[0]; xyz[o++] = v[1]; xyz[o++] = v[2]; } });
+    const connIdx = Object.entries(m.fleet || {}).filter(([, b]) => !b.planet).map(([key]) => {
+      const v = speedFor(key).v, i = m.connect.findIndex((c) => c.body === key && c.v === v);
+      return i >= 0 ? { body: key, v, i } : null;
+    }).filter(Boolean);
+    const [lon, lat, dist] = camParam().split(",").map(Number);
+    const ld = document.querySelector('script[type="application/ld+json"]');
+    let version = "";
+    try { version = JSON.parse(ld.textContent).softwareVersion || ""; } catch (e) {}
+    const res = await exportResults({
+      kind, meta: JSON.parse(JSON.stringify(m)), xyz, counts, shape: (await historyIndex()).shape,
+      drawn: (p.order ?? []).slice(0, Math.min(state.nLines, nf)), connIdx, version,
+      view: { lon, lat, dist, fov: camera.fov, logScale: state.logScale, theme: currentTheme(), vsw: state.vsw, connMode: state.connMode, nLines: state.nLines },
+    });
+    const url = URL.createObjectURL(new Blob([res.zip], { type: "application/zip" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: res.name });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    $("dlDlg").close();
+    $("status").textContent = `Saved ${res.name}`;
+    setTimeout(() => { $("status").textContent = ""; }, 3000);
+  } catch (err) {
+    $("dlNote").textContent = "Could not prepare the download: " + err.message;
+  } finally {
+    btn.disabled = false; btn.textContent = "Download";
+  }
 };
 
 // ------------------------------------------------------------- dates

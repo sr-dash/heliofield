@@ -155,15 +155,17 @@
     if (folded) h.classList.add("panel-closed");
   })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=7b3851488e">
+<link rel="stylesheet" href="css/style.css?v=bf5eff1f44">
 <!-- assets:start (written by scripts/stamp_assets.py) -->
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-  "./js/history.js": "./js/history.js?v=4ef121a8ff",
-  "./js/main.js": "./js/main.js?v=9a7fc4bef3",
-  "./js/pfss-worker.js": "./js/pfss-worker.js?v=0ca193a04a",
+  "./js/export.js": "./js/export.js?v=8ecc7c1f32",
+  "./js/history.js": "./js/history.js?v=a57b38d8f9",
+  "./js/main.js": "./js/main.js?v=e5ad154fbc",
+  "./js/netcdf.js": "./js/netcdf.js?v=b9a0a32cc2",
+  "./js/pfss-worker.js": "./js/pfss-worker.js?v=de7f550859",
   "./js/pfss.js": "./js/pfss.js?v=b541db08ad",
   "./js/series.js": "./js/series.js?v=9af40c674f",
   "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
@@ -268,6 +270,9 @@
       <button id="copyLink">Copy link</button><button id="copyEmbed">Copy embed code</button>
     </div>
     <textarea id="shareOut" readonly rows="4" aria-label="Link or embed code" hidden></textarea>
+    <div class="seg">
+      <button id="dlResults" title="Download the model results with Python scripts that plot them">Download results…</button>
+    </div>
   </details>
 
   <p class="panel-foot"><a href="guide.html">How to use</a> · <a href="guide.html#methods">Methods and data</a> · <a href="series.html">Solar-cycle series</a></p>
@@ -303,6 +308,26 @@
 <nav class="credits" aria-label="Related"><a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a> · <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> · <a href="https://github.com/sr-dash/heliofield/issues/new/choose">Report or suggest</a></nav>
 <div id="status" role="status" aria-live="polite"></div>
 
+<dialog id="dlDlg" aria-labelledby="dlTitle">
+  <h2 id="dlTitle">Download the results for <span id="dlDate"></span></h2>
+  <p id="dlIntro"></p>
+  <fieldset class="dl-opts" id="dlOpts">
+    <legend>What to download</legend>
+    <label class="dl-opt"><input type="radio" name="dlKind" value="surface" checked><span><b>Surface maps</b> <small>about 0.4 MB</small>
+      Photospheric and source-surface B<sub>r</sub>, open-field footprints, neutral line, spacecraft footpoints. Scripts plot the maps and compute the 3D field from them.</span></label>
+    <label class="dl-opt"><input type="radio" name="dlKind" value="pfss"><span><b>Full 3D, PFSS</b> <small>about 7 MB</small>
+      Adds the 3D field on its grid, the field lines and the spacecraft connections. Scripts plot the maps and the 3D view.</span></label>
+    <label class="dl-opt"><input type="radio" name="dlKind" value="scs"><span><b>Full 3D, PFSS + SCS</b> <small>about 17 MB</small>
+      Adds the Schatten current-sheet field out to <span id="dlRout">21.5</span> R<sub>☉</sub>, the traced current sheet and the polarity at the outer edge.</span></label>
+  </fieldset>
+  <p class="note" id="dlNote" aria-live="polite"></p>
+  <p class="more"><a href="guide.html#download" target="_blank" rel="noopener">What is in the files</a></p>
+  <div class="dlg-actions">
+    <button id="dlCancel">Cancel</button>
+    <button id="dlGo" class="primary">Download</button>
+  </div>
+</dialog>
+
 <dialog id="computeDlg" aria-labelledby="dlgTitle">
   <h2 id="dlgTitle">Compute the field for <span id="dlgDate"></span>?</h2>
   <p>There is no ready-made product for this date. Your browser will download the SDO/HMI map for
@@ -331,6 +356,6 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js?v=9a7fc4bef3"></script>
+<script type="module" src="js/main.js?v=e5ad154fbc"></script>
 </body>
 </html>
