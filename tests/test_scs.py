@@ -122,12 +122,18 @@ def test_scs_against_python(js, cr):
     lo, la = np.meshgrid(np.arange(1, 360, 2.0), np.arange(-89, 90, 2.0))
     w = np.cos(np.radians(la)).ravel()
     flux = []
-    for r in (RCP * 1.01, 5.0, 10.0, 21.0):
+    radii = (RCP * 1.005, (RCP + RSS) / 2, 2.6, 5.0, 10.0, 21.0)
+    for r in radii:
         pts = r * unit(lo.ravel(), la.ravel())
         B = np.array(js("scsfield", map=br.astype(np.float32), rss=RSS, rout=21.5, points=pts.tolist())["values"])
         absbr = np.abs((B * pts).sum(1) / r)
         flux.append(float(r ** 2 * np.sum(w * absbr) / w.sum()))
-    spread = float(np.ptp(flux) / np.mean(flux))
+    # Outside the source surface the field is pure SCS: flux is conserved.
+    # Inside, the PFSS-to-SCS transition shell is a blend of two solutions,
+    # which is not divergence-free; its flux error is under 1% on these maps.
+    outer = flux[2:]
+    spread = float(np.ptp(outer) / np.mean(outer))
+    shell = float(max(abs(f / np.mean(outer) - 1) for f in flux[:2]))
     # Far out, |B_r| r^2 hardly depends on latitude, as Ulysses found
     # (Smith & Balogh 1995); PFSS alone at its source surface does not do this.
     bands = absbr.reshape(la.shape).mean(axis=1)[5:85].reshape(-1, 5).mean(axis=1)   # 10-degree bands, |lat| < 80
@@ -139,10 +145,30 @@ def test_scs_against_python(js, cr):
     pol = np.array(js("scspolarity", map=br.astype(np.float32), rss=RSS, rout=21.5, r=21.0, lonlat=north + south)["values"])
     split = float(np.mean((pol[:len(h)] * pol[len(h):]) < 0))
     report(f"scs-cr{cr}", dict(note="per radius: correlation, median |rel diff| of B_r vs Python",
-                               flux_spread=round(spread, 5), sheet_split=round(split, 3),
+                               flux_spread=round(spread, 5), shell_flux_error=round(shell, 4), sheet_split=round(split, 3),
                                lat_band_max_over_min=round(uniform, 3), **stats))
     for corr, rel in stats.values():
         assert corr > 0.995 and rel < 0.03
-    assert spread < 0.005
+    assert spread < 0.002
+    assert shell < 0.015
     assert split > 0.85
     assert uniform < 1.1
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("cr", [2148, 2230])
+def test_no_kink_at_the_cusp(js, cr):
+    """Across the cusp surface the field keeps its direction: the PFSS field
+    just below (turned outward) and the coupled field just above agree. Without the
+    transition shell they differ by a median 15-22 degrees on these maps."""
+    import rotations
+    br = rotations.load_cr(cr).astype(np.float32)
+    lo, la = np.meshgrid(np.arange(1, 360, 4.0), np.arange(-87, 88, 4.0))
+    u = unit(lo.ravel(), la.ravel())
+    below = np.array(js("field", map=br, rss=RSS, points=(u * RCP * 0.999).tolist()))
+    above = np.array(js("scsfield", map=br, rss=RSS, rout=21.5, points=(u * RCP * 1.001).tolist())["values"])
+    sign = np.sign((below * u).sum(1))[:, None]
+    cos = (sign * below * above).sum(1) / np.linalg.norm(below, axis=1) / np.linalg.norm(above, axis=1)
+    ang = np.degrees(np.arccos(np.clip(cos, -1, 1)))
+    report(f"scs-cusp-cr{cr}", dict(median_deg=round(float(np.median(ang)), 3), p90_deg=round(float(np.percentile(ang, 90)), 3)))
+    assert np.median(ang) < 1 and np.percentile(ang, 90) < 2

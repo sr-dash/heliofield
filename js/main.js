@@ -84,8 +84,14 @@ for (const k of ["photo", "foot", "closed", "open", "ext", "ss", "pil", "hcs", "
 // ------------------------------------------------------------- distance
 // Log mode keeps the corona at true size and compresses the heliosphere so
 // 1 au lands near 25 R_sun; spirals and the sheet are computed in true r and
-// mapped afterwards, so their shape in longitude is unchanged.
-const mapR = (r) => (!state.logScale || r <= state.rss) ? r : state.rss * (1 + 2 * Math.log(r / state.rss));
+// mapped afterwards, so their shape in longitude is unchanged. The mapping
+// starts with slope 1 at the source surface, so lines that cross it (SCS)
+// do not bend there on screen.
+const mapR = (r) => {
+  if (!state.logScale || r <= state.rss) return r;
+  const k = 2.5 * state.rss;
+  return state.rss + k * Math.log(1 + (r - state.rss) / k);
+};
 // The same mapping for a traced point given in true Cartesian R_sun (SCS
 // lines run beyond the source surface).
 function warp(q) {

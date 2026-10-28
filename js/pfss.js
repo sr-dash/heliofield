@@ -136,6 +136,7 @@ export function fieldGrid(coef, { rss = 2.5, r0 = 1, r1 = rss, radialFn = (l, r)
 // Trilinear interpolation of the Cartesian field at a Cartesian point.
 export function sample(G, x, y, z, out) {
   const r = Math.hypot(x, y, z);
+  if (G.near && r < G.near.rss) return sample(G.near, x, y, z, out);
   const fr = Math.min(Math.max((Math.log(r) - G.lnr0) / G.lnr * (G.nr - 1), 0), G.nr - 1.000001);
   const ft = Math.min(Math.max(Math.acos(Math.max(-1, Math.min(1, z / r))) / Math.PI * G.nth - 0.5, 0), G.nth - 1.000001);
   let fp = (Math.atan2(y, x) / TAU) * G.nph; if (fp < 0) fp += G.nph;
@@ -198,6 +199,26 @@ function resample(pts, step = 0.02, nmax = 160) {
   for (let i = 1; i < pts.length; i++) s.push(s[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]));
   const tot = s[s.length - 1], n = Math.max(6, Math.min(nmax, Math.floor(tot / step)));
   const out = [];
+  let j = 0;
+  for (let i = 0; i < n; i++) {
+    const t = tot * i / (n - 1);
+    while (j < s.length - 2 && s[j + 1] < t) j++;
+    const w = (t - s[j]) / ((s[j + 1] - s[j]) || 1);
+    out.push([0, 1, 2].map((c) => pts[j][c] + w * (pts[j + 1][c] - pts[j][c])));
+  }
+  return out;
+}
+
+// Resampled with spacing proportional to the distance from the Sun (frac r),
+// for lines running far out: fine near the Sun, coarse far away.
+function resampleLog(pts, frac = 0.015, nmax = 180) {
+  if (pts.length < 3) return pts;
+  const s = [0];
+  for (let i = 1; i < pts.length; i++) {
+    const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]);
+    s.push(s[i - 1] + 2 * d / (Math.hypot(...pts[i]) + Math.hypot(...pts[i - 1])));
+  }
+  const tot = s[s.length - 1], n = Math.max(6, Math.min(nmax, Math.ceil(tot / frac) + 1)), out = [];
   let j = 0;
   for (let i = 0; i < n; i++) {
     const t = tot * i / (n - 1);
@@ -409,10 +430,39 @@ const bMag = (G, p, v) => { sample(G, p[0], p[1], p[2], v); return Math.hypot(v[
 export const CUSP_FRAC = 0.92;
 export const cusp = (rss) => +(CUSP_FRAC * rss).toFixed(3);
 
-export function scsGrid(coef, rss, rcp, rout, { nr = 40, progress } = {}) {
+// The SCS field from rcp to rout. Between rcp and the source surface both
+// solutions exist, and the field there is blended across the shell from
+// the PFSS field, turned to point outward (its sign times B), into the SCS
+// field. Field lines then turn smoothly instead of kinking at rcp; the
+// unsigned flux changes by a fraction of a percent in the shell (see the
+// guide). The shell has its own finer grid, sampled below rss.
+export function scsGrid(coef, rss, rcp, rout, { nr = 40, nrShell = 14, blend = true, progress } = {}) {
   const ny = 180, nx = 360, abs = surfaceBr(coef, rcp, rss, ny, nx, true).map(Math.abs);
   const a = analyse(abs, ny, nx, coef.L, { mono: true });
-  const S = fieldGrid(a, { r0: rcp, r1: rout, radialFn: exterior(rcp), nr, progress });
+  const ext = exterior(rcp);
+  if (!blend || rss <= rcp) {
+    const S = fieldGrid(a, { r0: rcp, r1: rout, radialFn: ext, nr, progress });
+    S.innerEnd = "cp";
+    return S;
+  }
+  const S = fieldGrid(a, { r0: rss, r1: rout, radialFn: ext, nr, progress: (f) => progress?.(0.6 + 0.4 * f) });
+  const sh = fieldGrid(a, { r0: rcp, r1: rss, radialFn: ext, nr: nrShell });
+  const P = fieldGrid(coef, { rss, r0: rcp, r1: rss, nr: nrShell, progress: (f) => progress?.(0.6 * f) });
+  const { nth, nph } = sh;
+  for (let ir = 0; ir < nrShell; ir++) {
+    const t = ir / (nrShell - 1), w = t * t * (3 - 2 * t);       // smoothstep, 0 at rcp, 1 at rss
+    for (let k = 0; k < nth; k++) {
+      const th = (k + 0.5) * Math.PI / nth, st = Math.sin(th), ct = Math.cos(th);
+      for (let p = 0; p < nph; p++) {
+        const ph = p * TAU / nph, o = 3 * ((ir * nth + k) * nph + p);
+        const ux = st * Math.cos(ph), uy = st * Math.sin(ph), uz = ct;
+        const sg = P.B[o] * ux + P.B[o + 1] * uy + P.B[o + 2] * uz >= 0 ? 1 : -1;
+        for (let c = 0; c < 3; c++) sh.B[o + c] = (1 - w) * sg * P.B[o + c] + w * sh.B[o + c];
+      }
+    }
+  }
+  S.near = sh;
+  S.r0 = rcp;
   S.innerEnd = "cp";
   return S;
 }
@@ -511,7 +561,7 @@ export function solve(br, ny, nx, { rss = 2.5, rout = 0, L = 40, vsw = [300, 400
       kind.push(open ? (brFoot > 0 ? 1 : -1) : 0);
       // Beyond the cusp surface the spacing can grow with distance.
       const out = open && S ? continueScs(S, pts) : null;
-      polys.push(out ? resample(pts).concat(resample(out, 0.08, 110).slice(1)) : resample(pts));
+      polys.push(out ? resample(pts).concat(resampleLog(out).slice(1)) : resample(pts));
     }
     if (i % 40 === 0) progress("lines", 0.35 + 0.15 * i / sd.length);
   });
@@ -606,7 +656,7 @@ export function connectOnly(models, fleet) {
       const d = dchb(m.bound, flon, flat);
       Object.assign(c, { foot: [+flon.toFixed(2), +flat.toFixed(2)], fs: +fs.toFixed(2), dchb: +d.toFixed(2), vwsa: +wsaSpeed(fs, d).toFixed(1) });
     }
-    return { c, line: lines ? (pts.length > 2 ? resample(pts, 0.03, m.S ? 160 : 80) : pts) : null };
+    return { c, line: lines ? (pts.length > 2 ? (m.S ? resampleLog(pts, 0.02, 220) : resample(pts, 0.03, 80)) : pts) : null };
   };
   const connect = [], conn = [], foot = models.slice(1).map(() => []);
   for (const [key, b] of Object.entries(fleet)) {

@@ -58,8 +58,12 @@ sunkit-magex at 1.5, 2.0, 3.0 and 3.5 R☉ as well.
 **PFSS + SCS** (`scs=5|10|21.5`) couples the Schatten current-sheet model
 (Schatten 1972), as in WSA. PFSS runs to a cusp surface at 0.92 R<sub>ss</sub>. On
 that surface, |B<sub>r</sub>| is expanded in harmonics with the monopole included,
-and the exterior potential field is traced out to the chosen edge. Lines take back
-the sign of B<sub>r</sub> where they crossed the cusp surface. The current sheet
+and the exterior potential field is traced out to the chosen edge. Between the cusp
+surface and the source surface, the outward-turned PFSS field is blended smoothly into
+the SCS field. Without the blend, field lines kink by a median 15–22° at the cusp
+surface; with it, the direction changes by 0.2°, at the cost of up to 0.8% of unsigned
+flux inside the shell. Lines take back the sign of B<sub>r</sub> where they crossed
+the cusp surface. The current sheet
 between the cusp surface and the edge is traced from the cusp-surface neutral line.
 Spacecraft connect at the edge. The unsigned flux is conserved outward, and at
 21 R☉ |B<sub>r</sub>|r² is even in latitude to within 4%, as Ulysses observed.
