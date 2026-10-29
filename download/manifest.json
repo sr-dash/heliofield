@@ -1,11 +1,11 @@
 {
- "version": "01aae9263247",
+ "version": "6b2b33f72c52",
  "files": {
-  "compute_corona.py": "92bb6190135091c64ddad2c78291fe6dca7d005ac0e1f949c3d3908a7b5d2c1d",
-  "heliofield_io.py": "9a424e10035d7a055183944c5f31c7b27899e0802760a1c2b9c114c6a12ce6e4",
+  "compute_corona.py": "a3b8ae1d6bbb25df7def01edbfd420a544018c04881259b579650b835458a0cd",
+  "heliofield_io.py": "f58aaf9e6e0a91756d498d796d560e84964bd00d9ec31df18112ab056d833017",
   "heliofield_update.py": "3d0c2e0016311c57e03bc2124b3cccf3b18bc5fbe0266e79e77644c82b93a074",
   "plot_3d.py": "9ed503ec93099de17941c27a32a416062acbb553f0755dc801b6dd77b06783f9",
-  "plot_surface.py": "0e48a5e96d972b8f84d94d3c0c7e7567b760095b7530c59c794d0b70deb0d60d",
+  "plot_surface.py": "c6dc66d14398f98260798e04f4beb308e3da939c4754e11d07d5707769d5c6e7",
   "requirements-tested.txt": "cdb809784c6372f55a4546ba374e7f4a262f32f4043a30df3992eed5af84aaa0",
   "requirements.txt": "6b88606078c3ebd24b22ac8e67d99fbcd9a841ab2e866575ab19f7c31b4e4831"
  }

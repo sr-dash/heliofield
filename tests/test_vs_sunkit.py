@@ -197,3 +197,56 @@ def test_other_source_surfaces(js, rss):
         assert v["corr"] > 0.995
         assert abs(v["open_flux_ratio"] - 1) < 0.05
         assert v["spread"] == [round(max(1.3, rss - 0.5), 2), round(rss + 0.5, 2)]
+
+
+@pytest.fixture(scope="module", params=[2148, 2230], ids=lambda cr: f"CR{cr}")
+def like_for_like(request, js):
+    """sunkit-magex given the browser's own boundary map: the input map after
+    the browser's smoothing (br_phot in downloads), and the browser solving
+    from the input map as on the page."""
+    import rotations
+    from build_day import connectivity
+    import sunkit_magex.pfss as pfss
+    from sunkit_magex.pfss import tracing
+    cr = request.param
+    start = next(r["start"] for r in rotations.rotation_index() if r["cr"] == cr)
+    br = rotations.load_cr(cr).astype(np.float32)
+    phot = np.reshape(js("boundary", map=br, rss=RSS), br.shape)
+    smap = rotations.sinlat_map(phot, start.rstrip("Z"))
+    out = pfss.pfss(pfss.Input(smap, rotations.NR, RSS))
+    _, res = connectivity(out, tracing.PerformanceTracer(), FLEET, RSS, lines=False)
+    py = rotations.solve_map(smap)
+    return cr, br, out, dict(py, res=res), js("solve", map=br, fleet=FLEET)
+
+
+def test_like_for_like(like_for_like, js):
+    """With the same boundary map, the two solvers agree right down to the
+    photosphere: the gap against the full-resolution map (see
+    test_field_strength_with_height) is the map's resolution, not the solver."""
+    from build_day import b_mag
+    cr, br, out, py, j = like_for_like
+    rng = np.random.default_rng(1)
+    lon, lat = rng.uniform(0, 360, 400), np.degrees(np.arcsin(rng.uniform(-0.97, 0.97, 400)))
+    stats = {}
+    for r in (1.0, 1.02, 1.05):
+        pts = (r * unit(lon, lat)).tolist()
+        ref = b_mag(out, lon, lat, r)
+        ex = np.log(np.linalg.norm(js("fieldexact", map=br, rss=RSS, points=pts), axis=1) / ref)
+        gr = np.log(np.linalg.norm(js("field", map=br, rss=RSS, points=pts), axis=1) / ref)
+        stats[f"B_r{r}"] = [round(float(np.median(ex)), 3), round(float(np.percentile(np.abs(ex), 90)), 3), round(float(np.median(gr)), 3)]
+    area = float(j["open_fraction"] / np.mean(py["open"] != 0))
+    rows = [(r, c) for r, c in zip(py["res"], j["connect"]) if r[1] and c["foot"]]
+    d = np.diag(separation(unit(*np.array([r[1] for r, _ in rows]).T), unit(*np.array([c["foot"] for _, c in rows]).T)))
+    fs = np.log([c["fs"] / r[2] for r, c in rows])
+    dv = np.abs([c["vwsa"] - r[4] for r, c in rows])
+    report(f"cr{cr}-like-for-like", dict(note="B per radius: median ln(js exact/py), p90 |ln| exact, median ln(js grid/py)",
+                                         open_area_ratio=round(area, 3), foot_median_deg=round(float(np.median(d)), 3),
+                                         fs_median_ln_ratio=round(float(np.median(fs)), 3), fs_p90_abs_ln=round(float(np.percentile(np.abs(fs), 90)), 3),
+                                         vwsa_median_kms=round(float(np.median(dv)), 1), **stats))
+    for r in (1.0, 1.02, 1.05):
+        med, p90, grid = stats[f"B_r{r}"]
+        assert abs(med) < 0.05 and p90 < 0.15 and grid > -0.1
+    assert 0.85 < area < 1.15
+    assert abs(np.median(fs)) < 0.2
+    assert np.median(dv) < 10
+    assert np.median(d) < 1.5

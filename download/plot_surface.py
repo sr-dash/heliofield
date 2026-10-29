@@ -30,7 +30,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-from heliofield_io import THEMES, body_keys, br_cmap, caption, contour_lines, fleet_color, load, model_radii
+from heliofield_io import L1_KEYS, THEMES, body_keys, body_names, br_cmap, caption, contour_lines, fleet_color, load, model_radii
 
 
 def edges(c, lo, hi):
@@ -66,8 +66,19 @@ def main(argv=None):
     lon_e = edges(res["lon"], 0, 360)
     lat_e = np.degrees(np.arcsin(np.linspace(-1, 1, len(res["lat"]) + 1)))       # sin(lat) rows
     cmap = br_cmap()
-    fig, axes = plt.subplots(3, 1, figsize=(8.6, 12.6), facecolor=th["bg"], constrained_layout=True)
+    # Maps in the left column, all the same size; colour bars and the
+    # footpoint list in the right one.
+    fig = plt.figure(figsize=(10, 12.2), facecolor=th["bg"], constrained_layout=True)
     fig.get_layout_engine().set(h_pad=0.12)
+    gs = fig.add_gridspec(3, 2, width_ratios=[1, 0.3], wspace=0.02)
+    axes = [fig.add_subplot(gs[i, 0]) for i in range(3)]
+    side = [fig.add_subplot(gs[i, 1]) for i in range(3)]
+    for sa in side:
+        sa.set_axis_off()
+
+    def colorbar(m, i, label):
+        cax = side[i].inset_axes([0.02, 0.12, 0.07, 0.76])
+        fig.colorbar(m, cax=cax, label=label)
 
     def frame(ax, title):
         ax.set_facecolor(th["bg"])
@@ -83,7 +94,7 @@ def main(argv=None):
     m = ax.pcolormesh(lon_e, lat_e, res["br_input"] if raw else res["br_phot"], cmap=cmap, vmin=-20, vmax=20, shading="flat", rasterized=True)
     frame(ax, "Photospheric $B_r$: input map" if raw or "br_input" not in res
           else "Photospheric $B_r$ as used by the model (smoothed, zero net flux)")
-    fig.colorbar(m, ax=ax, label="$B_r$ [G]", shrink=0.85, pad=0.01)
+    colorbar(m, 0, "$B_r$ [G]")
 
     # 2. Source or cusp surface, scaled to its 99.5th percentile like the viewer.
     ax = axes[1]
@@ -101,34 +112,49 @@ def main(argv=None):
         lines.append(plt.Line2D([], [], color=th["hcs"], lw=1.2, ls="--", label=f"current sheet at {r_top:g} R$_\\odot$"))
     frame(ax, f"$B_r$ on the cusp surface ({r_in:g} R$_\\odot$)" if scs else f"$B_r$ on the source surface ({rss:g} R$_\\odot$)")
     ax.legend(handles=lines, loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=2, frameon=False, fontsize=9)
-    fig.colorbar(m, ax=ax, label="$B_r$ [G]", shrink=0.85, pad=0.01)
+    colorbar(m, 1, "$B_r$ [G]")
 
     # 3. Open-field footprints and spacecraft footpoints.
     ax = axes[2]
     cls = res["open_class"].astype(int) + 1                      # 0 inward, 1 closed, 2 outward
     fp = ListedColormap([th["neg"], th["occluder"], th["pos"]])
     m = ax.pcolormesh(edges(res["lon1"], 0, 360), edges(res["lat1"], -90, 90), cls, cmap=fp, vmin=-0.5, vmax=2.5, shading="flat", rasterized=True)
-    fig.colorbar(m, ax=ax, shrink=0.85, pad=0.01).ax.set_visible(False)       # keeps the panels aligned
     frame(ax, f"Open-field footprints (open = reaches the {'cusp' if scs else 'source'} surface)")
-    keys = body_keys(res)
+    keys, names = body_keys(res), body_names(res)
     v = a.v or view.get("vsw", 400)
+    entries = []                       # (colour, name, footpoint row) for the list on the right
     if "conn_v" in res and keys:
+        l1_done = False
         for i, key in enumerate(keys):
             if res["body_planet"][i]:
                 continue
             rows = np.where((res["conn_body"] == i) & np.isclose(res["conn_v"], v))[0]
             if not len(rows) or not np.isfinite(res["foot_lon"][rows[0]]):
                 continue
-            k = rows[0]
-            c = fleet_color(th, key)
-            ax.plot(res["foot_lon"][k], res["foot_lat"][k], "o", ms=8, mfc=c, mec=th["bg"], mew=1.5)
-            ax.annotate(f"{key} ({res['foot_vwsa'][k]:.0f} km/s)", (res["foot_lon"][k], res["foot_lat"][k]), xytext=(6, 6),
-                        textcoords="offset points", fontsize=8.5, color=th["text"])
+            if key in L1_KEYS:          # the L1 monitors share one footpoint: one entry
+                if l1_done:
+                    continue
+                l1_done, name = True, "L1 monitors"
+            else:
+                name = names[i]
+            k, c = rows[0], fleet_color(th, key)
+            ax.plot(res["foot_lon"][k], res["foot_lat"][k], "o", ms=8, mfc=c, mec=th["bg"], mew=1.5, zorder=5)
+            entries.append((c, name, k))
+    # The footpoint list: marker colour, name, and what the model says there.
+    sa = side[2]
+    sa.text(0.02, 0.97, f"Footpoints at {v:g} km/s", transform=sa.transAxes, va="top", fontsize=10, fontweight="bold", color=th["text"])
+    y, step = 0.88, min(0.12, 0.85 / max(1, len(entries)))
+    for c, name, k in entries:
+        sa.plot([0.05], [y - 0.012], "o", ms=8, mfc=c, mec=th["bg"], mew=1.2, transform=sa.transAxes, clip_on=False)
+        sa.text(0.12, y, name, transform=sa.transAxes, va="top", fontsize=9, color=th["text"])
+        sa.text(0.12, y - step * 0.42, f"{res['foot_lon'][k]:.0f}°, {res['foot_lat'][k]:+.0f}°  ·  {res['foot_vwsa'][k]:.0f} km/s",
+                transform=sa.transAxes, va="top", fontsize=8.5, color=th["muted"])
+        y -= step
+    if not entries:
+        sa.text(0.02, 0.88, "no spacecraft footpoints", transform=sa.transAxes, va="top", fontsize=9, color=th["muted"])
     handles = [plt.Line2D([], [], marker="s", ls="", ms=9, color=c, label=t) for c, t in
                [(th["pos"], "open, outward"), (th["neg"], "open, inward"), (th["occluder"], "closed")]]
-    if keys:
-        handles.append(plt.Line2D([], [], marker="o", ls="", ms=7, color=th["muted"], label=f"spacecraft footpoint at {v:g} km/s"))
-    ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=4, frameon=False, fontsize=9)
+    ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=3, frameon=False, fontsize=9)
 
     fig.suptitle("\n".join(textwrap.wrap("HelioField  ·  " + caption(res), 95)), fontsize=10, color=th["text"])
     out = a.out or str(Path(a.file).with_suffix("")) + "_surface"

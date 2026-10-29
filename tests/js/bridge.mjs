@@ -17,7 +17,7 @@
 import fs from "node:fs";
 import { buildExport, readme } from "../../js/export.js";
 import { lineOrder } from "./line-order.mjs";
-import { LMAX, TAPER_L0, taper } from "../../js/pfss.js";
+import { LMAX, TAPER_L0, taper, fieldAt } from "../../js/pfss.js";
 import { alf, analyse, fieldGrid, sample, trace, solve, surfaceBr, zeroContour, chBoundary, wsaSpeed, model, scsPolarity } from "../../js/pfss.js";
 
 const req = JSON.parse(fs.readFileSync(0, "utf8"));
@@ -35,6 +35,16 @@ switch (req.cmd) {
   case "analyse": {
     const c = analyse(readMap(req.br), req.ny, req.nx, req.L);
     out = { C: Array.from(c.C), S: Array.from(c.S) };
+    break;
+  }
+  case "boundary": {
+    // The photospheric map the model actually uses (br_phot in downloads).
+    out = Array.from(surfaceBr(coefOf(req), 1, req.rss ?? 2.5, req.ny, req.nx, true));
+    break;
+  }
+  case "fieldexact": {
+    const c = coefOf(req), v = [0, 0, 0];
+    out = req.points.map((p) => fieldAt(c, req.rss ?? 2.5, p[0], p[1], p[2], v).slice());
     break;
   }
   case "field": {

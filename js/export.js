@@ -6,7 +6,7 @@
 //       "pfss"    (+ the 3D PFSS field, field lines, connection lines),
 //       "scs"     (+ the 3D Schatten current-sheet field, the traced sheet
 //                  and the polarity at the outer edge).
-import { surfaceBr, scsPolarity } from "./pfss.js?v=ec64981eca";
+import { surfaceBr, scsPolarity } from "./pfss.js?v=a3f2dfa4d7";
 import { writeNetCDF } from "./netcdf.js?v=b9a0a32cc2";
 
 export const FORMAT = "heliofield-export-2";
@@ -121,11 +121,14 @@ export function buildExport(ctx) {
 
   // --- spacecraft, planets and footpoints
   const keys = Object.keys(meta.fleet || {}), nb = Math.max(1, keys.length), w = Math.max(4, ...keys.map((k) => k.length));
-  dim("body", nb); dim("name_len", w);
-  const keyChars = new Uint8Array(nb * w);
+  const names = keys.map((k) => String(meta.fleet[k].name || k).replace(/[^\x20-\x7e]/g, "")), wn = Math.max(4, ...names.map((n) => n.length));
+  dim("body", nb); dim("name_len", w); dim("long_name_len", wn);
+  const keyChars = new Uint8Array(nb * w), nameChars = new Uint8Array(nb * wn);
   keys.forEach((k, i) => { for (let c = 0; c < k.length; c++) keyChars[i * w + c] = k.charCodeAt(c); });
+  names.forEach((n, i) => { for (let c = 0; c < n.length; c++) nameChars[i * wn + c] = n.charCodeAt(c); });
   const fb = (f) => f32(keys.length ? keys.map((k) => f(meta.fleet[k])) : [NaN]);
   add("body_key", ["body", "name_len"], "char", keyChars, { long_name: "Short key of each body (psp, solo, earth, ...)" });
+  add("body_name", ["body", "long_name_len"], "char", nameChars, { long_name: "Name of each body" });
   add("body_lon", ["body"], "float", fb((b) => b.lon), { units: "degrees_east", long_name: "Carrington longitude of the body" });
   add("body_lat", ["body"], "float", fb((b) => b.lat), { units: "degrees_north", long_name: "Carrington latitude of the body" });
   add("body_r", ["body"], "float", fb((b) => b.r), { units: "au", long_name: "Heliocentric distance of the body" });
@@ -289,6 +292,8 @@ export function readme(template, header) {
   const surf = bundleName(header, "surface"), three = header.product !== "surface";
   const files = [[nc, "results (NetCDF-3)"], [hd, "its header: variables, units, preprocessing, model settings, saved view"],
     ...(three ? [[`${surf}.nc`, "the surface maps alone (NetCDF-3)"], [`${surf}_header.json`, "their header"]] : []),
+    [`${stem}_preview_view.png`, "preview: the view on screen when the files were saved"],
+    [`${stem}_preview_maps.png`, "preview: the surface maps (plot_surface.py draws the full figure)"],
     ...SCRIPTS.map((f) => [f, ABOUT[f]]), ["README.txt", "this file"]];
   const w = Math.max(...files.map(([f]) => f.length));
   const model = header.model.rout_rsun ? "scs" : "pfss", out = `heliofield_model-${header.date}_computed-YYYY-MM-DD_${model}.nc`;

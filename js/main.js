@@ -1015,12 +1015,13 @@ $("dlGo").onclick = async () => {
       return i >= 0 ? { body: key, v, i } : null;
     }).filter(Boolean);
     const [lon, lat, dist] = camParam().split(",").map(Number);
+    const viewPng = await new Promise((ok) => snapshotCanvas().toBlob((b) => ok(b ? b.arrayBuffer() : null), "image/png"));
     const ld = document.querySelector('script[type="application/ld+json"]');
     let version = "";
     try { version = JSON.parse(ld.textContent).softwareVersion || ""; } catch (e) {}
     const res = await exportResults({
       kind, meta: JSON.parse(JSON.stringify(m)), xyz, counts, shape: (await historyIndex()).shape,
-      drawn: (p.order ?? []).slice(0, Math.min(state.nLines, nf)), connIdx, version, saved: localDate(),
+      drawn: (p.order ?? []).slice(0, Math.min(state.nLines, nf)), connIdx, version, saved: localDate(), viewPng: await viewPng,
       view: { lon, lat, dist, fov: camera.fov, logScale: state.logScale, theme: currentTheme(), vsw: state.vsw, connMode: state.connMode, nLines: state.nLines },
     });
     const url = URL.createObjectURL(new Blob([res.zip], { type: "application/zip" }));

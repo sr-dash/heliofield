@@ -92,7 +92,9 @@ Names carry the model date and the day of download, as in
 `br_phot` is what the model uses: its tapered harmonic expansion to degree 80
 without the monopole, a smoothing of FWHM 3.8° that keeps the net flux at zero.
 
-The plot scripts write PNG and PDF in the viewer's colours and view.
+The plot scripts write PNG and PDF in the viewer's colours and view. Each zip also
+has two preview images made in the browser: the view on screen, and the surface
+maps.
 `compute_corona.py` is `js/pfss.js` rewritten in NumPy: it computes the 3D field
 from the surface maps (`--rss`, `--scs`, `--lmax`) and writes a 3D result file.
 `tests/test_export.py` checks that it reproduces the browser to within 10⁻⁵, and
@@ -195,9 +197,13 @@ The suite needs no downloads; the maps come from `data/history/`. The numbers of
 run are written to `cache/validation/`. The **Validation** workflow runs the suite on
 demand (Actions → Validation → Run workflow), not on every push. Current agreement:
 source-surface correlation ≥ 0.9998, open flux within 2%, neutral line within 0.2°
-in median, footpoints within about 1° in median, speeds within 3 km/s in median.
-The browser's photospheric |B| is 30–60% weaker (the smoothing), so its
-f<sub>s</sub> is about half the server's. The guide's
+in median, footpoints within about 1° in median, speeds within 6 km/s in median.
+The browser's photospheric |B| is 30–60% weaker than sunkit-magex's on the full
+map, because the browser smooths the map. Given the same smoothed map
+(`br_phot`), sunkit-magex agrees with the browser to 1% at the photosphere, on
+open area to 5–9% and on f<sub>s</sub> to 5–14% (`test_like_for_like`). The gap is
+the map's resolution, not the solver. Against the full map, f<sub>s</sub>
+is about half the server's. The guide's
 [Validation](https://sr-dash.github.io/heliofield/guide.html#validation) section has
 the full table.
 

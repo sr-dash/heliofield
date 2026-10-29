@@ -173,6 +173,30 @@ def field_grid(coef, r0, r1, radial_fn, nr=36, nth=90, nph=180):
                 lnr=math.log(r1 / r0), radii=radii, near=None, inner="sun")
 
 
+def field_at(coef, rss, p):
+    """The PFSS field straight from the harmonic series (no grid) at points
+    p (n, 3), Cartesian. Used for the photospheric field at footpoints."""
+    C, S, L, l0 = coef["C"], coef["S"], coef["L"], coef["lmin"]
+    p = np.atleast_2d(np.asarray(p, float))
+    r = np.linalg.norm(p, axis=1)
+    ct = np.clip(p[:, 2] / r, -1, 1)
+    th, ph, eps = np.arccos(ct), np.arctan2(p[:, 1], p[:, 0]), 1e-5
+    st = np.where(np.sin(th) == 0, 1e-12, np.sin(th))
+    P, dP = alf(ct, L), (alf(np.cos(th + eps), L) - alf(np.cos(th - eps), L)) / (2 * eps)
+    f, g = np.zeros((L + 1, len(r))), np.zeros((L + 1, len(r)))
+    for l in range(l0, L + 1):
+        f[l], g[l] = pfss_radial(rss)(l, r)
+    m = np.arange(L + 1)[None, :, None]
+    cm, sm = np.cos(m * ph), np.sin(m * ph)
+    A = C[..., None] * cm + S[..., None] * sm
+    D = m * (-C[..., None] * sm + S[..., None] * cm)
+    Br = np.einsum("lmn,lmn,ln->n", A, P, f)
+    Bt = np.einsum("lmn,lmn,ln->n", A, dP, g) / r
+    Bp = np.einsum("lmn,lmn,ln->n", D, P, g) / (r * st)
+    cp, sp = np.cos(ph), np.sin(ph)
+    return np.stack([Br * st * cp + Bt * ct * cp - Bp * sp, Br * st * sp + Bt * ct * sp + Bp * cp, Br * ct - Bt * st], 1)
+
+
 def sample(G, p):
     """Trilinear interpolation of the Cartesian field at points p (n, 3)."""
     p = np.asarray(p, float)
@@ -582,7 +606,8 @@ def connect(res, fleet, bound, v_draw):
         if ok[j]:
             f = pts_all[j][0]
             flon, flat = np.degrees(np.arctan2(f[1], f[0])) % 360, np.degrees(np.arcsin(f[2] / np.linalg.norm(f)))
-            fs = np.linalg.norm(sample(G, cart(1, flon, flat)[None])[0]) / np.linalg.norm(sample(G, np.asarray(top[j])[None])[0]) / r_top[j] ** 2
+            # |B| at the footpoint from the series itself, as the browser does
+            fs = np.linalg.norm(field_at(res["coef"], rss, cart(1, flon, flat)[None])[0]) / np.linalg.norm(sample(G, np.asarray(top[j])[None])[0]) / r_top[j] ** 2
             d = np.degrees(np.arccos(np.clip((bound * cart(1, flon, flat)).sum(1).max(), -1, 1))) if len(bound) else np.nan
             row.update(foot=(flon, flat), fs=fs, dchb=d, vwsa=wsa_speed(fs, d))
         rows.append(row)
@@ -642,6 +667,8 @@ def write(out, src, sol, args, view):
 
     if keys:
         var("body_key", ("body", "name_len"), src["body_key"], "c", long_name="Short key of each body (psp, solo, earth, ...)")
+        if "body_name" in src:
+            var("body_name", ("body", "long_name_len"), src["body_name"], "c", long_name="Name of each body")
         for name in ("body_lon", "body_lat", "body_r"):
             var(name, ("body",), src[name], units=src.var_attrs[name].get("units"), long_name=src.var_attrs[name].get("long_name"))
         var("body_planet", ("body",), src["body_planet"], "b", long_name="1 for a planet, 0 for a spacecraft")

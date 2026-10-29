@@ -150,6 +150,31 @@ export function fieldGrid(coef, { rss = 2.5, r0 = 1, r1 = rss, radialFn = (l, r)
   return { B, nr, nth, nph, rss: r1, r0, lnr0: Math.log(r0), lnr: Math.log(r1 / r0) };
 }
 
+// The PFSS field straight from the harmonic series at one Cartesian point
+// (no grid): for quantities that need the photospheric field at full model
+// resolution, such as the expansion factor at a footpoint.
+export function fieldAt(coef, rss, x, y, z, out = [0, 0, 0]) {
+  const { C, S, L } = coef, W = L + 1, l0 = coef.lmin ?? 1;
+  const r = Math.hypot(x, y, z), ct = Math.max(-1, Math.min(1, z / r)), th = Math.acos(ct), st = Math.sin(th) || 1e-12;
+  const ph = Math.atan2(y, x), eps = 1e-5;
+  const P = alf(ct, L), Pa = alf(Math.cos(th + eps), L), Pb = alf(Math.cos(th - eps), L);
+  let Br = 0, Bt = 0, Bp = 0;
+  for (let l = l0; l <= L; l++) {
+    const { f, g } = radial(l, r, rss);
+    for (let m = 0; m <= l; m++) {
+      const i = l * W + m, cm = Math.cos(m * ph), sm = Math.sin(m * ph);
+      const a = C[i] * cm + S[i] * sm, dP = (Pa[i] - Pb[i]) / (2 * eps);
+      Br += a * P[i] * f; Bt += a * dP * g; Bp += m * (-C[i] * sm + S[i] * cm) * P[i] * g;
+    }
+  }
+  Bt /= r; Bp /= r * st;
+  const cp = Math.cos(ph), sp = Math.sin(ph);
+  out[0] = Br * st * cp + Bt * ct * cp - Bp * sp;
+  out[1] = Br * st * sp + Bt * ct * sp + Bp * cp;
+  out[2] = Br * ct - Bt * st;
+  return out;
+}
+
 // Trilinear interpolation of the Cartesian field at a Cartesian point.
 export function sample(G, x, y, z, out) {
   const r = Math.hypot(x, y, z);
@@ -532,11 +557,11 @@ function hcsRibs(S, hcs, rcp, rout, nRib = 24) {
 // is open once it reaches the cusp surface.
 export function model(coef, rss, { rout = 0, progress } = {}) {
   const G = fieldGrid(coef, { rss, progress });
-  if (!rout) return { G, rss, ...chBoundary(G) };
+  if (!rout) return { G, coef, rss, ...chBoundary(G) };
   const rcp = cusp(rss);
   G.rStop = rcp;
   const S = scsGrid(coef, rss, rcp, rout);
-  return { G, S, rss, rcp, rout, ...chBoundary(G) };
+  return { G, S, coef, rss, rcp, rout, ...chBoundary(G) };
 }
 
 // A PFSS line that reached the cusp surface, continued outward through the
@@ -601,7 +626,7 @@ export function solve(br, ny, nx, { rss = 2.5, rout = 0, L = LMAX, taperL0 = TAP
   // Coronal holes for this and the other source surfaces, for the footpoint
   // diagnostics and their spread.
   progress("holes", 0.55);
-  const models = [S ? { G, S, rss, rcp, rout, ...chBoundary(G) } : { G, rss, ...chBoundary(G) }];
+  const models = [S ? { G, S, coef, rss, rcp, rout, ...chBoundary(G) } : { G, coef, rss, ...chBoundary(G) }];
   rssSpread(rss).forEach((r, k) => {
     progress("holes", 0.65 + 0.15 * k);
     models.push(model(coef, r, { rout }));
@@ -669,7 +694,10 @@ export function connectOnly(models, fleet) {
     if (pts.length && ok) {
       const f = pts[0], rr = Math.hypot(...f);
       const flon = ((Math.atan2(f[1], f[0]) / DEG) + 360) % 360, flat = Math.asin(f[2] / rr) / DEG;
-      const fs = bMag(m.G, cart(1, flon, flat), v) / bMag(m.G, top, v) / (rTop * rTop);
+      // |B| at the footpoint from the series itself: the grid's trilinear
+      // interpolation loses a few per cent right at the photosphere.
+      const bp = m.coef ? Math.hypot(...fieldAt(m.coef, m.rss, ...cart(1, flon, flat), v)) : bMag(m.G, cart(1, flon, flat), v);
+      const fs = bp / bMag(m.G, top, v) / (rTop * rTop);
       const d = dchb(m.bound, flon, flat);
       Object.assign(c, { foot: [+flon.toFixed(2), +flat.toFixed(2)], fs: +fs.toFixed(2), dchb: +d.toFixed(2), vwsa: +wsaSpeed(fs, d).toFixed(1) });
     }

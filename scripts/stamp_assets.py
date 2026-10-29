@@ -43,7 +43,10 @@ IN_SOURCE = [
     ("export.js", "pfss.js", r'from "\./pfss\.js(\?v=[0-9a-f]*)?"'),
     ("export.js", "netcdf.js", r'from "\./netcdf\.js(\?v=[0-9a-f]*)?"'),
     ("pfss-worker.js", "pfss.js", r'from "\./pfss\.js(\?v=[0-9a-f]*)?"'),
+    ("preview.js", "pfss.js", r'from "\./pfss\.js(\?v=[0-9a-f]*)?"'),
+    ("preview.js", "theme.js", r'from "\./theme\.js(\?v=[0-9a-f]*)?"'),
     ("pfss-worker.js", "export.js", r'from "\./export\.js(\?v=[0-9a-f]*)?"'),
+    ("pfss-worker.js", "preview.js", r'from "\./preview\.js(\?v=[0-9a-f]*)?"'),
     ("history.js", "pfss-worker.js", r'new URL\("\./pfss-worker\.js(\?v=[0-9a-f]*)?"'),
 ]
 

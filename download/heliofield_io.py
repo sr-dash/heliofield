@@ -77,6 +77,13 @@ def body_keys(res: Result) -> list[str]:
     return [b"".join(row).decode().rstrip("\x00") for row in res["body_key"]]
 
 
+def body_names(res: Result) -> list[str]:
+    """Full names of the bodies (files from before names were stored: keys)."""
+    if "body_name" not in res:
+        return body_keys(res)
+    return [b"".join(row).decode().rstrip("\x00") for row in res["body_name"]]
+
+
 def polylines(res: Result, prefix: str = "line") -> list[np.ndarray]:
     """Field lines (or connection lines with prefix 'cline') as (n, 3) arrays."""
     if f"{prefix}_x" not in res:

@@ -12,6 +12,10 @@ Files
 -----
 {{FILES}}
 
+Start by opening the two *_preview_*.png images: they show the view on
+screen when the files were saved and the surface maps, so you can see what
+the results hold before running anything.
+
 Getting started
 ---------------
 Python 3.9 or newer with NumPy, SciPy and Matplotlib:

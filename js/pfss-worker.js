@@ -2,8 +2,9 @@
 // date inside the same rotation only re-traces spacecraft connectivity, and
 // its map and harmonic coefficients so another source-surface height only
 // re-solves the field. The same holds for switching the SCS model on or off.
-import { solve, connectOnly } from "./pfss.js?v=ec64981eca";
-import { buildExport, bundleName, readme, SCRIPTS } from "./export.js?v=ec086060ff";
+import { solve, connectOnly } from "./pfss.js?v=a3f2dfa4d7";
+import { buildExport, bundleName, readme, SCRIPTS } from "./export.js?v=6313e16f2f";
+import { mapsPreview } from "./preview.js?v=994127d983";
 
 let last = null;   // { key, rss, rout, br, coef, models }
 
@@ -45,6 +46,12 @@ async function exportZip(req) {
     files[`${stem}/${ss}_header.json`] = enc.encode(JSON.stringify(s.header, null, 1));
   }
   SCRIPTS.forEach((f, i) => { files[`${stem}/${f}`] = enc.encode(texts[i]); });
+  // Preview figures: the view on screen, and the surface maps.
+  if (req.viewPng) files[`${stem}/${stem}_preview_view.png`] = new Uint8Array(req.viewPng);
+  try {
+    const png = await mapsPreview({ ...ctx, theme: req.view?.theme, v: req.view?.vsw });
+    if (png) files[`${stem}/${stem}_preview_maps.png`] = png;
+  } catch (e) { /* the preview is a convenience; the results do not depend on it */ }
   files[`${stem}/README.txt`] = enc.encode(readme(texts[texts.length - 1], header));
   return { zip: zipSync(files, { level: 6 }), name: `${stem}.zip` };
 }
