@@ -164,3 +164,73 @@ def caption(res: Result) -> str:
     if "L0_deg" in a:
         parts.append(f"Earth L0 {float(a['L0_deg']):.1f}°, B0 {float(a['B0_deg']):.1f}°")
     return " · ".join(p for p in parts if p)
+
+
+# ------------------------------------------------------------- inputs from the site
+SITE = "https://sr-dash.github.io/heliofield/"
+
+
+def _fetch(url: str, timeout: float = 60) -> bytes:
+    import urllib.request
+    req = urllib.request.Request(url, headers={"User-Agent": "heliofield-scripts"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
+
+
+def fetch_inputs(date: str, site: str = SITE) -> Result:
+    """What the web page uses for a date, fetched from the site: the SDO/HMI
+    Carrington-rotation map covering noon UTC of the date (archived on the
+    site, averaged to 180 x 360, mean removed), and Earth's and the
+    spacecraft's Carrington positions that day. Returns the same structure
+    as a surface-map download, for compute_corona.py."""
+    import gzip
+    from datetime import datetime, timezone
+    idx = json.loads(_fetch(site + "data/history/index.json"))
+    t = datetime.fromisoformat(f"{date}T12:00:00+00:00")
+    when = lambda s: datetime.fromisoformat(s.replace("Z", "+00:00"))
+    rots = idx["rotations"]
+    rot = next((r for r in rots if when(r["start"]) <= t <= when(r["stop"])), None)
+    exact = rot is not None
+    if rot is None:          # outside the archive: the nearest rotation, as the page does
+        rot = min(rots, key=lambda r: min(abs((when(r["start"]) - t).total_seconds()), abs((when(r["stop"]) - t).total_seconds())))
+    ny, nx = idx["shape"]
+    raw = gzip.decompress(_fetch(site + "data/history/" + rot["file"]))
+    br = np.frombuffer(raw, "<i2").reshape(ny, nx).astype(float) * float(idx["scale_G"])
+    doc = json.loads(_fetch(site + f"data/history/fleet/{date[:4]}.json"))
+    i = round((datetime.fromisoformat(date + "T00:00:00+00:00") - when(doc["start"] if "T" in doc["start"] else doc["start"] + "T00:00:00Z")).total_seconds() / 86400)
+    if not 0 <= i < doc["n"]:
+        raise ValueError(f"no positions for {date}")
+    bodies = {k: b for k, b in doc["bodies"].items() if b["lon"][i] is not None}
+
+    res = Result()
+    res["lat"] = np.degrees(np.arcsin(-1 + (2 * np.arange(ny) + 1) / ny))
+    res["lon"] = (np.arange(nx) + 0.5) * 360 / nx
+    res["br_input"] = br
+    res["br_phot"] = br                      # replaced by the model's smoothed map on output
+    keys = list(bodies)
+    if keys:
+        w, wn = max(4, *map(len, keys)), max(4, *(len(b["name"]) for b in bodies.values()))
+        res["body_key"] = np.array([list(k.ljust(w, "\0")) for k in keys], "S1")
+        res["body_name"] = np.array([list(bodies[k]["name"].ljust(wn, "\0")) for k in keys], "S1")
+        res["body_lon"] = np.array([bodies[k]["lon"][i] for k in keys], float)
+        res["body_lat"] = np.array([bodies[k]["lat"][i] for k in keys], float)
+        res["body_r"] = np.array([bodies[k]["r"][i] for k in keys], float)
+        res["body_planet"] = np.array([1 if bodies[k]["planet"] else 0 for k in keys], np.int8)
+    res.var_attrs = {"body_lon": dict(units="degrees_east", long_name="Carrington longitude of the body"),
+                     "body_lat": dict(units="degrees_north", long_name="Carrington latitude of the body"),
+                     "body_r": dict(units="au", long_name="Heliocentric distance of the body")}
+    source = f"SDO/HMI rotation map, Carrington rotation {rot['cr']}"
+    res.attrs = dict(title=f"HelioField coronal magnetic field for {date}", date=date, obstime=f"{date}T12:00:00Z",
+                     source=source, source_file=f"hmi.Synoptic_Mr_small.{rot['cr']}",
+                     source_url=f"https://jsoc1.stanford.edu/data/hmi/synoptic/hmi.Synoptic_Mr_small.{rot['cr']}.fits",
+                     carrington_rotation=doc["CR"][i], L0_deg=doc["L0"][i], B0_deg=doc["B0"][i], rss_rsun=2.5,
+                     frame="Carrington heliographic (rotating with the Sun); x towards longitude 0, z along the rotation axis",
+                     length_unit="R_sun = 695700 km",
+                     references="https://doi.org/10.5281/zenodo.23487231; https://sr-dash.github.io/heliofield/guide.html#methods")
+    res.header = dict(citation="Dash, S. HelioField: the Sun's coronal magnetic field in 3D. Zenodo. https://doi.org/10.5281/zenodo.23487231",
+                      source=dict(name="SDO/HMI rotation map", file=res.attrs["source_file"], url=res.attrs["source_url"],
+                                  carrington_rotation_of_map=rot["cr"], map_covers=[rot["start"], rot["stop"]], covers_date=exact),
+                      earth=dict(L0_deg=doc["L0"][i], B0_deg=doc["B0"][i], carrington_rotation=doc["CR"][i]), view={})
+    if not exact:
+        print(f"note: no rotation map covers {date}; using the nearest, CR {rot['cr']} ({rot['start'][:10]} to {rot['stop'][:10]})")
+    return res

@@ -1,0 +1,91 @@
+# HelioField
+
+> HelioField shows the Sun's coronal magnetic field in 3D for any date since 2010-05-01: potential-field source-surface (PFSS) field lines from NSO/GONG and SDO/HMI magnetograms, the source surface and its neutral line, the heliospheric current sheet, and the magnetic connection of planets and spacecraft (Parker Solar Probe, Solar Orbiter, STEREO, BepiColombo, the L1 fleet) to their source regions on the Sun, with expansion factor, distance to the coronal-hole boundary and a WSA-type wind-speed estimate. Optional Schatten current-sheet (SCS) model out to 21.5 solar radii. Free, open source (MIT), no account or key.
+
+Site: https://sr-dash.github.io/heliofield/
+Machine-readable parameters: https://sr-dash.github.io/heliofield/api.json
+Guide (methods, validation, limitations): https://sr-dash.github.io/heliofield/guide.html
+Source: https://github.com/sr-dash/heliofield · Cite: https://doi.org/10.5281/zenodo.23487231
+
+## How an agent can use it
+
+There are two ways to show a user the 3D corona without writing a model:
+
+1. **Give a link, or embed it (needs a browser).** Every view is a URL. Build one from the parameters below and give it to the user, put it in an iframe, or open it in a browser tool and take a screenshot. The page computes any date in the browser (a few seconds; WebGL needed). For a screenshot, add `embed=1` so a past date computes without a confirmation dialog, and wait until the field lines appear.
+2. **Make images with Python (no browser).** Download the HelioField scripts and run one command. It fetches the same inputs as the page, solves the field and writes PNG and PDF figures plus a NetCDF results file.
+
+```bash
+pip install numpy scipy matplotlib
+base=https://sr-dash.github.io/heliofield/download
+for f in heliofield_io.py heliofield_update.py compute_corona.py plot_3d.py plot_surface.py requirements.txt requirements-tested.txt; do curl -sO "$base/$f"; done
+python compute_corona.py --date 2014-03-12 --plot --view earth            # PFSS
+python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet # PFSS + current-sheet model
+```
+
+Outputs, in the working directory:
+- `heliofield_model-<date>_computed-<today>_<pfss|scs>_3d.png` and `.pdf`: the 3D view;
+- `..._surface.png` and `.pdf`: three surface maps (photospheric B_r, source-surface B_r with the neutral line, open-field footprints with spacecraft footpoints);
+- `....nc` and `..._header.json`: the results.
+
+Options:
+- `--rss 1.5..3.5`: source-surface height;
+- `--scs 5|10|21.5`: couple the current-sheet model out to that radius;
+- `--view home|earth|north|fleet`: the camera;
+- `--theme light|dark`;
+- `--v <km/s>`: the wind speed used for the spacecraft connections.
+
+`python plot_3d.py FILE.nc --lon L --lat B --dist D` sets the camera freely. PFSS takes a few seconds and SCS 10–20 s. The scripts are tested every month against the newest NumPy, SciPy and Matplotlib, and update themselves if they fail.
+
+## URL recipes
+
+- Today's corona from Earth: https://sr-dash.github.io/heliofield/?date=latest&view=earth
+- A past date from Earth: https://sr-dash.github.io/heliofield/?date=2014-03-12&view=earth
+- Whole fleet with its magnetic connections: https://sr-dash.github.io/heliofield/?date=latest&view=fleet
+- Heliospheric current sheet out to 1 au at true scale: https://sr-dash.github.io/heliofield/?date=latest&view=fleet&layers=photo,hcs,fleet,spiral&scale=true&rmax=1.2
+- Open field extended into the heliosphere: https://sr-dash.github.io/heliofield/?date=latest&layers=photo,closed,open,ext,pil,fleet,spiral
+- Coronal holes (open-field footprints): https://sr-dash.github.io/heliofield/?date=latest&layers=photo,foot,open,pil&view=earth
+- PFSS + Schatten current sheet out to 21.5 R_sun, past date: https://sr-dash.github.io/heliofield/?date=2020-05-08&scs=21.5&view=fleet&layers=photo,closed,open,pil,hcs,fleet,spiral
+- Lower source surface (2.0 R_sun), past date: https://sr-dash.github.io/heliofield/?date=2014-03-12&rss=2&view=earth
+- Clean embed for another page: https://sr-dash.github.io/heliofield/?date=latest&view=earth&embed=1&controls=0&theme=light
+
+## URL parameters
+
+- `date`: YYYY-MM-DD from 2010-05-01, or `latest` (default). Recent days use daily server products (GONG, or the HMI fallback). Other days are computed in the browser from the SDO/HMI Carrington-rotation map covering the date. On the full page, a computed date first shows a dialog: click **Compute**, then wait a few seconds. With `embed=1` it computes without asking, which suits browser tools.
+- `view`: `earth` (as seen from Earth), `north` (over the north pole) or `fleet` (zoomed out to all spacecraft). Without it, an oblique view.
+- `cam`: `lon,lat,dist`, a fixed camera (Carrington longitude and latitude in degrees, distance in display units). Overrides `view`.
+- `layers`: comma list from `photo` (surface B_r), `foot` (open-field footprints), `closed`, `open` (field lines), `ext` (open lines continued into the heliosphere), `ss` (source-surface B_r), `pil` (neutral line), `hcs` (current sheet), `fleet` (planets and spacecraft), `spiral` (connections to the Sun), `cloud` (footpoint spread). Default: `photo,closed,open,pil,fleet,spiral`.
+- `v`: solar-wind speed for the spirals and connections: 300, 400 (default), 500, 600, 700 or 800 km/s.
+- `conn`: `sc` lets each spacecraft connect at its own footpoint's estimated speed.
+- `ext`: `radial` continues open lines straight out instead of as Parker spirals.
+- `rmax`: how far the current sheet and extended lines reach, 0.1–1.8 au (default 1.2).
+- `scale`: `true` for true distances (default: log distances beyond the source surface).
+- `lines`: number of field lines drawn (default 250, up to about 740).
+- `ss`: source-surface opacity, 0–1.
+- `rss`: source-surface height, 1.5–3.5 R_sun (default 2.5). Computed dates only.
+- `scs`: `5`, `10` or `21.5` couples the Schatten current-sheet model out to that radius. Computed dates only.
+- `rotate`: `1` rotates slowly.
+- `theme`: `dark` or `light`.
+- `embed`: `1` gives the embedded layout. With it, `controls=0` hides the date bar, `panel=0|1` closes or opens the menu, and `series=0|1` hides or shows the solar-cycle panel.
+
+An embedded page can also be driven with postMessage. Send `{type: "heliofield:set", date, v, rss, scs, view, layers, conn}`. The page answers `{type: "heliofield:state", date, v, rss, scs, source, computed, obstime}`.
+
+## Data (JSON and binary, CORS-free static files on the site)
+
+- `data/index.json`: dates with daily products (`dates`, `updated`).
+- `data/<date>/meta.json`: a daily product. It holds:
+  - `model`, `source`, `L0`, `B0` and `open_flux_Mx`;
+  - `hcs`: source-surface neutral lines as flat `[lon, lat, ...]` lists;
+  - `fleet`: each body's Carrington `lon`, `lat`, `r` in au;
+  - `connect`: per body and speed, the source-surface point `ss`, the footpoint `foot`, `fs`, `dchb` and `vwsa`;
+  - `vgrid`.
+- `data/history/index.json`: the archive of HMI rotation maps (`rotations`: `cr`, `start`, `stop`, `file`; `shape`; `scale_G`). Each `data/history/cr/<CR>.bin.gz` is gzipped int16 × 0.1 G, 180 × 360, rows uniform in sin(latitude) from the south, column j at Carrington longitude j + 0.5°.
+- `data/history/fleet/<year>.json`: daily Carrington positions at 12:00 UTC, and Earth's L0, B0 and Carrington rotation.
+- `data/series/rotations.json`: per Carrington rotation since 2010: open flux, open area, current-sheet tilt (north and south) and polar field.
+
+## Limits to tell users
+
+- PFSS is a current-free model. It cannot show sheared or erupting fields, and its open flux is typically about half of what is measured in situ.
+- A computed date uses a Carrington-rotation map built over about 27 days, so it shows the field around that date.
+- The browser smooths the map (FWHM 3.8°). The daily products use the full map.
+- Wind speeds are indicative; the coefficients are not tuned.
+- Results are model output, not observations. Cite HelioField and the magnetogram (NSO/GONG or SDO/HMI).

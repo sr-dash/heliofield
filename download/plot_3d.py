@@ -9,6 +9,7 @@ connection lines. The camera, theme, wind speed and log-distance scale default
 to the view that was on screen when the file was saved.
 
     python plot_3d.py heliofield_2014-03-12_pfss.nc
+    python plot_3d.py RESULT.nc --view earth           # as seen from Earth (also: home, north, fleet)
     python plot_3d.py RESULT.nc --lon 300 --lat 20 --dist 12 --all-lines --theme light
     python plot_3d.py RESULT.nc --true-distance --dist 40
 
@@ -31,7 +32,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection, PolyCollection
 
-from heliofield_io import (AU_RS, OMEGA, RSUN_KM, THEMES, body_keys, caption, contour_lines, diverging_lut,
+from heliofield_io import (AU_RS, L1_KEYS, OMEGA, RSUN_KM, THEMES, body_keys, body_names, caption, contour_lines, diverging_lut,
                            fleet_color, has_3d, load, map_r, model_radii, polylines, sph, warp)
 
 
@@ -118,6 +119,8 @@ def draw_poly(ax, cam, pts, color, lw, alpha=1.0, z=3):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("file", help="HelioField result file with a 3D field (.nc)")
+    ap.add_argument("--view", choices=["home", "earth", "north", "fleet"],
+                    help="named camera as in the viewer: home (as the page opens), earth (from Earth), north (over the north pole), fleet (whole fleet)")
     ap.add_argument("--lon", type=float, help="camera Carrington longitude [deg]")
     ap.add_argument("--lat", type=float, help="camera latitude [deg]")
     ap.add_argument("--dist", type=float, help="camera distance (display units, R_sun inside the source surface)")
@@ -142,8 +145,16 @@ def main(argv=None):
     log = not a.true_distance and view.get("logScale", True)
     rss, r_in, r_top = model_radii(res)
     w, h = (int(x) for x in a.size.lower().split("x"))
-    cam = Camera(a.lon if a.lon is not None else view.get("lon", 330.0), a.lat if a.lat is not None else view.get("lat", 15.0),
-                 a.dist or view.get("dist", 9.0), a.fov or view.get("fov", 35.0), w, h)
+    L0, B0 = float(res.attrs.get("L0_deg", 0)), float(res.attrs.get("B0_deg", 0))
+    preset = a.view or (None if view.get("lon") is not None else "home")
+    if preset == "fleet":
+        far = max([float(map_r(r * AU_RS, rss, log)) for r in res.get("body_r", [1.0])] or [25.0])
+        base = (L0 + 200, 55.0, far / np.tan(np.radians(17.5)) * 1.15)
+    else:
+        base = {"home": (L0 - 35, B0 + 20, 9.0), "earth": (L0, B0, 9.0), "north": (L0 + 180, 89.5, 10.8),
+                None: (view.get("lon", 330.0), view.get("lat", 15.0), view.get("dist", 9.0))}[preset]
+    cam = Camera(a.lon if a.lon is not None else base[0], a.lat if a.lat is not None else base[1],
+                 a.dist or base[2], a.fov or view.get("fov", 35.0), w, h)
     v = a.v or view.get("vsw", 400.0)
     lut = diverging_lut()
 
@@ -183,8 +194,9 @@ def main(argv=None):
 
     # Spacecraft: the Parker spiral from the model's outer boundary, the
     # connection field line below it, and the marker with its label.
-    keys = body_keys(res)
+    keys, names = body_keys(res), body_names(res)
     clines = polylines(res, "cline")
+    marks, l1 = [], False                     # markers drawn; labels added once per group below
     for i, key in enumerate(keys):
         planet = bool(res["body_planet"][i])
         c = fleet_color(th, key, planet)
@@ -204,16 +216,47 @@ def main(argv=None):
                 if res["cline_body"][j] == i and np.isclose(res["cline_v"][j], v):
                     draw_poly(ax, cam, warp(p.astype(float), rss, log), c, 1.6 * lw)
         if 0 <= xy[0] <= w and 0 <= xy[1] <= h and cam.visible(pos[None])[0]:
+            if key in L1_KEYS:                # the L1 monitors share one marker, as in the viewer
+                if l1:
+                    continue
+                l1, name = True, f"L1 monitors ({sum(k in L1_KEYS for k in keys)})"
+            else:
+                name = names[i]
             ax.plot(*xy, "o", ms=6 if planet else 7.5, mfc=c, mec=th["bg"], mew=1.2, zorder=6)
-            ax.annotate(key, xy, xytext=(7, 5), textcoords="offset points", fontsize=8, color=th["text"], zorder=6)
+            marks.append((xy, name, planet))
+    # Bodies that sit together on screen (Earth and L1, Mercury and BepiColombo) share one label.
+    groups = []
+    for xy, name, planet in marks:
+        g = next((g for g in groups if np.hypot(*(g["xy"] - xy)) < 0.018 * w), None)
+        if g is None:
+            groups.append(dict(xy=np.asarray(xy, float), names=[name]))
+        else:
+            g["names"].insert(len(g["names"]) if planet else 0, name)
+    # Labels avoid each other: each takes the first free spot around its marker.
+    pt = a.dpi / 72                                   # pixels per point
+    placed = []
+    for g in sorted(groups, key=lambda g: -g["xy"][1]):
+        label = " · ".join(g["names"])
+        wpx, hpx = len(label) * 8 * 0.56 * pt, 8 * 1.3 * pt
+        for dx, dy, ha in ((7, 5, "left"), (7, -13, "left"), (-7, 5, "right"), (-7, -13, "right"), (7, 17, "left"), (7, -25, "left")):
+            x0 = g["xy"][0] + dx * pt - (wpx if ha == "right" else 0)
+            y0 = g["xy"][1] + dy * pt
+            box = (x0, y0, x0 + wpx, y0 + hpx)
+            if not any(box[0] < b[2] and b[0] < box[2] and box[1] < b[3] and b[1] < box[3] for b in placed):
+                break
+        placed.append(box)
+        ax.annotate(label, g["xy"], xytext=(dx, dy), textcoords="offset points", ha=ha, fontsize=8, color=th["text"], zorder=6)
 
     handles = [plt.Line2D([], [], color=th["closed"], lw=2, label="closed"), plt.Line2D([], [], color=th["pos"], lw=2, label="open +"),
                plt.Line2D([], [], color=th["neg"], lw=2, label="open −"), plt.Line2D([], [], color=th["hcs"], lw=2, label="neutral line / current sheet")]
-    ax.legend(handles=handles, loc="lower left", frameon=False, fontsize=8, labelcolor=th["text"], ncol=4)
+    leg = ax.legend(handles=handles, loc="lower left", frameon=True, fontsize=8, labelcolor=th["text"], ncol=4,
+                    facecolor=th["bg"], edgecolor="none", framealpha=0.8)
+    leg.set_zorder(8)
     cl = cam.pos
     view_txt = f"view from lon {np.degrees(np.arctan2(cl[1], cl[0])) % 360:.0f}°, lat {np.degrees(np.arcsin(cl[2] / np.linalg.norm(cl))):.0f}°"
     title = "HelioField  ·  " + caption(res) + f" · {view_txt} · wind {v:g} km/s" + (" · log distance" if log else "")
-    ax.text(0.012, 0.985, "\n".join(textwrap.wrap(title, 110)), transform=ax.transAxes, va="top", fontsize=8, color=th["text"])
+    ax.text(0.012, 0.985, "\n".join(textwrap.wrap(title, 110)), transform=ax.transAxes, va="top", fontsize=8, color=th["text"], zorder=8,
+            bbox=dict(facecolor=th["bg"], edgecolor="none", alpha=0.8, boxstyle="round,pad=0.4"))
 
     out = a.out or str(Path(a.file).with_suffix("")) + "_3d"
     for ext in ("png", "pdf"):

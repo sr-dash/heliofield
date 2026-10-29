@@ -1,0 +1,68 @@
+{
+ "name": "HelioField",
+ "description": "3D coronal magnetic field (PFSS, optional Schatten current sheet), heliospheric current sheet and spacecraft magnetic connectivity for any date since 2010-05-01. Every view is a URL; images can also be made without a browser with the Python scripts.",
+ "version": "1.2.0",
+ "documentation": "https://sr-dash.github.io/heliofield/guide.html",
+ "llms_txt": "https://sr-dash.github.io/heliofield/llms.txt",
+ "license": "MIT",
+ "citation": "https://doi.org/10.5281/zenodo.23487231",
+ "viewer": {
+  "url": "https://sr-dash.github.io/heliofield/",
+  "url_template": "https://sr-dash.github.io/heliofield/?date={date}&view={view}&layers={layers}&v={v}&rss={rss}&scs={scs}&scale={scale}&rmax={rmax}&theme={theme}&embed={embed}",
+  "notes": "Omit parameters to use the defaults. A date without a daily product is computed in the browser (WebGL, a few seconds); the full page asks the user to confirm first, embed=1 does not.",
+  "parameters": [
+   {"name": "date", "type": "string", "format": "YYYY-MM-DD or latest", "minimum": "2010-05-01", "default": "latest", "description": "Date of the field. Recent days are daily server products; other days are computed in the browser from the SDO/HMI rotation map covering the date."},
+   {"name": "view", "type": "string", "enum": ["earth", "north", "fleet"], "description": "Camera: from Earth, over the north pole, or zoomed out to the whole fleet. Default: an oblique view."},
+   {"name": "cam", "type": "string", "format": "lon,lat,dist", "description": "Fixed camera: Carrington longitude and latitude [deg] and distance [display units]. Overrides view."},
+   {"name": "layers", "type": "list", "items": ["photo", "foot", "closed", "open", "ext", "ss", "pil", "hcs", "fleet", "spiral", "cloud"], "separator": ",", "default": ["photo", "closed", "open", "pil", "fleet", "spiral"], "description": "photo: surface B_r; foot: open-field footprints (coronal holes); closed/open: field lines; ext: open lines continued into the heliosphere; ss: source-surface B_r; pil: neutral line; hcs: heliospheric current sheet; fleet: planets and spacecraft; spiral: their magnetic connections; cloud: footpoint spread."},
+   {"name": "v", "type": "integer", "enum": [300, 400, 500, 600, 700, 800], "default": 400, "unit": "km/s", "description": "Solar-wind speed for the spirals and connections."},
+   {"name": "conn", "type": "string", "enum": ["sc"], "description": "sc: each spacecraft connects at the WSA-type speed of its own footpoint."},
+   {"name": "ext", "type": "string", "enum": ["radial"], "description": "radial: extended open lines go straight out instead of as Parker spirals."},
+   {"name": "rmax", "type": "number", "minimum": 0.1, "maximum": 1.8, "default": 1.2, "unit": "au", "description": "Extent of the current sheet and extended lines."},
+   {"name": "scale", "type": "string", "enum": ["true"], "description": "true: true distances (default: log-compressed beyond the source surface)."},
+   {"name": "lines", "type": "integer", "minimum": 50, "maximum": 740, "default": 250, "description": "Number of field lines drawn."},
+   {"name": "ss", "type": "number", "minimum": 0, "maximum": 1, "default": 0.25, "description": "Source-surface opacity."},
+   {"name": "rss", "type": "number", "minimum": 1.5, "maximum": 3.5, "default": 2.5, "unit": "R_sun", "description": "Source-surface height (dates computed in the browser)."},
+   {"name": "scs", "type": "number", "enum": [5, 10, 21.5], "unit": "R_sun", "description": "Couple the Schatten current-sheet model out to this radius (dates computed in the browser)."},
+   {"name": "rotate", "type": "integer", "enum": [1], "description": "Rotate slowly."},
+   {"name": "theme", "type": "string", "enum": ["dark", "light"], "description": "Colour theme (default: the system's)."},
+   {"name": "embed", "type": "integer", "enum": [1], "description": "Embedded layout for iframes."},
+   {"name": "controls", "type": "integer", "enum": [0], "description": "With embed=1: hide the date bar."},
+   {"name": "panel", "type": "integer", "enum": [0, 1], "description": "Start with the menu closed or open."},
+   {"name": "series", "type": "integer", "enum": [0, 1], "description": "Hide or show the solar-cycle panel."}
+  ],
+  "postMessage": {
+   "send": {"type": "heliofield:set", "fields": ["date", "v", "rss", "scs", "view", "layers", "conn"]},
+   "receive": {"type": "heliofield:state", "fields": ["date", "v", "rss", "scs", "conn", "source", "computed", "obstime"]}
+  },
+  "examples": {
+   "today_from_earth": "https://sr-dash.github.io/heliofield/?date=latest&view=earth",
+   "past_date_from_earth": "https://sr-dash.github.io/heliofield/?date=2014-03-12&view=earth",
+   "fleet_connectivity": "https://sr-dash.github.io/heliofield/?date=latest&view=fleet",
+   "current_sheet_true_scale": "https://sr-dash.github.io/heliofield/?date=latest&view=fleet&layers=photo,hcs,fleet,spiral&scale=true&rmax=1.2",
+   "coronal_holes": "https://sr-dash.github.io/heliofield/?date=latest&layers=photo,foot,open,pil&view=earth",
+   "current_sheet_model": "https://sr-dash.github.io/heliofield/?date=2020-05-08&scs=21.5&view=fleet&layers=photo,closed,open,pil,hcs,fleet,spiral",
+   "embed": "https://sr-dash.github.io/heliofield/?date=latest&view=earth&embed=1&controls=0&theme=light"
+  }
+ },
+ "scripts": {
+  "description": "Python scripts (NumPy, SciPy, Matplotlib) that fetch the page's inputs for a date, solve the same model as the browser, and write the figures (PNG, PDF) and the results (NetCDF + JSON header). No browser needed.",
+  "base_url": "https://sr-dash.github.io/heliofield/download/",
+  "files": ["heliofield_io.py", "heliofield_update.py", "compute_corona.py", "plot_3d.py", "plot_surface.py", "requirements.txt", "requirements-tested.txt"],
+  "manifest": "https://sr-dash.github.io/heliofield/download/manifest.json",
+  "commands": {
+   "pfss_figures": "python compute_corona.py --date YYYY-MM-DD --plot --view earth",
+   "scs_figures": "python compute_corona.py --date YYYY-MM-DD --scs 21.5 --plot --view fleet",
+   "replot": "python plot_3d.py RESULT.nc --view north --theme light"
+  },
+  "options": {"--rss": "1.5..3.5", "--scs": "5 | 10 | 21.5", "--view": "home | earth | north | fleet", "--theme": "light | dark", "--v": "wind speed [km/s]"}
+ },
+ "data": {
+  "daily_index": "https://sr-dash.github.io/heliofield/data/index.json",
+  "daily_product": "https://sr-dash.github.io/heliofield/data/{date}/meta.json",
+  "rotation_maps": "https://sr-dash.github.io/heliofield/data/history/index.json",
+  "rotation_map_file": "https://sr-dash.github.io/heliofield/data/history/cr/{cr}.bin.gz",
+  "fleet_positions": "https://sr-dash.github.io/heliofield/data/history/fleet/{year}.json",
+  "solar_cycle_series": "https://sr-dash.github.io/heliofield/data/series/rotations.json"
+ }
+}

@@ -16,9 +16,14 @@ the same results as the web page:
          B_r where it crossed the cusp surface.
 
 It writes a result file in the format of a 3D download (NAME.nc and
-NAME_header.json), which plot_3d.py and plot_surface.py read:
+NAME_header.json), which plot_3d.py and plot_surface.py read. The input is
+either a surface-map download, or a date: the script then fetches the same
+inputs the web page uses (the archived SDO/HMI rotation map covering the date
+and the spacecraft positions) from the HelioField site, so no browser is
+needed. --plot also draws the 3D view and the maps as PNG and PDF.
 
-    python compute_corona.py heliofield_2014-03-12_surface.nc
+    python compute_corona.py --date 2014-03-12 --plot
+    python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view earth
     python compute_corona.py SURFACE.nc --rss 2.0 --scs 21.5 --out my_run
     python plot_3d.py my_run.nc
 
@@ -40,7 +45,7 @@ from pathlib import Path
 import numpy as np
 from scipy.io import netcdf_file
 
-from heliofield_io import body_keys, load
+from heliofield_io import SITE, body_keys, fetch_inputs, load
 
 TAU, DEG = 2 * math.pi, math.pi / 180
 RSUN_KM, RSUN_CM = 695700.0, 6.957e10
@@ -765,7 +770,13 @@ def write(out, src, sol, args, view):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("file", help="HelioField result file with surface maps (.nc)")
+    ap.add_argument("file", nargs="?", help="HelioField result file with surface maps (.nc); or use --date")
+    ap.add_argument("--date", help="YYYY-MM-DD (since 2010-05-01): fetch the inputs for this date from the HelioField site")
+    ap.add_argument("--site", default=SITE, help=argparse.SUPPRESS)
+    ap.add_argument("--plot", action="store_true", help="also draw the 3D view and the surface maps (PNG and PDF)")
+    ap.add_argument("--view", default=None, choices=["home", "earth", "north", "fleet"],
+                    help="camera for --plot (default: the saved view, or 'home' as the page opens)")
+    ap.add_argument("--theme", choices=["light", "dark"], help="colours for --plot")
     ap.add_argument("--rss", type=float, help="source-surface radius [R_sun] (default: that of the file)")
     ap.add_argument("--scs", type=float, default=None, help="couple the SCS model out to this radius [R_sun], e.g. 21.5 (default: as in the file)")
     ap.add_argument("--pfss", action="store_true", help="PFSS only, even if the file used SCS")
@@ -776,7 +787,9 @@ def main(argv=None):
     ap.add_argument("--out", help="output name without extension (default: <file>_<model>)")
     a = ap.parse_args(argv)
 
-    src = load(a.file)
+    if not a.file and not a.date:
+        ap.error("give a surface-map file or --date YYYY-MM-DD")
+    src = fetch_inputs(a.date, a.site) if a.date else load(a.file)
     attrs = src.attrs
     rss = a.rss or float(attrs.get("rss_rsun", 2.5))
     rout = 0.0 if a.pfss else (a.scs if a.scs is not None else float(attrs.get("rout_rsun", 0) or 0))
@@ -789,9 +802,17 @@ def main(argv=None):
     print(f"{attrs.get('date', '')}: {'PFSS + SCS to ' + format(rout, 'g') if rout else 'PFSS'}, R_ss {rss:g}, lmax {a.lmax}")
     sol = solve(input_map(src), rss=rss, rout=rout, L=a.lmax, taper_l0=a.taper, fleet=fleet, v_draw=v)
     # heliofield_model-<model date>_computed-<today>_<model>, next to the input file
-    out = a.out or str(Path(a.file).with_name(f"heliofield_model-{attrs.get('date', 'unknown')}_computed-{today()}_{'scs' if rout else 'pfss'}"))
+    name = f"heliofield_model-{attrs.get('date', 'unknown')}_computed-{today()}_{'scs' if rout else 'pfss'}"
+    out = a.out or (name if a.date else str(Path(a.file).with_name(name)))
+    a.file = a.file or f"{SITE} inputs for {a.date}"
     write(out, src, sol, a, view)
     print(f"wrote {out}.nc and {out}_header.json")
+    if a.plot:
+        import plot_3d
+        import plot_surface
+        extra = (["--view", a.view] if a.view else []) + (["--theme", a.theme] if a.theme else [])
+        plot_3d.main([f"{out}.nc", *extra])
+        plot_surface.main([f"{out}.nc", *(["--theme", a.theme] if a.theme else [])])
 
 
 if __name__ == "__main__":

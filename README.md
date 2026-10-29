@@ -106,6 +106,25 @@ runs again. The monthly **Scripts vs new packages** workflow runs the download
 tests against the newest NumPy, SciPy, Matplotlib and xarray. If they pass, it
 records those versions as tested; if not, it opens an issue.
 
+## Scripts and automated agents
+
+Every view is a URL (`date`, `view`, `layers`, `rss`, `scs`, …). With `--date`,
+the download scripts need no browser at all: they fetch the inputs for that date
+from the site, solve the same model and draw the figures.
+
+```bash
+python download/compute_corona.py --date 2014-03-12 --plot --view earth
+python download/compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet
+```
+
+[`llms.txt`](llms.txt) describes the site for automated agents (the llms.txt convention): ready-made links,
+the scripts, the data files and the limits to mention. [`api.json`](api.json)
+lists the same parameters, scripts and endpoints as JSON. Both are linked from
+every page's head (`rel="alternate"`, `rel="service-desc"`), along with a
+schema.org `ViewAction` in the JSON-LD. If the URL parameters change, update
+`llms.txt`, `api.json` and the guide together; `tests/test_site.py` checks that
+they match the code.
+
 ## Solar-wind sources at the footpoints
 
 Each connection is mapped at 200–900 km/s in 25 km/s steps, and each footpoint

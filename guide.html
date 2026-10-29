@@ -12,7 +12,9 @@
   gtag('js', new Date());
   gtag('config', 'G-8X5BSNF3VV');
 </script>
-<meta name="description" content="How to use HelioField, and how it computes the Sun's coronal magnetic field: GONG and SDO/HMI magnetograms, the PFSS model, field-line tracing, the heliospheric current sheet, spacecraft connectivity, colours and data products.">
+<meta name="description" content="How to use HelioField, and how it computes the Sun's coronal magnetic field: magnetogram smoothing, the PFSS and Schatten current-sheet models, field-line tracing, the heliospheric current sheet, spacecraft connectivity, validation against sunkit-magex, downloads and the URL API.">
+<link rel="alternate" type="text/markdown" href="https://sr-dash.github.io/heliofield/llms.txt" title="HelioField for automated agents">
+<link rel="service-desc" type="application/json" href="https://sr-dash.github.io/heliofield/api.json" title="HelioField URL parameters, scripts and data">
 <meta name="author" content="Soumyaranjan Dash">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://sr-dash.github.io/heliofield/guide.html">
@@ -29,7 +31,7 @@
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Soumyaranjan Dash Portfolio">
 <meta property="og:title" content="HelioField guide: using the viewer, PFSS methods and data">
-<meta property="og:description" content="How HelioField computes the Sun's coronal magnetic field, current sheet and spacecraft connectivity, and how to use, save, share and embed it.">
+<meta property="og:description" content="How HelioField computes the Sun's coronal magnetic field (PFSS and Schatten current sheet), how it is validated, and how to use, download, embed and script it.">
 <meta property="og:url" content="https://sr-dash.github.io/heliofield/guide.html">
 <meta property="og:image" content="https://sr-dash.github.io/heliofield/assets/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -44,6 +46,9 @@
   "@context": "https://schema.org",
   "@type": "TechArticle",
   "headline": "HelioField guide: using the viewer, PFSS methods and data",
+  "description": "Using HelioField, and its methods: magnetogram smoothing, PFSS and Schatten current-sheet models, field-line tracing, the heliospheric current sheet, spacecraft connectivity, validation against sunkit-magex, downloads and the URL API for scripts and agents.",
+  "dateModified": "2026-10-29",
+  "keywords": "PFSS, Schatten current sheet, coronal magnetic field, heliospheric current sheet, validation, NetCDF, Python, URL API",
   "url": "https://sr-dash.github.io/heliofield/guide.html",
   "author": { "@type": "Person", "@id": "https://sr-dash.github.io/#person", "name": "Soumyaranjan Dash", "url": "https://sr-dash.github.io/" },
   "about": { "@id": "https://sr-dash.github.io/heliofield/#app" },
@@ -83,6 +88,7 @@
   <a href="#download">Downloading results</a>
   <a href="#model">Model choices</a>
   <a href="#embed">Links and embedding</a>
+  <a href="#agents">Scripts and automated agents</a>
   <h2>Methods</h2>
   <a href="#methods">Overview</a>
   <a href="#data">Magnetograms</a>
@@ -240,7 +246,7 @@ python plot_3d.py heliofield_model-2014-03-12_computed-2026-10-28_scs.nc --theme
     <tr><th>Parameter</th><th>Values</th><th>Default</th></tr>
     <tr><td><code>date</code></td><td><code>YYYY-MM-DD</code> from 2010-05-01, or <code>latest</code>. A date without a daily product is computed in the browser.</td><td>latest</td></tr>
     <tr><td><code>v</code></td><td>Solar wind speed: 300, 400 … 800 km/s</td><td>400</td></tr>
-    <tr><td><code>layers</code></td><td>Comma list of layers to show: <code>photo, closed, open, ext, ss, pil, hcs, fleet, spiral, cloud</code> (<code>ext</code> is the extension of open lines, <code>cloud</code> the footpoint spread)</td><td><code>photo, closed, open, pil, fleet, spiral</code></td></tr>
+    <tr><td><code>layers</code></td><td>Comma list of layers to show: <code>photo, foot, closed, open, ext, ss, pil, hcs, fleet, spiral, cloud</code> (<code>foot</code> is the open-field footprints, <code>ext</code> the extension of open lines, <code>cloud</code> the footpoint spread)</td><td><code>photo, closed, open, pil, fleet, spiral</code></td></tr>
     <tr><td><code>ext</code></td><td><code>radial</code> to extend open lines straight out instead of as Parker spirals</td><td>spiral</td></tr>
     <tr><td><code>conn</code></td><td><code>sc</code> for self-consistent connection speeds</td><td>fixed</td></tr>
     <tr><td><code>view</code></td><td><code>earth</code>, <code>north</code> or <code>fleet</code></td><td>oblique</td></tr>
@@ -283,6 +289,24 @@ addEventListener("message", (e) =&gt; {
   if (e.data?.type === "heliofield:state") console.log(e.data.date, e.data.source);
 });</code></pre>
   <p>Every field of the <code>set</code> message is optional. <code>layers</code> takes the same comma list as the URL, <code>conn</code> is <code>"sc"</code> or <code>"fixed"</code>, <code>rss</code> sets the source-surface height for computed dates, and <code>scs</code> the outer edge of the current-sheet model (<code>0</code> for PFSS alone). Either one alone re-solves the date on screen. The reply carries <code>date</code>, <code>v</code>, <code>rss</code>, <code>scs</code>, <code>conn</code>, <code>source</code>, <code>computed</code> (true for a date computed in the browser) and <code>obstime</code>. A host showing any date since 2010, such as <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, can pass it directly. Embeds and host messages compute past dates without asking; only the page itself shows the confirmation.</p>
+</section>
+
+<section id="agents">
+  <h3>Scripts and automated agents</h3>
+  <p>HelioField can be used without the page. That suits scripts, notebooks and automated assistants asked to show the Sun's coronal field for a date.</p>
+  <ul>
+    <li><b>Links.</b> Every view is a URL built from the <a href="#embed">parameters above</a>: <code>?date=2014-03-12&amp;view=earth</code>, <code>?date=latest&amp;view=fleet&amp;layers=photo,hcs,fleet,spiral&amp;scale=true</code>. A link can be shared, embedded, or opened by a browser tool and captured. Add <code>embed=1</code> so a past date computes without the confirmation dialog.</li>
+    <li><b>Figures without a browser.</b> The <a href="#download">download scripts</a> can fetch the inputs for any date from this site themselves, then solve the same model as the page and write the figures:
+<pre><code>pip install numpy scipy matplotlib
+base=https://sr-dash.github.io/heliofield/download
+for f in heliofield_io.py heliofield_update.py compute_corona.py plot_3d.py plot_surface.py requirements.txt requirements-tested.txt; do curl -sO "$base/$f"; done
+python compute_corona.py --date 2014-03-12 --plot --view earth
+python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet</code></pre>
+      This writes the 3D view and the surface maps as PNG and PDF, and the results as NetCDF. The views are <code>home</code>, <code>earth</code>, <code>north</code> and <code>fleet</code>; <code>--rss</code>, <code>--scs</code>, <code>--theme</code> and <code>--v</code> work as on the page.</li>
+    <li><b>Descriptions for machines.</b> <a href="llms.txt"><code>llms.txt</code></a> is a plain-text summary for automated agents (the llms.txt convention): what HelioField does, ready-made links, the scripts, the data files and the limits to mention. <a href="api.json"><code>api.json</code></a> lists the same parameters, scripts and data endpoints as JSON. Both are linked from the head of every page.</li>
+    <li><b>Data.</b> The daily products (<code>data/&lt;date&gt;/meta.json</code>), the HMI rotation maps, the fleet positions and the solar-cycle series are static JSON and binary files on this site, readable from any program. <code>api.json</code> gives their addresses and formats.</li>
+  </ul>
+  <p>Please tell users that these are model results, and cite HelioField and the magnetogram (see <a href="#cite">Cite HelioField</a>).</p>
 </section>
 
 <h2 class="part" id="methods">Methods</h2>

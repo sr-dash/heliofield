@@ -12,14 +12,16 @@
   gtag('js', new Date());
   gtag('config', 'G-8X5BSNF3VV');
 </script>
-<meta name="description" content="Explore the Sun's coronal magnetic field in 3D for any date since 2010: GONG and SDO/HMI magnetograms, PFSS field lines, the source surface, the heliospheric current sheet, and the magnetic connection of Parker Solar Probe, Solar Orbiter, STEREO and the L1 fleet. Free, in the browser, with PNG/PDF snapshots and embeds.">
-<meta name="keywords" content="HelioField, coronal magnetic field, PFSS, potential field source surface, heliospheric current sheet, solar magnetic field 3D, field lines, coronal holes, open flux, magnetic connectivity, Parker spiral, Parker Solar Probe, Solar Orbiter, STEREO, GONG, SDO HMI, synoptic map, Carrington rotation, heliophysics">
+<meta name="description" content="Explore the Sun's coronal magnetic field in 3D for any date since 2010: PFSS field lines from GONG and SDO/HMI magnetograms, an adjustable source surface, a Schatten current-sheet model, the heliospheric current sheet, and the magnetic connection of Parker Solar Probe, Solar Orbiter, STEREO, BepiColombo and the L1 fleet. Download the results as NetCDF with Python plotting scripts.">
+<meta name="keywords" content="HelioField, coronal magnetic field, PFSS, potential field source surface, heliospheric current sheet, solar magnetic field 3D, field lines, coronal holes, open flux, magnetic connectivity, Parker spiral, Parker Solar Probe, Solar Orbiter, STEREO, GONG, SDO HMI, synoptic map, Carrington rotation, heliophysics, Schatten current sheet, SCS, WSA, source surface height, NetCDF, Python, solar wind source, space weather, API">
 <meta name="author" content="Soumyaranjan Dash">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://sr-dash.github.io/heliofield/">
 <link rel="author" href="https://sr-dash.github.io/">
 <link rel="license" href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">
 <link rel="help" href="https://sr-dash.github.io/heliofield/guide.html">
+<link rel="alternate" type="text/markdown" href="https://sr-dash.github.io/heliofield/llms.txt" title="HelioField for automated agents">
+<link rel="service-desc" type="application/json" href="https://sr-dash.github.io/heliofield/api.json" title="HelioField URL parameters, scripts and data">
 <meta name="citation_title" content="HelioField: the Sun's coronal magnetic field in 3D">
 <meta name="citation_author" content="Dash, Soumyaranjan">
 <meta name="citation_publication_date" content="2026/10/20">
@@ -46,7 +48,7 @@
 <meta property="og:site_name" content="Soumyaranjan Dash Portfolio">
 <meta property="og:locale" content="en_US">
 <meta property="og:title" content="HelioField: the Sun's coronal magnetic field in 3D">
-<meta property="og:description" content="PFSS field lines, the heliospheric current sheet and spacecraft magnetic connectivity for any date since 2010, computed from GONG and SDO/HMI magnetograms.">
+<meta property="og:description" content="PFSS and Schatten current-sheet models of the corona, the heliospheric current sheet and spacecraft magnetic connectivity for any date since 2010, with downloadable NetCDF results and Python scripts.">
 <meta property="og:url" content="https://sr-dash.github.io/heliofield/">
 <meta property="og:image" content="https://sr-dash.github.io/heliofield/assets/og-image.png">
 <meta property="og:image:secure_url" content="https://sr-dash.github.io/heliofield/assets/og-image.png">
@@ -58,7 +60,7 @@
 <meta name="twitter:site" content="@soumyatheory">
 <meta name="twitter:creator" content="@soumyatheory">
 <meta name="twitter:title" content="HelioField: the Sun's coronal magnetic field in 3D">
-<meta name="twitter:description" content="PFSS field lines, the heliospheric current sheet and spacecraft magnetic connectivity for any date since 2010.">
+<meta name="twitter:description" content="3D coronal magnetic field, current sheet and spacecraft connectivity for any date since 2010, with downloadable results and Python scripts.">
 <meta name="twitter:image" content="https://sr-dash.github.io/heliofield/assets/og-image.png">
 <meta name="twitter:image:alt" content="HelioField view of the Sun from Earth: photospheric magnetic field, open and closed PFSS field lines, and the source-surface neutral line">
 <script type="application/ld+json">
@@ -80,14 +82,21 @@
         "https://twitter.com/soumyatheory",
         "https://orcid.org/0000-0003-0103-6569"
       ],
-      "worksFor": { "@type": "EducationalOrganization", "name": "National Solar Observatory", "alternateName": "NSO", "url": "https://nso.edu" }
+      "worksFor": {
+        "@type": "EducationalOrganization",
+        "name": "National Solar Observatory",
+        "alternateName": "NSO",
+        "url": "https://nso.edu"
+      }
     },
     {
       "@type": "WebSite",
       "@id": "https://sr-dash.github.io/#website",
       "url": "https://sr-dash.github.io/",
       "name": "Soumyaranjan Dash Portfolio",
-      "publisher": { "@id": "https://sr-dash.github.io/#person" }
+      "publisher": {
+        "@id": "https://sr-dash.github.io/#person"
+      }
     },
     {
       "@type": "WebApplication",
@@ -95,17 +104,24 @@
       "name": "HelioField",
       "alternateName": "HelioField 3D coronal magnetic field viewer",
       "url": "https://sr-dash.github.io/heliofield/",
-      "description": "Explore the Sun's coronal magnetic field in 3D for any date since 2010: GONG and SDO/HMI magnetograms, PFSS field lines, the source surface, the heliospheric current sheet, and the magnetic connection of Parker Solar Probe, Solar Orbiter, STEREO and the L1 fleet. Free, in the browser, with PNG/PDF snapshots and embeds.",
+      "description": "Explore the Sun's coronal magnetic field in 3D for any date since 2010: PFSS field lines from GONG and SDO/HMI magnetograms, an adjustable source surface, a Schatten current-sheet model, the heliospheric current sheet, and the magnetic connection of Parker Solar Probe, Solar Orbiter, STEREO, BepiColombo and the L1 fleet. Download the results as NetCDF with Python plotting scripts.",
       "applicationCategory": "EducationalApplication",
       "applicationSubCategory": "Heliophysics visualization",
       "operatingSystem": "Any (web browser)",
       "browserRequirements": "Requires JavaScript, WebGL and Web Workers",
       "inLanguage": "en",
       "isAccessibleForFree": true,
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
       "datePublished": "2026-10-20",
       "softwareVersion": "1.2.0",
-      "sameAs": ["https://github.com/sr-dash/heliofield", "https://doi.org/10.5281/zenodo.23487231"],
+      "sameAs": [
+        "https://github.com/sr-dash/heliofield",
+        "https://doi.org/10.5281/zenodo.23487231"
+      ],
       "identifier": {
         "@type": "PropertyValue",
         "propertyID": "DOI",
@@ -117,19 +133,71 @@
       "screenshot": "https://sr-dash.github.io/heliofield/assets/og-image.png",
       "softwareHelp": "https://sr-dash.github.io/heliofield/guide.html",
       "codeRepository": "https://github.com/sr-dash/heliofield",
-      "keywords": "coronal magnetic field, PFSS, heliospheric current sheet, magnetic connectivity, Parker spiral, open flux, coronal holes, GONG, SDO HMI, Carrington rotation",
+      "keywords": "coronal magnetic field, PFSS, heliospheric current sheet, magnetic connectivity, Parker spiral, open flux, coronal holes, GONG, SDO HMI, Carrington rotation, Schatten current sheet, source surface height, NetCDF, Python scripts",
       "featureList": [
         "PFSS coronal magnetic field for any date since May 2010, daily from GONG and computed in the browser from SDO/HMI rotation maps",
-        "Open and closed field lines with an adjustable count, extendable to 1 au as Parker spirals or radially",
-        "Source surface, neutral line and heliospheric current sheet",
-        "Planets and spacecraft with Parker-spiral magnetic footpoints for 300-800 km/s wind",
-        "Dark and light themes with an accessibility-checked colour scheme",
-        "PNG and PDF snapshots, shareable links and an embeddable mode"
+        "Adjustable source-surface height (1.5-3.5 solar radii) and an optional Schatten current-sheet model out to 21.5 solar radii",
+        "Open and closed field lines, open-field footprints (coronal holes), the source-surface neutral line and the heliospheric current sheet",
+        "Planets and spacecraft with Parker-spiral magnetic footpoints, expansion factor, distance to the coronal-hole boundary and a WSA-type wind speed",
+        "Solar-cycle series of open flux, open area, current-sheet tilt and polar field since 2010",
+        "Downloadable results (NetCDF with a JSON header) and Python scripts that plot them and recompute the corona without a browser",
+        "Every view is a URL (date, view, layers, model); embeddable, with a postMessage API; descriptions for agents in llms.txt and api.json",
+        "Dark and light themes with an accessibility-checked colour scheme; PNG and PDF snapshots"
       ],
-      "isRelatedTo": { "@type": "WebApplication", "name": "HelioFleet", "url": "https://sr-dash.github.io/heliofleet/" },
-      "author": { "@id": "https://sr-dash.github.io/#person" },
-      "creator": { "@id": "https://sr-dash.github.io/#person" },
-      "isPartOf": { "@id": "https://sr-dash.github.io/#website" }
+      "isRelatedTo": {
+        "@type": "WebApplication",
+        "name": "HelioFleet",
+        "url": "https://sr-dash.github.io/heliofleet/"
+      },
+      "author": {
+        "@id": "https://sr-dash.github.io/#person"
+      },
+      "creator": {
+        "@id": "https://sr-dash.github.io/#person"
+      },
+      "isPartOf": {
+        "@id": "https://sr-dash.github.io/#website"
+      },
+      "dateModified": "2026-10-29",
+      "potentialAction": {
+        "@type": "ViewAction",
+        "name": "Show the coronal magnetic field for a date",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://sr-dash.github.io/heliofield/?date={date}&view={view}",
+          "actionPlatform": [
+            "https://schema.org/DesktopWebPlatform",
+            "https://schema.org/MobileWebPlatform"
+          ]
+        },
+        "query-input": [
+          "required name=date",
+          "optional name=view"
+        ]
+      },
+      "subjectOf": [
+        {
+          "@type": "SoftwareSourceCode",
+          "name": "HelioField Python scripts",
+          "programmingLanguage": "Python",
+          "runtimePlatform": "Python 3.9+ with NumPy, SciPy and Matplotlib",
+          "codeRepository": "https://github.com/sr-dash/heliofield/tree/main/download",
+          "url": "https://sr-dash.github.io/heliofield/download/compute_corona.py",
+          "description": "Fetch the inputs for a date, solve PFSS or PFSS + Schatten current sheet as the web page does, and plot the 3D view and surface maps as PNG and PDF: python compute_corona.py --date YYYY-MM-DD --plot"
+        },
+        {
+          "@type": "TextDigitalDocument",
+          "name": "HelioField for automated agents",
+          "url": "https://sr-dash.github.io/heliofield/llms.txt",
+          "encodingFormat": "text/markdown"
+        },
+        {
+          "@type": "DigitalDocument",
+          "name": "HelioField URL parameters, scripts and data endpoints",
+          "url": "https://sr-dash.github.io/heliofield/api.json",
+          "encodingFormat": "application/json"
+        }
+      ]
     }
   ]
 }
@@ -276,7 +344,7 @@
     </div>
   </details>
 
-  <p class="panel-foot"><a href="guide.html">How to use</a> · <a href="guide.html#methods">Methods and data</a> · <a href="series.html">Solar-cycle series</a></p>
+  <p class="panel-foot"><a href="guide.html">How to use</a> · <a href="guide.html#methods">Methods and data</a> · <a href="series.html">Solar-cycle series</a> · <a href="guide.html#agents">Scripts &amp; API</a></p>
   <p class="panel-foot">Companion to <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, spacecraft positions around the Sun.
     Made by <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
     <a href="https://github.com/sr-dash/heliofield/issues/new/choose">Report a problem or suggest a feature</a></p>
