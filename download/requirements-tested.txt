@@ -1,5 +1,5 @@
-# The versions the HelioField scripts were last tested with (Python 3.12).
+# The versions the HelioField scripts were last tested with (Python 3.13).
 # Updated automatically by the monthly package check when newer releases pass.
-numpy==2.2.6
-scipy==1.16.2
-matplotlib==3.10.3
+numpy==2.5.4
+scipy==1.18.1
+matplotlib==3.11.2
