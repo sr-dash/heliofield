@@ -17,11 +17,14 @@
 import fs from "node:fs";
 import { buildExport, readme } from "../../js/export.js";
 import { lineOrder } from "./line-order.mjs";
+import { LMAX, TAPER_L0, taper } from "../../js/pfss.js";
 import { alf, analyse, fieldGrid, sample, trace, solve, surfaceBr, zeroContour, chBoundary, wsaSpeed, model, scsPolarity } from "../../js/pfss.js";
 
 const req = JSON.parse(fs.readFileSync(0, "utf8"));
 const readMap = (p) => { const b = fs.readFileSync(p); return new Float32Array(b.buffer, b.byteOffset, b.byteLength / 4); };
-const grid = (r) => fieldGrid(analyse(readMap(r.br), r.ny, r.nx, r.L ?? 40), { rss: r.rss ?? 2.5 });
+// Coefficients as the solver makes them: degree LMAX with the Gaussian taper.
+const coefOf = (r) => taper(analyse(readMap(r.br), r.ny, r.nx, r.L ?? LMAX), r.taper ?? TAPER_L0);
+const grid = (r) => fieldGrid(coefOf(r), { rss: r.rss ?? 2.5 });
 let out;
 
 switch (req.cmd) {
@@ -72,7 +75,7 @@ switch (req.cmd) {
   }
   case "scsfield":
   case "scspolarity": {
-    const m = model(analyse(readMap(req.br), req.ny, req.nx, req.L ?? 40), req.rss ?? 2.5, { rout: req.rout ?? 21.5 });
+    const m = model(coefOf(req), req.rss ?? 2.5, { rout: req.rout ?? 21.5 });
     if (req.cmd === "scsfield") { const v = [0, 0, 0]; out = req.points.map((p) => sample(m.S, p[0], p[1], p[2], v).slice()); }
     else out = req.lonlat.map(([lo, la]) => scsPolarity(m, req.r, lo, la));
     out = { rcp: m.rcp, values: out };

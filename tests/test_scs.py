@@ -23,7 +23,11 @@ from conftest import MU, NX, PHI, report
 from test_exact import dipole, pbar, RSS, RSUN_CM
 
 RCP = round(0.92 * RSS, 3)
-L = 40
+L, L0 = 80, 42                         # the solver's degree and Gaussian taper (js/pfss.js)
+
+
+def taper_w(l):
+    return np.exp(-l * (l + 1) / (2 * L0 ** 2))
 
 
 def unit(lon, lat):
@@ -32,15 +36,16 @@ def unit(lon, lat):
 
 
 def abs_mu_series():
-    """Legendre coefficients of |mu| up to degree L (odd ones vanish)."""
-    return np.array([(2 * l + 1) / 2 * quad(lambda x: abs(x) * eval_legendre(l, x), -1, 1, points=[0], limit=200)[0]
+    """Legendre coefficients of |mu| up to degree L (odd ones vanish),
+    tapered as the solver tapers them."""
+    return np.array([taper_w(l) * (2 * l + 1) / 2 * quad(lambda x: abs(x) * eval_legendre(l, x), -1, 1, points=[0], limit=200)[0]
                      for l in range(L + 1)])
 
 
 def test_dipole_scs_field(js):
-    """The SCS field of a dipole against its series solution, truncated at the same degree."""
+    """The SCS field of a dipole against its series solution, truncated and tapered as the solver does."""
     br, f, _ = dipole()
-    A, c = f(RCP), abs_mu_series()
+    A, c = f(RCP) * taper_w(1), abs_mu_series()
     pts, want = [], []
     for r in (2.6, 4.0, 8.0, 15.0, 21.0):
         for th in np.radians([20, 60, 100, 150]):
@@ -84,7 +89,7 @@ def test_dipole_scs_sheet_and_flux(js):
 def test_scs_against_python(js, cr):
     """The browser's SCS field against one built here from the sunkit-magex
     PFSS solution: |B_r| at the cusp surface, expanded in harmonics to degree
-    40 including the monopole, and continued outward analytically."""
+    80 with the solver's taper, including the monopole, and continued outward analytically."""
     import rotations
     import sunkit_magex.pfss as pfss
     import astropy.units as u
@@ -102,7 +107,7 @@ def test_scs_against_python(js, cr):
     dO = (2 / MU.size) * (2 * np.pi / NX) / (4 * np.pi)
     cos_m = np.cos(np.outer(np.arange(L + 1), PHI)); sin_m = np.sin(np.outer(np.arange(L + 1), PHI))
     cm, sm = babs @ cos_m.T, babs @ sin_m.T                    # (ny, m)
-    coef = {(l, m): ((pbar(l, m, MU) * cm[:, m]).sum() * dO, (pbar(l, m, MU) * sm[:, m]).sum() * dO)
+    coef = {(l, m): (taper_w(l) * (pbar(l, m, MU) * cm[:, m]).sum() * dO, taper_w(l) * (pbar(l, m, MU) * sm[:, m]).sum() * dO)
             for l in range(L + 1) for m in range(l + 1)}
 
     rng = np.random.default_rng(3)

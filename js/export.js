@@ -6,7 +6,7 @@
 //       "pfss"    (+ the 3D PFSS field, field lines, connection lines),
 //       "scs"     (+ the 3D Schatten current-sheet field, the traced sheet
 //                  and the polarity at the outer edge).
-import { surfaceBr, scsPolarity } from "./pfss.js?v=b541db08ad";
+import { surfaceBr, scsPolarity } from "./pfss.js?v=ec64981eca";
 import { writeNetCDF } from "./netcdf.js?v=b9a0a32cc2";
 
 export const FORMAT = "heliofield-export-2";
@@ -14,8 +14,23 @@ export const FORMAT = "heliofield-export-2";
 // What happens to the map before and during the extrapolation.
 const PREP = {
   input: "SDO/HMI Carrington-rotation synoptic map (hmi.Synoptic_Mr_small, or hmi.Synoptic_Mr averaged), averaged in blocks to 180 x 360 (rows uniform in sine latitude), missing pixels set to 0, mean removed so the net flux is zero",
-  model: (L) => `br_input expanded in spherical harmonics up to degree ${L} with the monopole (l = 0) removed: a low-pass filter (resolution about ${(180 / L).toFixed(1)} degrees) that also guarantees zero net flux. This is the boundary condition of the PFSS solution.`,
+  model: (L, l0) => `br_input expanded in spherical harmonics up to degree ${L}${l0 ? ` with a Gaussian taper exp(-l(l+1)/(2*${l0}^2))` : ""} and the monopole (l = 0) removed: a smoothing with a kernel of FWHM ${fwhmDeg(L, l0).toFixed(1)} degrees that also guarantees zero net flux. This is the boundary condition of the PFSS solution.`,
 };
+
+// Width of the smoothing kernel that the series and its taper amount to:
+// sum (2l + 1) w_l P_l(cos g), down to half its peak.
+function fwhmDeg(L, l0) {
+  const w = (l) => (l0 ? Math.exp(-l * (l + 1) / (2 * l0 * l0)) : 1);
+  const K = (g) => {
+    const x = Math.cos(g);
+    let p0 = 1, p1 = x, s = w(0) + 3 * w(1) * x;
+    for (let l = 2; l <= L; l++) { const p = ((2 * l - 1) * x * p1 - (l - 1) * p0) / l; s += (2 * l + 1) * w(l) * p; p0 = p1; p1 = p; }
+    return s;
+  };
+  const k0 = K(0);
+  for (let i = 1; i <= 4000; i++) if (K(i * Math.PI / 180 / 100) < k0 / 2) return 2 * i / 100;
+  return NaN;
+}
 const TAU = 2 * Math.PI;
 
 // Grid values as spherical components (B_r, B_theta, B_phi) for the given
@@ -81,7 +96,7 @@ export function buildExport(ctx) {
       preprocessing: PREP.input });
   add("br_phot", ["lat", "lon"], "float", surfaceBr(coef, 1, rss, ny, nx, true),
     { units: "G", long_name: "Photospheric radial field as used by the model (its boundary condition)",
-      preprocessing: PREP.model(coef.L) });
+      preprocessing: PREP.model(coef.L, coef.taper ?? 0) });
   add("br_ss", ["lat", "lon"], "float", surfaceBr(coef, rss, rss, ny, nx, true),
     { units: "G", long_name: "PFSS radial field on the source surface", radius_rsun: rss });
   if (scs) add("br_cusp", ["lat", "lon"], "float", surfaceBr(coef, rcp, rss, ny, nx, true),
@@ -218,7 +233,7 @@ export function buildExport(ctx) {
     frame: "Carrington heliographic (rotating with the Sun); x towards longitude 0, z along the rotation axis",
     length_unit: "R_sun = 695700 km",
     open_flux_Mx: meta.open_flux_Mx,
-    saved_date: saved, preprocessing: `${PREP.input}. ${PREP.model(coef.L)}`,
+    saved_date: saved, preprocessing: `${PREP.input}. ${PREP.model(coef.L, coef.taper ?? 0)}`, taper_l0: coef.taper ?? 0,
     software: `HelioField ${ctx.version || ""} in-browser solver (js/pfss.js)`.replace("  ", " "),
     references: "https://doi.org/10.5281/zenodo.23487231; https://sr-dash.github.io/heliofield/guide.html#methods",
     history: `Created ${ctx.created || new Date().toISOString()} in the browser`,
@@ -227,10 +242,10 @@ export function buildExport(ctx) {
   const header = {
     format: FORMAT, product: kind, title: attrs.title,
     created: ctx.created, saved_date: saved, software: attrs.software,
-    preprocessing: { br_input: PREP.input, br_phot: PREP.model(coef.L) }, citation: "Dash, S. HelioField: the Sun's coronal magnetic field in 3D. Zenodo. https://doi.org/10.5281/zenodo.23487231",
+    preprocessing: { br_input: PREP.input, br_phot: PREP.model(coef.L, coef.taper ?? 0) }, citation: "Dash, S. HelioField: the Sun's coronal magnetic field in 3D. Zenodo. https://doi.org/10.5281/zenodo.23487231",
     date, obstime: meta.obstime,
     source: { name: meta.source?.name, file: meta.source?.file, url: meta.source?.url, carrington_rotation_of_map: meta.map_cr, map_covers: [meta.map_start, meta.map_stop] },
-    model: { name: scs ? "PFSS + SCS" : "PFSS", rss_rsun: rss, rcp_rsun: rcp, rout_rsun: rout, lmax: meta.model?.lmax,
+    model: { name: scs ? "PFSS + SCS" : "PFSS", rss_rsun: rss, rcp_rsun: rcp, rout_rsun: rout, lmax: meta.model?.lmax, taper_l0: coef.taper ?? 0,
       grid: { pfss: [m.G.nr, m.G.nth, m.G.nph], scs: scs && kind === "scs" ? [dims.find((d) => d[0] === "r_scs")[1], m.S.nth, m.S.nph] : null },
       cusp_fraction: scs ? +(rcp / rss).toFixed(3) : null,
       transition_shell: scs ? "PFSS (turned outward) blended into SCS from the cusp surface to the source surface (smoothstep in r)" : null },

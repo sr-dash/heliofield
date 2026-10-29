@@ -2,7 +2,8 @@
 HMI rotation maps: one near the cycle-24 maximum, one at the 2019-20 minimum
 and one in cycle 25. Both sides solve the same 180 x 360 map with a source
 surface at 2.5 R_sun. sunkit-magex solves the Laplace equation by finite
-differences; the browser expands the map in spherical harmonics to l = 40.
+differences; the browser expands the map in spherical harmonics to l = 80,
+tapered (a Gaussian smoothing of FWHM 3.8 deg).
 They are independent methods, so the tolerances below are agreement levels,
 not round-off.
 
@@ -73,7 +74,7 @@ def pair(request, js):
 def test_field_strength_with_height(pair, js):
     """|B| at random points on shells. Above ~1.1 R_sun both solutions are
     smooth and agree closely (|B| is small near the neutral line at 2.5, where
-    the spread is largest). At the photosphere the l = 40 expansion on a
+    the spread is largest). At the photosphere the tapered expansion on a
     2-degree grid misses small-scale field that the finite-difference
     solution keeps at the map's 1-degree resolution, so the browser's |B|
     there is smaller, by a median 10-50% on these maps. This is what moves
@@ -129,9 +130,12 @@ def test_open_field_map(pair):
     agree = float(np.mean(js_on_py == py_open))
     fpy, fjs = float(py_open.mean()), float(j["open_fraction"])
     report(f"cr{cr}-open", dict(area_py=round(fpy, 4), area_js=round(fjs, 4), cell_agreement=round(agree, 4)))
-    # Open area hinges on the small-scale photospheric field, so it differs
+    # Open area hinges on the small-scale photospheric field. The browser
+    # smooths the map (FWHM 3.8 deg) to avoid ringing; with less small-scale
+    # closed field it opens more of the photosphere than sunkit-magex does
+    # on the full 1-degree map: +14% to +32% on these maps.
     # by up to ~20% even when the source-surface field matches.
-    assert abs(fjs / fpy - 1) < 0.25
+    assert 0.8 < fjs / fpy < 1.4
     assert agree > 0.95
 
 

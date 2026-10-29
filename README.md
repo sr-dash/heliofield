@@ -39,7 +39,9 @@ per rotation since CR 2096 (`hmi.Synoptic_Mr_small`, or `hmi.Synoptic_Mr` averag
 down where only that exists), stored as gzipped int16 on the 180 × 360 sin-latitude
 grid (about 85 kB each, 18 MB in all), and the daily Carrington positions of Earth,
 the planets and the spacecraft. A date without a daily product is solved in a Web
-Worker by `js/pfss.js`: spherical harmonics to degree 40, a 36 × 90 × 180 field grid,
+Worker by `js/pfss.js`: spherical harmonics to degree 80 with a Gaussian taper
+(l₀ = 42, a smoothing of FWHM 3.8° that avoids the rings a sharp cut leaves around
+active regions), a 36 × 90 × 180 field grid,
 RK4 tracing, the source-surface neutral line, connectivity and the source
 diagnostics below, in a few seconds.
 On the GONG map of 2026-10-17 it matches the sunkit-magex pipeline to a
@@ -87,8 +89,8 @@ Names carry the model date and the day of download, as in
 | Full 3D, PFSS + SCS | + the SCS field, traced current sheet, polarity at the outer edge | ~18 MB |
 
 `br_input` is the archived map: averaged to 180 × 360, with its mean removed.
-`br_phot` is what the model uses: its harmonic expansion to degree 40 without the
-monopole, a low-pass filter of about 4.5° that keeps the net flux at zero.
+`br_phot` is what the model uses: its tapered harmonic expansion to degree 80
+without the monopole, a smoothing of FWHM 3.8° that keeps the net flux at zero.
 
 The plot scripts write PNG and PDF in the viewer's colours and view.
 `compute_corona.py` is `js/pfss.js` rewritten in NumPy: it computes the 3D field
@@ -117,7 +119,7 @@ the footpoints for ±100 km/s on source surfaces 0.5 R☉ either side of the one
 `build_day.py` and `js/pfss.js` compute all of it; on the 2026-10-17 GONG map they
 agree on DCHB to a median 0.23° and on speed to a median 4 km/s (within 50 km/s for
 84% of 341 connections); f<sub>s</sub> agrees in median but scatters by a factor of
-two, because the browser field stops at harmonic degree 40. Details and
+two, because the browser smooths the photospheric field. Details and
 limitations are in the guide.
 
 ## Open field into the heliosphere
@@ -171,7 +173,7 @@ code under test is the code the page runs.
 
 ```bash
 pip install -r requirements.txt -r requirements-test.txt
-python -m pytest tests -v                 # full suite, about two minutes
+python -m pytest tests -v                 # full suite, two to three minutes
 python -m pytest tests -v -m "not slow"   # exact solutions only, seconds
 ```
 
@@ -194,7 +196,7 @@ run are written to `cache/validation/`. The **Validation** workflow runs the sui
 demand (Actions → Validation → Run workflow), not on every push. Current agreement:
 source-surface correlation ≥ 0.9998, open flux within 2%, neutral line within 0.2°
 in median, footpoints within about 1° in median, speeds within 3 km/s in median.
-The browser's photospheric |B| is 10–50% weaker (the degree-40 cut), so its
+The browser's photospheric |B| is 30–60% weaker (the smoothing), so its
 f<sub>s</sub> is about half the server's. The guide's
 [Validation](https://sr-dash.github.io/heliofield/guide.html#validation) section has
 the full table.

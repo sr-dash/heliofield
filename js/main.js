@@ -739,6 +739,7 @@ function info() {
       ? [["Model", "PFSS + Schatten current sheet"], ["Cusp surface", `${m.model.rcp.toFixed(2)} R<sub>☉</sub> (PFSS to ${state.rss.toFixed(1)})`],
         ["SCS out to", `${m.model.rout} R<sub>☉</sub>`]]
       : [["Model", "PFSS"], ["Source surface", `${state.rss.toFixed(1)} R<sub>☉</sub>`]]),
+    ...(m.model.taper_l0 ? [["Map smoothing", `harmonics to degree ${m.model.lmax}, Gaussian taper (FWHM 3.8°) <a href="guide.html#smoothing">?</a>`]] : []),
     ["Open flux", `${flux} × 10<sup>22</sup> Mx`],
     ...(state.product.foot && $("lyrFoot").checked
       ? [["Footprints from", state.product.foot.browser ? "this solution"

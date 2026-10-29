@@ -222,7 +222,7 @@
     <tr><td>Full 3D, PFSS</td><td>The above, plus B<sub>r</sub>, B<sub>θ</sub>, B<sub>φ</sub> on the 36 × 90 × 180 grid (1 to R<sub>ss</sub>, uniform in ln r), all traced field lines, and the drawn spacecraft connections</td><td><code>plot_surface.py</code>, <code>plot_3d.py</code></td><td>~7 MB</td></tr>
     <tr><td>Full 3D, PFSS + SCS</td><td>The above, plus the SCS field from the cusp surface to the outer edge (including the transition shell), the traced current sheet, and the polarity near the outer edge</td><td><code>plot_surface.py</code>, <code>plot_3d.py</code></td><td>~18 MB</td></tr>
   </table>
-  <p><b>Two photospheric maps.</b> <code>br_input</code> is the archived map: the HMI rotation map averaged to 180 × 360, gaps set to zero and its mean removed, so the net flux is zero. The model never sees it at full detail. The browser expands it in spherical harmonics up to degree 40 and drops the monopole. That acts as a low-pass filter with a resolution of about 4.5°, and it removes any leftover net flux. <code>br_phot</code> is that reconstruction, the model's actual boundary condition, and <code>plot_surface.py</code> shows it. The sharp cut at degree 40 leaves faint rings around strong active regions (Gibbs ringing), and these are part of the model field near the surface. The viewer's Sun, and <code>plot_3d.py</code>, show the input map.</p>
+  <p><b>Two photospheric maps.</b> <code>br_input</code> is the archived map: the HMI rotation map averaged to 180 × 360, gaps set to zero and its mean removed, so the net flux is zero. The model never sees it at full detail. The browser expands it in spherical harmonics up to degree 80, with a Gaussian taper and without the monopole. That smooths it with a kernel of FWHM 3.8° and removes any leftover net flux (<a href="#smoothing">details</a>). <code>br_phot</code> is that smoothed map, the model's actual boundary condition, and <code>plot_surface.py</code> shows it. The viewer's Sun, and <code>plot_3d.py</code>, show the input map.</p>
   <p><b>Package versions.</b> The scripts were tested with the versions in <code>requirements-tested.txt</code>. A new release of NumPy, SciPy or Matplotlib can break them, so they check for that. If a script fails, it fetches the latest published scripts from this site, checks them against <code>download/manifest.json</code> (SHA-256), keeps the old copies as <code>.bak</code>, and runs again. Each month the scripts are run against the newest package releases; when they pass, those versions become the tested ones, and when they fail, an issue is opened so they get fixed. <code>python heliofield_update.py</code> updates by hand, and <code>HELIOFIELD_NO_UPDATE=1</code> turns the automatic update off.</p>
   <p>The download uses the model on screen. Choosing the other 3D model switches the view to it first. <code>compute_corona.py</code> is the browser solver rewritten in NumPy. Given only the surface maps, it computes the 3D field, PFSS or PFSS + SCS, and writes a file in the format of a 3D download for <code>plot_3d.py</code>. The test suite checks that it reproduces the browser's results to within 10<sup>−5</sup>. It also lets you change the model: another source-surface height (<code>--rss</code>), another outer edge (<code>--scs</code>) or another harmonic degree (<code>--lmax</code>).</p>
 <pre><code>pip install -r requirements.txt
@@ -335,7 +335,7 @@ addEventListener("message", (e) =&gt; {
   <ol>
     <li><b>PFSS inside.</b> The PFSS solution is used up to a cusp surface at R<sub>cp</sub> = 0.92 R<sub>ss</sub> (2.3 R<sub>☉</sub> for the default 2.5). The cusp surface sits below the source surface, where the PFSS field is not yet forced radial. This reduces the kink in field lines at the interface (McGregor et al. 2008). A line that reaches the cusp surface is open.</li>
     <li><b>Reorient.</b> On the cusp surface, take |B<sub>r</sub>|. The field now points outward everywhere, so there are no neutral lines to anchor closed loops.</li>
-    <li><b>Solve outward.</b> Expand |B<sub>r</sub>(R<sub>cp</sub>)| in spherical harmonics up to degree 40, including the monopole term. The potential field outside the sphere that vanishes at infinity is then
+    <li><b>Solve outward.</b> Expand |B<sub>r</sub>(R<sub>cp</sub>)| in spherical harmonics up to degree 80, with the same taper and including the monopole term. The potential field outside the sphere that vanishes at infinity is then
       <div class="eq"><i>B<sub>r</sub></i>(<i>r</i>, θ, φ) = Σ <i>a<sub>lm</sub></i> (R<sub>cp</sub> / <i>r</i>)<sup><i>l</i>+2</sup> <i>Y<sub>lm</sub></i>(θ, φ),</div>
       with the horizontal components from the same potential. The higher degrees fade quickly with distance, so the field tends to the monopole: radial, and even in latitude.</li>
     <li><b>Blend across the shell.</b> Between the cusp surface and the source surface, both solutions exist. Their field directions differ, because the SCS field starts spreading the open flux sideways right above the cusp surface while the PFSS field is still nearly radial. On the HMI maps of 2014 and 2020, the difference is a median of 15–22°, and a field line traced straight from one model into the other bends sharply there. HelioField removes the kink by blending across the shell. The PFSS field, turned to point outward, gives way smoothly to the SCS field, from all PFSS at the cusp surface to all SCS at the source surface. Lines then turn gradually over the shell; the direction jump at the cusp surface drops to a median of 0.2°. A blend of two solutions does not keep ∇·<b>B</b> exactly zero. On the test maps it changes the unsigned flux in the shell by at most 0.8%. Beyond the source surface the field is pure SCS again.</li>
@@ -397,14 +397,7 @@ addEventListener("message", (e) =&gt; {
   </ul>
   <p><b>Self-consistent connection.</b> The ballistic mapping needs a speed, and the footpoint gives one. Starting from the slider speed, HelioField maps each spacecraft to its footpoint, takes the estimated speed there, rounds it to the 25 km/s grid and maps again, until the speed repeats. Near a coronal-hole edge the footpoint can jump between two sources whose speeds point back at each other. The speed then cycles; HelioField keeps the cycle member whose own estimated speed is closest to it, and marks the row with a *. A different starting speed can settle on a different source, which is itself a measure of the uncertainty.</p>
   <p><b>Footpoint spread.</b> The connection is mapped again for every wind speed within 100 km/s of the one used, on source surfaces at 2.0, 2.5 and 3.0 R<sub>☉</sub>, giving up to 27 footpoints per spacecraft. Wind speed moves the source-surface point in longitude; the source-surface height changes which field is open and where. For past dates the extra surfaces cost little, because the browser solution only re-evaluates the same harmonic coefficients.</p>
-  <p><b>Server and browser agree.</b> On the GONG map of 2026-10-17, over 341 connections mapped by both (12 spacecraft × 29 speeds, source surface 2.5 R<sub>☉</sub>):</p>
-  <ul>
-    <li>Footpoints: median separation 1.1°, within 2° for 83%.</li>
-    <li>DCHB: median difference 0.23°, within 1° for 95%.</li>
-    <li>Estimated speed: median difference 4 km/s, within 50 km/s for 84% and within 100 km/s for 90%. The rest are footpoints that land in different coronal holes.</li>
-    <li>Expansion factor: the same median (browser/server ratio 0.86), but individual values differ by more than a factor of two for about half. <i>f</i><sub>s</sub> depends on the photospheric field at the footpoint, which the browser solution smooths by stopping at harmonic degree 40. Because the speed depends on (1 + <i>f</i><sub>s</sub>)<sup>2/9</sup>, a factor of two in <i>f</i><sub>s</sub> moves it by at most about 15%.</li>
-  </ul>
-  <p>The degree-40 field also opens slightly less of the photosphere (16% against 20%), because it lacks the smallest open regions.</p>
+  <p><b>Server and browser agree</b> on where the connections land: on the test maps, footpoints are within about 1° (median), DCHB within 0.3° and the estimated speed within a few km/s; see <a href="#validation">Validation</a>. The expansion factor differs more. <i>f</i><sub>s</sub> depends on the photospheric field at the footpoint, which the browser smooths (see <a href="#smoothing">smoothing</a>), so its <i>f</i><sub>s</sub> is about half the server's. Because the speed depends on (1 + <i>f</i><sub>s</sub>)<sup>2/9</sup>, a factor of two in <i>f</i><sub>s</sub> moves it by at most about 15%.</p>
 </section>
 
 <section id="coords">
@@ -422,14 +415,10 @@ addEventListener("message", (e) =&gt; {
     <li><b>One HMI map per Carrington rotation</b> since May 2010 (<code>hmi.Synoptic_Mr_small</code> from JSOC). Each is averaged to the same 180 × 360 grid as GONG, which comes to about 85 kB per rotation. The 2012 rotations exist at JSOC only at full resolution and are averaged down from those. The two paths give identical maps where both exist.</li>
     <li><b>Daily positions</b> of Earth, the planets and the spacecraft at 12:00 UTC, converted to the Carrington frame from HelioFleet's ephemerides. STEREO-B is shown until contact was lost on 1 October 2014.</li>
   </ul>
-  <p>For a chosen date the page takes the rotation whose time span contains noon of that day. It downloads that map and solves the field in a background thread. The same method is used as for daily products, with a spherical-harmonic solution up to degree 40 on a 36 × 90 × 180 grid. It then traces the same seed pattern of field lines, contours the neutral line and maps the spacecraft connections, with coronal holes on three source surfaces for the <a href="#sources">source diagnostics</a>. On a laptop this takes a few seconds. Moving to another day in the same rotation only re-traces the spacecraft connections.</p>
-  <p>Checked against the server pipeline on the same GONG map, the browser solution agrees closely:</p>
-  <ul>
-    <li>Source-surface field: correlation 0.9998, same sign over 99.8% of the surface.</li>
-    <li>Neutral line: within 0.6° everywhere.</li>
-    <li>Open flux: within 2%.</li>
-    <li>Spacecraft footpoints: within about 1°.</li>
-  </ul>
+  <p>For a chosen date the page takes the rotation whose time span contains noon of that day. It downloads that map and solves the field in a background thread. The same method is used as for daily products, with a spherical-harmonic solution up to degree 80, tapered (see <a href="#smoothing">below</a>), on a 36 × 90 × 180 grid. It then traces the same seed pattern of field lines, contours the neutral line and maps the spacecraft connections, with coronal holes on three source surfaces for the <a href="#sources">source diagnostics</a>. On a laptop this takes a few seconds. Moving to another day in the same rotation only re-traces the spacecraft connections.</p>
+  <h4 id="smoothing">Smoothing of the magnetogram</h4>
+  <p>The archived map is already balanced: the HMI rotation map is averaged to 180 × 360, gaps are set to zero, and the mean is removed, so the net flux is zero. The browser then expands it in spherical harmonics up to degree 80, without the monopole. Each degree <i>l</i> is weighted by a Gaussian taper, w<sub><i>l</i></sub> = exp[−<i>l</i>(<i>l</i>+1)/(2 × 42<sup>2</sup>)]. This is the same as smoothing the map with a Gaussian kernel of FWHM 3.8° before the solve. Cutting the series sharply instead, as the page did until October 2026 (at degree 40), leaves rings around strong active regions: the smoothing kernel then has side lobes of 13% of its peak, against 2.6% with the taper. Those rings were partly closing field that should be open. Without them, the model opens 14–32% more of the photosphere than sunkit-magex does on the full 1° map. The source-surface field, open flux, neutral line and spacecraft connections hardly change. The smoothed map is the one the solution uses; downloads include it as <code>br_phot</code>, next to the archived map, <code>br_input</code>.</p>
+  <p>Checked against the server pipeline, the browser solution agrees closely: source-surface field correlation 0.9998, neutral line within a fraction of a degree, open flux within 2%, and spacecraft footpoints within about 1°. The full comparison is under <a href="#validation">Validation</a>.</p>
   <p>The test suite repeats this on HMI rotation maps from three phases of the cycle; see <a href="#validation">Validation</a>.</p>
   <p>A rotation map is assembled over about 27 days, so a computed date shows the field <i>around</i> that date. A daily product shows the field as of that day.</p>
 </section>
@@ -441,7 +430,7 @@ addEventListener("message", (e) =&gt; {
     <li><b>Daily products</b> have their own footprints, made by the nightly job from the same magnetogram (<code>data/&lt;date&gt;/open.png</code>).</li>
     <li><b>Past dates</b>, and days without their own map, use the footprints of the HMI rotation map that covers the date (<code>data/history/open/NNNN.png</code>). The info panel says which one is shown.</li>
   </ul>
-  <p>For past dates the field lines are solved in your browser with spherical harmonics up to degree 40, while the footprints come from the full sunkit-magex solution of the same map. The two agree to within a cell or two at hole boundaries, so a drawn open line occasionally starts just outside a patch.</p>
+  <p>For past dates the field lines are solved in your browser from the smoothed map (spherical harmonics up to degree 80, tapered), while the footprints at the default height come from the full sunkit-magex solution of the same map. The two agree to within a cell or two at hole boundaries, so a drawn open line occasionally starts just outside a patch.</p>
 </section>
 
 <section id="series">
@@ -500,32 +489,32 @@ addEventListener("message", (e) =&gt; {
   <h3>Validation</h3>
   <p>The browser solver is tested independently of the page, from Python, by a test suite in the repository (<code>tests/</code>). The suite runs <code>js/pfss.js</code> itself under Node.js, so the code it checks is the code the page runs. Anyone can rerun it. It is not part of routine updates; it runs by hand or from the repository's <b>Validation</b> workflow.</p>
 <pre><code>pip install -r requirements.txt -r requirements-test.txt
-python -m pytest tests -v                 # everything, about two minutes
+python -m pytest tests -v                 # everything, two to three minutes
 python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code></pre>
   <p><b>Exact solutions.</b> The associated Legendre functions match SciPy to round-off. A dipole on the photosphere has a closed-form PFSS solution, and the solver reproduces it: the field within 2% everywhere between the photosphere and the source surface, traced field lines that keep the dipole's flux function constant to 1%, open flux within 1%, and a neutral line on the equator to 0.6°. The speed formula matches the Python pipeline's to round-off. The harmonic analysis of a single high-degree term leaks about 4% of its amplitude into other degrees, because the latitude integral uses the map's own uniform rows rather than Gauss–Legendre points. The test keeps that limit in view.</p>
   <p><b>Against sunkit-magex.</b> Three HMI rotation maps from the archive, one near the cycle-24 maximum (CR 2148, March 2014), one at the 2019–20 minimum (CR 2230, May 2020) and one in cycle 25 (CR 2300, July 2025), are solved by both codes at a source surface of 2.5 R<sub>☉</sub>. Four synthetic spacecraft at 0.3–1 au are connected at every speed from 200 to 900 km/s, 116 connections per map.</p>
   <table>
     <tr><th>Quantity</th><th>CR 2148</th><th>CR 2230</th><th>CR 2300</th></tr>
-    <tr><td>Source-surface B<sub>r</sub> correlation</td><td>0.99985</td><td>0.99999</td><td>0.99985</td></tr>
-    <tr><td>Same sign of B<sub>r</sub> (area)</td><td>99.6%</td><td>99.97%</td><td>99.9%</td></tr>
+    <tr><td>Source-surface B<sub>r</sub> correlation</td><td>0.99982</td><td>0.99999</td><td>0.99985</td></tr>
+    <tr><td>Same sign of B<sub>r</sub> (area)</td><td>99.6%</td><td>99.96%</td><td>99.9%</td></tr>
     <tr><td>Open flux, browser / server</td><td>0.98</td><td>0.99</td><td>0.99</td></tr>
-    <tr><td>Neutral line, median (95%) separation</td><td>0.17° (1.1°)</td><td>0.06° (0.13°)</td><td>0.20° (0.29°)</td></tr>
-    <tr><td>Open area, browser / server</td><td>2.3% / 2.8%</td><td>10.2% / 8.7%</td><td>6.6% / 7.4%</td></tr>
-    <tr><td>Open/closed map, cells that agree</td><td>97.3%</td><td>96.7%</td><td>96.0%</td></tr>
-    <tr><td>Footpoints, median separation</td><td>0.65°</td><td>1.2°</td><td>0.95°</td></tr>
-    <tr><td>Footpoints within 3°</td><td>99%</td><td>83%</td><td>98%</td></tr>
-    <tr><td>DCHB, median difference</td><td>0.24°</td><td>0.15°</td><td>0.28°</td></tr>
-    <tr><td>Estimated speed, median difference</td><td>3 km/s</td><td>1 km/s</td><td>2 km/s</td></tr>
-    <tr><td>Expansion factor, median browser / server</td><td>0.60</td><td>0.42</td><td>0.59</td></tr>
+    <tr><td>Neutral line, median (95%) separation</td><td>0.19° (1.3°)</td><td>0.07° (0.14°)</td><td>0.22° (0.32°)</td></tr>
+    <tr><td>Open area, browser / server</td><td>3.7% / 2.8%</td><td>10.5% / 8.7%</td><td>8.4% / 7.4%</td></tr>
+    <tr><td>Open/closed map, cells that agree</td><td>97.8%</td><td>97.0%</td><td>97.0%</td></tr>
+    <tr><td>Footpoints, median separation</td><td>0.62°</td><td>1.3°</td><td>0.63°</td></tr>
+    <tr><td>Footpoints within 3°</td><td>99%</td><td>84%</td><td>100%</td></tr>
+    <tr><td>DCHB, median difference</td><td>0.27°</td><td>0.17°</td><td>0.33°</td></tr>
+    <tr><td>Estimated speed, median difference</td><td>6 km/s</td><td>1 km/s</td><td>4 km/s</td></tr>
+    <tr><td>Expansion factor, median browser / server</td><td>0.53</td><td>0.44</td><td>0.53</td></tr>
   </table>
   <p>For the source-surface slider, the same two codes also solve CR 2148 and CR 2230 at 1.5, 2.0, 3.0 and 3.5 R<sub>☉</sub>. At every height the source-surface field correlates at 0.9998 or better, and the open flux agrees within 2.1%.</p>
   <p><b>The current-sheet model</b> (<code>tests/test_scs.py</code>) is checked in three ways.</p>
   <ul>
     <li><b>Dipole.</b> The SCS field of a dipole has a series solution, |cos θ| expanded in Legendre polynomials. The browser's field matches it within 2% from 2.6 to 21 R<sub>☉</sub>, and its current sheet lies on the equator at every height.</li>
-    <li><b>Against Python.</b> For CR 2148 and CR 2230, an independent SCS field is built in Python from the sunkit-magex PFSS field at the cusp surface. At 3 to 20 R<sub>☉</sub>, B<sub>r</sub> correlates at 0.9997 or better with a median difference of 1.4%.</li>
-    <li><b>Physical checks.</b> Beyond the source surface, the unsigned flux through spheres out to 21 R<sub>☉</sub> is constant within 0.1%. Inside the transition shell it differs by at most 0.8%. Across the cusp surface, the field direction changes by a median of 0.2°. |B<sub>r</sub>| r<sup>2</sup> at 21 R<sub>☉</sub> varies by less than 4% between latitude bands. At 3° either side of the traced current sheet, the polarities are opposite at 100% (2020) and 92% (2014) of the points; near maximum the sheet folds, and some points fall on another fold.</li>
+    <li><b>Against Python.</b> For CR 2148 and CR 2230, an independent SCS field is built in Python from the sunkit-magex PFSS field at the cusp surface. At 3 to 20 R<sub>☉</sub>, B<sub>r</sub> correlates at 0.9996 or better with a median difference under 1.7%.</li>
+    <li><b>Physical checks.</b> Beyond the source surface, the unsigned flux through spheres out to 21 R<sub>☉</sub> is constant within 0.1%. Inside the transition shell it differs by at most 0.8%. Across the cusp surface, the field direction changes by a median of 0.2°. |B<sub>r</sub>| r<sup>2</sup> at 21 R<sub>☉</sub> varies by less than 4% between latitude bands. At 3° either side of the traced current sheet, the polarities are opposite at 100% (2020) and 94% (2014) of the points; near maximum the sheet folds, and some points fall on another fold.</li>
   </ul>
-  <p>The field strength agrees to about 1% (median) everywhere above 1.1 R<sub>☉</sub>. At the photosphere the degree-40 expansion on a 2° grid misses small-scale field that the finite-difference solution keeps at the map's 1° resolution, so the browser's |<b>B</b>| there is 10–50% smaller in median. That one difference explains the rest. The expansion factor scales with the photospheric field, so it is about half the server's. Open area depends on the smallest open regions, so it differs by up to 20%. The speed depends on (1 + <i>f</i><sub>s</sub>)<sup>2/9</sup>, so it barely moves. The values come from the version of each code that the tests ran. Each run writes them to <code>cache/validation/</code>, and the tests fail if they leave these ranges.</p>
+  <p>The field strength agrees to about 1% (median) everywhere above 1.1 R<sub>☉</sub>. At the photosphere the browser's field is <a href="#smoothing">smoothed</a> (FWHM 3.8°, on a 2° grid), while the finite-difference solution keeps the map's 1° resolution, so the browser's |<b>B</b>| there is 30–60% smaller in median. That one difference explains the rest. The expansion factor scales with the photospheric field, so it is about half the server's. Open area depends on the smallest closed regions, so the browser opens 14–32% more. The speed depends on (1 + <i>f</i><sub>s</sub>)<sup>2/9</sup>, so it barely moves. The values come from the version of each code that the tests ran. Each run writes them to <code>cache/validation/</code>, and the tests fail if they leave these ranges.</p>
 </section>
 
 <section id="limits">
@@ -540,7 +529,7 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
     <li><b>The HMI fallback lags.</b> The HMI frame is typically several hours old when it is published.</li>
     <li><b>Source diagnostics are indicative.</b> The speed formula's coefficients are illustrative, the wind is assumed to travel at constant speed from the source surface, and the expansion factor depends on the magnetogram and the model's resolution. Footpoints near a coronal-hole edge, where slow wind comes from, are the most sensitive to all of this.</li>
     <li><b>Footprints are the model's coronal holes.</b> They follow the open field of PFSS and are not compared with EUV images; the model typically opens a smaller area than the dark regions seen in EUV.</li>
-    <li><b>Past dates use rotation maps.</b> They show the field averaged over the rotation, not that day's map, and the browser solution is truncated at harmonic degree 40.</li>
+    <li><b>Past dates use rotation maps.</b> They show the field averaged over the rotation, not that day's map, and the browser solution smooths the map to a resolution of about 4° (FWHM 3.8°).</li>
   </ul>
 </section>
 

@@ -71,17 +71,20 @@ def test_files_read_and_described(exports, kind):
 
 
 def test_model_boundary_is_the_smoothed_map(exports):
-    """br_phot is what the model uses: the input map expanded to degree 40
-    without the monopole, smoother than br_input and with zero net flux."""
+    """br_phot is what the model uses: the input map expanded in harmonics with
+    a Gaussian taper and without the monopole. It is smoother than br_input,
+    keeps its large-scale pattern and has zero net flux."""
     from heliofield_io import load
     res = load(f"{exports['surface']}.nc")
     raw, model = res["br_input"], res["br_phot"]
     assert abs(raw.mean()) < 1e-3 and abs(model.mean()) < 0.02 * np.abs(model).mean()
     assert model.std() < 0.7 * raw.std()
-    # A projection: what was removed (the scales above degree 40) is
-    # uncorrelated with what was kept.
-    assert abs(np.corrcoef(model.ravel(), (raw - model).ravel())[0, 1]) < 0.1
-    assert "degree 40" in res.var_attrs["br_phot"]["preprocessing"]
+    assert np.corrcoef(raw.ravel(), model.ravel())[0, 1] > 0.5
+    # Smooth: neighbouring cells differ far less than in the input map.
+    rough = lambda a: np.abs(np.diff(a, axis=1)).mean() / np.abs(a).mean()
+    assert rough(model) < 0.3 * rough(raw)
+    assert "Gaussian taper" in res.var_attrs["br_phot"]["preprocessing"]
+    assert float(res.attrs["taper_l0"]) == 42 and int(float(res.attrs["lmax"])) == 80
 
 
 @pytest.mark.parametrize("kind", ["surface", "pfss", "scs"])

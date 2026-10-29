@@ -59,6 +59,23 @@ export function analyse(br, ny, nx, L, { mono = false } = {}) {
   return { C, S, L, lmin: mono ? 0 : 1 };
 }
 
+// The series runs to degree LMAX with a Gaussian taper,
+// w_l = exp(-l(l+1) / (2 l0^2)): the same as smoothing the map with a
+// Gaussian kernel (FWHM 3.8 deg at l0 = 42) before the expansion.
+// Cutting the series sharply instead rings around strong active regions
+// (side lobes of 13% of the peak); this taper keeps them at 2.6%. l0 = 0
+// leaves the series untouched.
+export const LMAX = 80, TAPER_L0 = 42;
+export function taper(coef, l0 = TAPER_L0) {
+  if (!l0) return { ...coef, taper: 0 };
+  const W = coef.L + 1, C = Float64Array.from(coef.C), S = Float64Array.from(coef.S);
+  for (let l = 0; l <= coef.L; l++) {
+    const w = Math.exp(-l * (l + 1) / (2 * l0 * l0));
+    for (let m = 0; m <= l; m++) { C[l * W + m] *= w; S[l * W + m] *= w; }
+  }
+  return { ...coef, C, S, taper: l0 };
+}
+
 // Radial factors, scaled by rss^-(2l+1) so nothing overflows.
 // f: B_r(r) / B_r(1) for degree l; g: the potential factor for B_theta, B_phi.
 function radial(l, r, rss) {
@@ -438,7 +455,7 @@ export const cusp = (rss) => +(CUSP_FRAC * rss).toFixed(3);
 // guide). The shell has its own finer grid, sampled below rss.
 export function scsGrid(coef, rss, rcp, rout, { nr = 40, nrShell = 14, blend = true, progress } = {}) {
   const ny = 180, nx = 360, abs = surfaceBr(coef, rcp, rss, ny, nx, true).map(Math.abs);
-  const a = analyse(abs, ny, nx, coef.L, { mono: true });
+  const a = taper(analyse(abs, ny, nx, coef.L, { mono: true }), coef.taper ?? 0);
   const ext = exterior(rcp);
   if (!blend || rss <= rcp) {
     const S = fieldGrid(a, { r0: rcp, r1: rout, radialFn: ext, nr, progress });
@@ -536,10 +553,10 @@ function continueScs(S, pts) {
 // Returns the solved models too ([main, ...spread]) for connectOnly, and the
 // harmonic coefficients, which a re-solve of the same map at another source
 // surface can pass back in as `coef` to skip the expansion.
-export function solve(br, ny, nx, { rss = 2.5, rout = 0, L = 40, vsw = [300, 400, 500, 600, 700, 800], fleet = {}, coef = null, progress = () => {} } = {}) {
+export function solve(br, ny, nx, { rss = 2.5, rout = 0, L = LMAX, taperL0 = TAPER_L0, vsw = [300, 400, 500, 600, 700, 800], fleet = {}, coef = null, progress = () => {} } = {}) {
   const t0 = Date.now();
   progress("harmonics", 0);
-  coef ??= analyse(br, ny, nx, L);
+  coef ??= taper(analyse(br, ny, nx, L), taperL0);
   progress("field", 0.05);
   const G = fieldGrid(coef, { rss, progress: (f) => progress("field", 0.05 + (rout ? 0.15 : 0.3) * f) });
   const rcp = rout ? cusp(rss) : 0, rIn = rcp || rss;
@@ -597,8 +614,8 @@ export function solve(br, ny, nx, { rss = 2.5, rout = 0, L = 40, vsw = [300, 400
     polys: polys.concat(conn),
     meta: {
       model: rout
-        ? { name: "PFSS + SCS", code: "HelioField in-browser solver", rss, rcp, rout, lmax: L }
-        : { name: "PFSS", code: "HelioField in-browser solver", rss, lmax: L },
+        ? { name: "PFSS + SCS", code: "HelioField in-browser solver", rss, rcp, rout, lmax: coef.L, taper_l0: coef.taper ?? 0 }
+        : { name: "PFSS", code: "HelioField in-browser solver", rss, lmax: coef.L, taper_l0: coef.taper ?? 0 },
       br_scale: 20, ss_scale: +ssScale.toFixed(4), open_flux_Mx: +flux.toExponential(4),
       lines: { count: polys.length, kind }, counts: polys.concat(conn).map((p) => p.length),
       hcs, ...(sheet ? { hcs_out: sheet.out, hcs_ribs: sheet.ribs } : {}),

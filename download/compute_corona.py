@@ -4,10 +4,11 @@
 This is the browser solver of HelioField (js/pfss.js) in NumPy, so it gives
 the same results as the web page:
 
-  PFSS   potential field between the photosphere (the downloaded B_r map)
-         and a spherical source surface R_ss: spherical harmonics up to
-         degree lmax (40), evaluated on a grid uniform in ln r, theta, phi
-         (36 x 90 x 180) and traced by RK4.
+  PFSS   potential field between the photosphere (the downloaded input map
+         br_input) and a spherical source surface R_ss: spherical harmonics
+         up to degree lmax (80) with a Gaussian taper (l0 = 42, a smoothing
+         of FWHM 3.8 deg that avoids ringing), evaluated on a grid uniform in
+         ln r, theta, phi (36 x 90 x 180) and traced by RK4.
   SCS    with --scs ROUT, the Schatten current-sheet model beyond a cusp
          surface R_cp = 0.92 R_ss, out to ROUT: the potential field of
          |B_r(R_cp)| outside the sphere, blended from the outward-turned PFSS
@@ -47,14 +48,27 @@ AU_RS = 149597870.7 / RSUN_KM
 OMEGA = TAU / (25.38 * 86400)
 VGRID = [200 + 25 * i for i in range(29)]
 CUSP_FRAC = 0.92
+LMAX, TAPER_L0 = 80, 42          # the browser's defaults (js/pfss.js)
 FORMAT = "heliofield-export-2"
 PREP_INPUT = ("SDO/HMI Carrington-rotation synoptic map (hmi.Synoptic_Mr_small, or hmi.Synoptic_Mr averaged), averaged in blocks "
               "to 180 x 360 (rows uniform in sine latitude), missing pixels set to 0, mean removed so the net flux is zero")
 
 
-def prep_model(L):
-    return (f"br_input expanded in spherical harmonics up to degree {L} with the monopole (l = 0) removed: a low-pass filter "
-            f"(resolution about {180 / L:.1f} degrees) that also guarantees zero net flux. This is the boundary condition of the PFSS solution.")
+def fwhm_deg(L, l0):
+    """Width of the smoothing kernel that the series and its taper amount to."""
+    from scipy.special import eval_legendre
+    g = np.radians(np.linspace(0, 40, 4001))
+    l = np.arange(L + 1)
+    w = np.exp(-l * (l + 1) / (2 * l0 * l0)) if l0 else np.ones(L + 1)
+    K = np.einsum("l,lg->g", (2 * l + 1) * w, np.array([eval_legendre(k, np.cos(g)) for k in l]))
+    return 2 * np.degrees(g[np.argmax(K < K[0] / 2)])
+
+
+def prep_model(L, l0):
+    taper_txt = f" with a Gaussian taper exp(-l(l+1)/(2*{l0}^2))" if l0 else ""
+    return (f"br_input expanded in spherical harmonics up to degree {L}{taper_txt} and the monopole (l = 0) removed: "
+            f"a smoothing with a kernel of FWHM {fwhm_deg(L, l0):.1f} degrees that also guarantees zero net flux. "
+            "This is the boundary condition of the PFSS solution.")
 
 
 def input_map(src):
@@ -103,6 +117,17 @@ def analyse(br, L, mono=False):
     if not mono:
         C[0], S[0] = 0, 0
     return dict(C=C, S=S, L=L, lmin=0 if mono else 1)
+
+
+def taper(coef, l0=TAPER_L0):
+    """Gaussian taper w_l = exp(-l(l+1) / (2 l0^2)) of the coefficients: the
+    same as smoothing the map with a Gaussian kernel. Without it the sharp
+    end of the series rings around strong active regions. l0 = 0: no taper."""
+    if not l0:
+        return dict(coef, taper=0)
+    l = np.arange(coef["L"] + 1)
+    w = np.exp(-l * (l + 1) / (2 * l0 * l0))[:, None]
+    return dict(coef, C=coef["C"] * w, S=coef["S"] * w, taper=l0)
 
 
 def pfss_radial(rss):
@@ -417,7 +442,7 @@ def wsa_speed(fs, dchb):
 # ------------------------------------------------------------- SCS
 def scs_grid(coef, rss, rcp, rout, nr=40, nr_shell=14):
     absb = np.abs(surface_br(coef, rcp, rss, 180, 360, sinlat=True))
-    a = analyse(absb, coef["L"], mono=True)
+    a = taper(analyse(absb, coef["L"], mono=True), coef.get("taper", 0))
     S = field_grid(a, rss, rout, exterior(rcp), nr=nr)
     sh = field_grid(a, rcp, rss, exterior(rcp), nr=nr_shell)
     P = field_grid(coef, rcp, rss, pfss_radial(rss), nr=nr_shell)
@@ -438,9 +463,9 @@ def cusp_sign(G, p):
 
 
 # ------------------------------------------------------------- solve
-def solve(br, rss=2.5, rout=0.0, L=40, fleet=None, v_draw=400.0, log=print):
+def solve(br, rss=2.5, rout=0.0, L=LMAX, taper_l0=TAPER_L0, fleet=None, v_draw=400.0, log=print):
     t0 = time.time()
-    coef = analyse(br, L)
+    coef = taper(analyse(br, L), taper_l0)
     G = field_grid(coef, 1.0, rss, pfss_radial(rss))
     rcp = round(CUSP_FRAC * rss, 3) if rout else None
     r_in = rcp or rss
@@ -483,7 +508,7 @@ def solve(br, rss=2.5, rout=0.0, L=40, fleet=None, v_draw=400.0, log=print):
     log(f"open/closed map ({time.time() - t0:.1f} s)")
 
     res = dict(coef=coef, G=G, S=S, rss=rss, rcp=rcp, rout=rout or None, r_in=r_in, lines=lines, kinds=np.array(kinds, np.int8),
-               flux=flux, nl=nl, pol=pol, L=L)
+               flux=flux, nl=nl, pol=pol, L=L, taper=taper_l0)
     if S is not None:
         res["ribs"], res["hcs_out"] = hcs_ribs(S, nl, rcp, rout)
         lat_g = 90 - (np.arange(S["nth"]) + 0.5) * 180 / S["nth"]
@@ -596,7 +621,7 @@ def write(out, src, sol, args, view):
     var("br_input", ("lat", "lon"), input_map(src), units="G", long_name="Input map: the archived magnetogram before the harmonic expansion",
         preprocessing=PREP_INPUT)
     var("br_phot", ("lat", "lon"), surface_br(sol["coef"], 1.0, sol["rss"], *src["br_phot"].shape, sinlat=True), units="G",
-        long_name="Photospheric radial field as used by the model (its boundary condition)", preprocessing=prep_model(sol["L"]))
+        long_name="Photospheric radial field as used by the model (its boundary condition)", preprocessing=prep_model(sol["L"], sol["taper"]))
     var("br_ss", ("lat", "lon"), surface_br(sol["coef"], sol["rss"], sol["rss"], *src["br_phot"].shape, sinlat=True), units="G",
         long_name="PFSS radial field on the source surface", radius_rsun=sol["rss"])
     if scs:
@@ -688,8 +713,8 @@ def write(out, src, sol, args, view):
     attrs = dict(title=a.get("title"), format=FORMAT, product="scs" if scs else "pfss", source=a.get("source"), source_file=a.get("source_file"),
                  source_url=a.get("source_url"), date=a.get("date"), obstime=a.get("obstime"), carrington_rotation=a.get("carrington_rotation"),
                  L0_deg=a.get("L0_deg"), B0_deg=a.get("B0_deg"), model=model, rss_rsun=sol["rss"], rcp_rsun=sol["rcp"], rout_rsun=sol["rout"],
-                 lmax=sol["L"], saved_date=a.get("saved_date"), computed_date=today(),
-                 preprocessing=f"{PREP_INPUT}. {prep_model(sol['L'])}", frame=a.get("frame"), length_unit=a.get("length_unit"), open_flux_Mx=sol["flux"],
+                 lmax=sol["L"], taper_l0=sol["taper"], saved_date=a.get("saved_date"), computed_date=today(),
+                 preprocessing=f"{PREP_INPUT}. {prep_model(sol['L'], sol['taper'])}", frame=a.get("frame"), length_unit=a.get("length_unit"), open_flux_Mx=sol["flux"],
                  software="HelioField compute_corona.py (NumPy port of js/pfss.js)", references=a.get("references"),
                  history=f"Computed {datetime.now(timezone.utc).isoformat(timespec='seconds')} from {Path(args.file).name}")
     for k, x in attrs.items():
@@ -700,7 +725,7 @@ def write(out, src, sol, args, view):
     header = dict(format=FORMAT, product=attrs["product"], title=attrs["title"], created=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                   software=attrs["software"], citation=src.header.get("citation"), date=a.get("date"), obstime=a.get("obstime"),
                   saved_date=a.get("saved_date"), computed_date=today(),
-                  preprocessing=dict(br_input=PREP_INPUT, br_phot=prep_model(sol["L"])),
+                  preprocessing=dict(br_input=PREP_INPUT, br_phot=prep_model(sol["L"], sol["taper"])),
                   source=src.header.get("source"),
                   model=dict(name="PFSS + SCS" if scs else "PFSS", rss_rsun=sol["rss"], rcp_rsun=sol["rcp"], rout_rsun=sol["rout"], lmax=sol["L"],
                              grid=dict(pfss=[G["nr"], G["nth"], G["nph"]], scs=[len(r_scs), G["nth"], G["nph"]] if scs else None),
@@ -717,7 +742,9 @@ def main(argv=None):
     ap.add_argument("--rss", type=float, help="source-surface radius [R_sun] (default: that of the file)")
     ap.add_argument("--scs", type=float, default=None, help="couple the SCS model out to this radius [R_sun], e.g. 21.5 (default: as in the file)")
     ap.add_argument("--pfss", action="store_true", help="PFSS only, even if the file used SCS")
-    ap.add_argument("--lmax", type=int, default=40, help="highest harmonic degree (default 40, as in the browser)")
+    ap.add_argument("--lmax", type=int, default=LMAX, help=f"highest harmonic degree (default {LMAX}, as in the browser)")
+    ap.add_argument("--taper", type=float, default=TAPER_L0,
+                    help=f"Gaussian taper scale l0 of the harmonic series (default {TAPER_L0}, as in the browser; 0 for a sharp cut)")
     ap.add_argument("--v", type=float, help="wind speed of the connection lines drawn [km/s] (default: that of the saved view)")
     ap.add_argument("--out", help="output name without extension (default: <file>_<model>)")
     a = ap.parse_args(argv)
@@ -733,7 +760,7 @@ def main(argv=None):
     fleet = {k: dict(lon=float(src["body_lon"][i]), lat=float(src["body_lat"][i]), r=float(src["body_r"][i]), planet=bool(src["body_planet"][i]))
              for i, k in enumerate(keys)}
     print(f"{attrs.get('date', '')}: {'PFSS + SCS to ' + format(rout, 'g') if rout else 'PFSS'}, R_ss {rss:g}, lmax {a.lmax}")
-    sol = solve(input_map(src), rss=rss, rout=rout, L=a.lmax, fleet=fleet, v_draw=v)
+    sol = solve(input_map(src), rss=rss, rout=rout, L=a.lmax, taper_l0=a.taper, fleet=fleet, v_draw=v)
     # heliofield_model-<model date>_computed-<today>_<model>, next to the input file
     out = a.out or str(Path(a.file).with_name(f"heliofield_model-{attrs.get('date', 'unknown')}_computed-{today()}_{'scs' if rout else 'pfss'}"))
     write(out, src, sol, a, view)
