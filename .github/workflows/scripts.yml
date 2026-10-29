@@ -19,6 +19,7 @@ on:
 permissions:
   contents: write
   issues: write
+  pages: write
 
 jobs:
   latest:
@@ -46,6 +47,7 @@ jobs:
         run: python -m pytest tests/test_export.py -v -rA -p no:cacheprovider 2>&1 | tee pytest.log; exit ${PIPESTATUS[0]}
 
       - name: Record the versions as tested
+        id: record
         if: success()
         run: |
           python - <<'EOF'
@@ -63,6 +65,17 @@ jobs:
           if git diff --cached --quiet; then echo "versions unchanged"; exit 0; fi
           git commit -m "Download scripts pass with $(grep -h '==' download/requirements-tested.txt | tr '\n' ' ')"
           git push
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      # A push made with the workflow's token does not start a Pages build,
+      # and users' scripts read the manifest from the published site.
+      - name: Publish the new manifest
+        if: steps.record.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST "repos/${{ github.repository }}/pages/builds" --silent \
+            || echo "::warning::Could not request a Pages build; it will publish on the next push."
 
       - name: Report a failure
         if: failure() && steps.tests.outcome == 'failure'
