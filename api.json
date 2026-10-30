@@ -1,7 +1,7 @@
 {
  "name": "HelioField",
  "description": "3D coronal magnetic field (PFSS, optional Schatten current sheet), heliospheric current sheet and spacecraft magnetic connectivity for any date since 2010-05-01. Every view is a URL; images can also be made without a browser with the Python scripts.",
- "version": "1.2.0",
+ "version": "1.2.1",
  "documentation": "https://sr-dash.github.io/heliofield/guide.html",
  "llms_txt": "https://sr-dash.github.io/heliofield/llms.txt",
  "license": "MIT",
