@@ -584,11 +584,15 @@ def connect(res, fleet, bound, v_draw):
     jobs = [(k, v) for k, b in fleet.items() if not b["planet"] and np.isfinite(b["lon"]) for v in VGRID]
     if not jobs:
         return [], []
-    lon = np.array([(fleet[k]["lon"] + np.degrees(OMEGA * (fleet[k]["r"] * AU_RS - r_edge) * RSUN_KM / v)) % 360 for k, v in jobs])
+    # A spacecraft inside the SCS domain needs no spiral: its line starts where it is.
+    r_sc = np.array([fleet[k]["r"] * AU_RS for k, _ in jobs])
+    inside = (S is not None) & (r_sc < r_edge) & (r_sc > (rcp or 0) * 1.01)
+    lon = np.array([(fleet[k]["lon"] + (0 if ins else np.degrees(OMEGA * (r - r_edge) * RSUN_KM / v))) % 360
+                    for (k, v), r, ins in zip(jobs, r_sc, inside)])
     lat = np.array([np.clip(fleet[k]["lat"], -89, 89) for k, _ in jobs])
     pts_all, ok, top, r_top = [], [], cart(rss, lon, lat), np.full(len(jobs), rss)
     if S is not None:
-        sl, se = trace_dir(S, cart(r_edge * 0.995, lon, lat), -1, 6000)
+        sl, se = trace_dir(S, cart(np.where(inside, r_sc, r_edge * 0.995), lon, lat), -1, 6000)
         cusp = np.array([l[-1] for l in sl])
         down, de = trace(G, cusp * (rcp * 0.995) / np.linalg.norm(cusp, axis=1, keepdims=True))
         for j in range(len(jobs)):

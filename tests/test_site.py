@@ -98,3 +98,15 @@ def test_compute_by_date(tmp_path):
     for f in ("run.nc", "run_3d.png", "run_3d.pdf", "run_surface.png", "run_surface.pdf"):
         assert (tmp_path / f).stat().st_size > 10_000, f
     assert json.loads((tmp_path / "run_header.json").read_text())["date"] == "2014-03-12"
+
+
+def test_connectivity_parameters_match_the_code():
+    code = (ROOT / "js" / "connect.js").read_text()
+    names = set(re.findall(r'params\.get\("([a-z]+)"\)', code))
+    api = {p["name"] for p in API["connectivity"]["parameters"]}
+    assert api == names | {"theme"}
+    for n in names:
+        assert re.search(rf"`{n}(=[^`]*)?`", LLMS), n
+    assert 'href="connect.html"' in INDEX and "connect.html" in GUIDE
+    head = (ROOT / "connect.html").read_text().split("</head>")[0]
+    assert "llms.txt" in head and "api.json" in head

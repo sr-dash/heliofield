@@ -101,6 +101,7 @@
   <a href="#series">Solar-cycle series</a>
   <a href="#connectivity">Spacecraft connectivity</a>
   <a href="#sources">Solar-wind sources</a>
+  <a href="#connect">Connectivity page</a>
   <a href="#coords">Coordinates and scale</a>
   <a href="#colours">Colours and accessibility</a>
   <a href="#validation">Validation</a>
@@ -425,6 +426,21 @@ python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet</code>
   <p><b>Server and browser agree</b> on where the connections land: on the test maps, footpoints are within about 1° (median), DCHB within 0.3° and the estimated speed within a few km/s; see <a href="#validation">Validation</a>. The expansion factor differs more. <i>f</i><sub>s</sub> depends on the photospheric field at the footpoint, which the browser smooths (see <a href="#smoothing">smoothing</a>), so its <i>f</i><sub>s</sub> is about half the server's. Because the speed depends on (1 + <i>f</i><sub>s</sub>)<sup>2/9</sup>, a factor of two in <i>f</i><sub>s</sub> moves it by at most about 15%.</p>
 </section>
 
+<section id="connect">
+  <h3>Connectivity page</h3>
+  <p>The <a href="connect.html">connectivity page</a> follows the in-situ spacecraft (Parker Solar Probe, Solar Orbiter, BepiColombo, STEREO-A and Earth with the L1 monitors) back to their sources for one date. It combines this model with <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>'s catalogue of observations and its instrument fields. The field is the HMI rotation map covering the date, solved in the browser with PFSS or PFSS + Schatten current sheet at the chosen source-surface height, as in the viewer. Positions are HelioField's daily positions at 12:00 UTC.</p>
+  <ul>
+    <li><b>Connection.</b> Each spacecraft is joined to the model's outer boundary (the source surface, or the outer edge of the current-sheet model) along a ballistic Parker spiral at the chosen speed, or at its footpoint's own WSA-type speed (self-consistent). It then follows a field line down to the photosphere, as described under <a href="#connectivity">spacecraft connectivity</a> and <a href="#sources">solar-wind sources</a>.</li>
+    <li><b>Source time.</b> Plasma reaching a spacecraft at distance <i>r</i> left the outer boundary a travel time (<i>r</i> − <i>R</i><sub>edge</sub>) / <i>v</i> earlier: about 4 days for 1 au at 400 km/s, hours for Parker Solar Probe near perihelion. The page gives this <b>source time</b> for each spacecraft.</li>
+    <li><b>Inside the current-sheet model.</b> With SCS out to 21.5 R<sub>☉</sub>, Parker Solar Probe near perihelion is inside the model. It is then traced along the model field from its own position, with no Parker spiral, and its travel time is counted from the cusp surface. The 3D viewer and the download scripts do the same.</li>
+    <li><b>Polarity.</b> The predicted interplanetary field polarity is the sign of the model field where the spiral meets the outer boundary. For PFSS this is B<sub>r</sub> just inside the source surface; with SCS, the sign carried along the current-sheet model's field. <b>Agreement</b> is the share of the footpoint spread (speeds ±100 km/s, source surfaces ±0.5 R<sub>☉</sub>) whose photospheric field has the same sign. A low agreement, or a small angle to the current sheet, means a sector boundary is near and the prediction is uncertain.</li>
+    <li><b>Polarity over a rotation.</b> The same prediction day by day for 13 days either side, at the chosen speed and with this rotation's field, gives the expected sector structure.</li>
+    <li><b>Observations of the source region.</b> HelioFleet's footprints of IRIS, Hinode/EIS, DKIST and Solar Orbiter (EUI-HRI, PHI-HRT, SPICE) are searched over the <b>source-time window</b>. That is the range of source times for speeds ±100 km/s around the one used, widened by 6 hours. For each observation, the footpoint and its spread are projected into the observation's view (Earth's, or Solar Orbiter's from its recorded position) at the observation's time. The observation is listed when its field contains the footpoint or lies within 5° of the spread. The projections follow SunPy's conventions and match SunPy to 0.0001″ (<code>tests/test_connect.py</code>).</li>
+    <li><b>Coronagraph fields.</b> The model's open field and current sheet are projected onto the plane of the sky of each coronagraph or heliospheric imager whose spacecraft has a position on the date. Plane-of-sky radii are used for coronagraphs and elongation for wide-field imagers. Beyond the model's outer boundary, the current sheet and the open field are carried out as Parker spirals at the chosen speed. Structures are drawn brighter near the plane of the sky, where Thomson scattering makes them most visible. The fields of view (inner and outer limits, and the side for half-field imagers) are HelioFleet's.</li>
+  </ul>
+  <p><b>Limits.</b> The model is static over the rotation and current-free outside the sheets. The ballistic mapping ignores acceleration, stream interactions and coronal mass ejections, so a footpoint can be off by 10° or more; the spread shows how much. The search finds only observations in HelioFleet's catalogue, and the footprints carry the pointing recorded with each observation. Dates newer than the latest HMI rotation map use the nearest map, as the page says.</p>
+</section>
+
 <section id="coords">
   <h3>Coordinates and scale</h3>
   <p>The whole scene is in the Carrington frame. It is fixed to the rotating Sun, with <i>z</i> along the solar rotation axis and <i>x</i> at Carrington longitude 0. The field therefore stays still from day to day, and the planets and spacecraft move around it. Earth's position in this frame is given by L<sub>0</sub> and B<sub>0</sub>, its heliographic longitude and latitude.</p>
@@ -637,7 +653,7 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
 </main>
 
 </div>
-<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="series.html">Solar-cycle series</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
+<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="series.html">Solar-cycle series</a> · <a href="connect.html">Connectivity</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
   <a href="https://github.com/sr-dash/heliofield/issues/new/choose">Report a problem or suggest a feature</a> ·
   Companion to <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a> · Made by <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> ·
   <a href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">MIT licence</a> · DOI <a href="https://doi.org/10.5281/zenodo.23487231">10.5281/zenodo.23487231</a></footer>

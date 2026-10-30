@@ -106,6 +106,18 @@ runs again. The monthly **Scripts vs new packages** workflow runs the download
 tests against the newest NumPy, SciPy, Matplotlib and xarray. If they pass, it
 records those versions as tested; if not, it opens an issue.
 
+## Connectivity page
+
+[`connect.html`](https://sr-dash.github.io/heliofield/connect.html) brings HelioField's connectivity together with [HelioFleet](https://sr-dash.github.io/heliofleet/)'s observation catalogue and instrument fields. For one date it shows each in-situ spacecraft's:
+- footpoint, travel time and **source time**;
+- f<sub>s</sub>, DCHB and WSA-type speed;
+- **predicted IMF polarity**, with the spread's agreement and the angle to the current sheet;
+- polarity day by day over a rotation.
+
+The page also lists the HelioFleet observations (IRIS, Hinode/EIS, DKIST, Solar Orbiter) of each source region during its source-time window, and draws the model current sheet in each coronagraph's field of view.
+
+It runs in its own worker (`js/connect-worker.js`) with the same solver, and its geometry (`js/connect-geo.js`) is checked against SunPy in `tests/test_connect.py`. Parameters: `date`, `scs`, `rss`, `v`, `conn`, `focus`, `ins`, `bg`.
+
 ## Scripts and automated agents
 
 Every view is a URL (`date`, `view`, `layers`, `rss`, `scs`, …). With `--date`,

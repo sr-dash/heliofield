@@ -1,7 +1,7 @@
 {
- "version": "c8085dc4c813",
+ "version": "1943f9ffcf20",
  "files": {
-  "compute_corona.py": "d90e721a3f16849d66cde7d12d8906705eb63d1181d8a83f76c34695e8e2bdea",
+  "compute_corona.py": "a75612457ba8858fa02a528471a470818657f2932fcebaf112e836248438ca62",
   "heliofield_io.py": "1f1f0c9d745ccc205eb2dbe4d5e9d26bd6212fbbe42fdd59140e18ee3ad7f1cd",
   "heliofield_update.py": "3d0c2e0016311c57e03bc2124b3cccf3b18bc5fbe0266e79e77644c82b93a074",
   "plot_3d.py": "d49fbb3501984ea34da6d842feb5a0d1df966103af5779ef13ba5fdb337dbffa",

@@ -6,7 +6,7 @@
 //       "pfss"    (+ the 3D PFSS field, field lines, connection lines),
 //       "scs"     (+ the 3D Schatten current-sheet field, the traced sheet
 //                  and the polarity at the outer edge).
-import { surfaceBr, scsPolarity } from "./pfss.js?v=a3f2dfa4d7";
+import { surfaceBr, scsPolarity } from "./pfss.js?v=1e0df6a8d5";
 import { writeNetCDF } from "./netcdf.js?v=b9a0a32cc2";
 
 export const FORMAT = "heliofield-export-2";

@@ -2,9 +2,9 @@
 // date inside the same rotation only re-traces spacecraft connectivity, and
 // its map and harmonic coefficients so another source-surface height only
 // re-solves the field. The same holds for switching the SCS model on or off.
-import { solve, connectOnly } from "./pfss.js?v=a3f2dfa4d7";
-import { buildExport, bundleName, readme, SCRIPTS } from "./export.js?v=6313e16f2f";
-import { mapsPreview } from "./preview.js?v=994127d983";
+import { solve, connectOnly } from "./pfss.js?v=1e0df6a8d5";
+import { buildExport, bundleName, readme, SCRIPTS } from "./export.js?v=c0f986b5c2";
+import { mapsPreview } from "./preview.js?v=70e2ead2a2";
 
 let last = null;   // { key, rss, rout, br, coef, models }
 

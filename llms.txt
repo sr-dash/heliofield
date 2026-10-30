@@ -48,6 +48,32 @@ Options:
 - Lower source surface (2.0 R_sun), past date: https://sr-dash.github.io/heliofield/?date=2014-03-12&rss=2&view=earth
 - Clean embed for another page: https://sr-dash.github.io/heliofield/?date=latest&view=earth&embed=1&controls=0&theme=light
 
+## Connectivity page
+
+`https://sr-dash.github.io/heliofield/connect.html?date=YYYY-MM-DD` covers the in-situ spacecraft (Parker Solar Probe, Solar Orbiter, BepiColombo, STEREO-A, Earth/L1). It shows, for each:
+- its magnetic footpoint (ballistic Parker spiral, then PFSS or PFSS + SCS field line);
+- the travel time and the **source time** (when the plasma it measures left the Sun);
+- f_s, DCHB and the WSA-type speed;
+- the **predicted IMF polarity** (outward or inward), with the share of the footpoint spread that agrees and the angle to the current sheet;
+- the predicted polarity day by day over a rotation (sector structure);
+- the HelioFleet observations (IRIS, Hinode/EIS, DKIST, Solar Orbiter EUI-HRI, PHI-HRT, SPICE) whose field contains or lies within 5° of the footpoint during the source-time window, with data links;
+- the model current sheet in coronagraph fields (LASCO, COR1/COR2, Metis, WISPR, SoloHI, VELC, CCOR, ASPIICS, PUNCH NFI).
+
+Parameters:
+- `date`;
+- `scs` (`5`, `10` or `21.5`);
+- `rss`;
+- `v`;
+- `conn=sc`;
+- `focus` (`psp`, `solo`, `bepi`, `sta`, `stb` or `earth`);
+- `ins` (instrument id);
+- `bg=open`;
+- `theme`.
+
+Examples:
+- https://sr-dash.github.io/heliofield/connect.html?date=2025-03-22
+- https://sr-dash.github.io/heliofield/connect.html?date=2025-03-22&scs=21.5&focus=solo&ins=metis
+
 ## URL parameters
 
 - `date`: YYYY-MM-DD from 2010-05-01, or `latest` (default). Recent days use daily server products (GONG, or the HMI fallback). Other days are computed in the browser from the SDO/HMI Carrington-rotation map covering the date. On the full page, a computed date first shows a dialog: click **Compute**, then wait a few seconds. With `embed=1` it computes without asking, which suits browser tools.

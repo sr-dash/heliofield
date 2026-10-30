@@ -29,7 +29,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 # Each page and its entry module (None: stylesheets only)
-PAGES = {"index.html": "main.js", "series.html": "series.js", "guide.html": None}
+PAGES = {"index.html": "main.js", "series.html": "series.js", "connect.html": "connect.js", "guide.html": None}
 # Libraries the viewer loads from the CDN; versioned already, so not hashed
 LIBRARIES = {
     "index.html": {
@@ -48,6 +48,10 @@ IN_SOURCE = [
     ("pfss-worker.js", "export.js", r'from "\./export\.js(\?v=[0-9a-f]*)?"'),
     ("pfss-worker.js", "preview.js", r'from "\./preview\.js(\?v=[0-9a-f]*)?"'),
     ("history.js", "pfss-worker.js", r'new URL\("\./pfss-worker\.js(\?v=[0-9a-f]*)?"'),
+    ("connect-model.js", "pfss.js", r'from "\./pfss\.js(\?v=[0-9a-f]*)?"'),
+    ("connect-worker.js", "pfss.js", r'from "\./pfss\.js(\?v=[0-9a-f]*)?"'),
+    ("connect-worker.js", "connect-model.js", r'from "\./connect-model\.js(\?v=[0-9a-f]*)?"'),
+    ("connect.js", "connect-worker.js", r'new URL\("\./connect-worker\.js(\?v=[0-9a-f]*)?"'),
 ]
 
 

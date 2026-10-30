@@ -670,11 +670,14 @@ export function connectOnly(models, fleet) {
   const v = [0, 0, 0];
   const one = (m, b, vs, lines) => {
     const rRs = b.r * AU_RS, rEdge = m.rout || m.rss;
-    const lon = (b.lon + (OMEGA * (rRs - rEdge) * RSUN_KM / vs) / DEG) % 360, lat = Math.max(-89, Math.min(89, b.lat));
+    // A spacecraft inside the SCS domain (Parker Solar Probe near perihelion,
+    // inside 21.5 R_sun) needs no spiral: its field line starts where it is.
+    const inside = !!m.S && rRs < rEdge && rRs > m.rcp * 1.01;
+    const lon = ((inside ? b.lon : b.lon + (OMEGA * (rRs - rEdge) * RSUN_KM / vs) / DEG) % 360 + 360) % 360, lat = Math.max(-89, Math.min(89, b.lat));
     let pts = [], top = cart(m.rss, lon, lat), rTop = m.rss, ok = false;
     if (m.S) {
       // In along the SCS field to the cusp surface, then down through PFSS.
-      const s = traceDir(m.S, cart(rEdge * 0.995, lon, lat), -1, 6000);
+      const s = traceDir(m.S, cart(inside ? rRs : rEdge * 0.995, lon, lat), -1, 6000);
       if (s.end === "cp") {
         const e = s.pts[s.pts.length - 1], f = (m.rcp * 0.995) / Math.hypot(...e);
         top = e; rTop = m.rcp;
@@ -690,7 +693,7 @@ export function connectOnly(models, fleet) {
       if (pts.length && Math.hypot(...pts[0]) > Math.hypot(...pts[pts.length - 1])) pts = pts.slice().reverse();
       ok = t.ends.includes("sun");
     }
-    const c = { ss: [+lon.toFixed(3), +lat.toFixed(3)], foot: null, fs: null, dchb: null, vwsa: null };
+    const c = { ss: [+lon.toFixed(3), +lat.toFixed(3)], foot: null, fs: null, dchb: null, vwsa: null, ...(inside ? { inside: true, r: +rRs.toFixed(3) } : {}) };
     if (pts.length && ok) {
       const f = pts[0], rr = Math.hypot(...f);
       const flon = ((Math.atan2(f[1], f[0]) / DEG) + 360) % 360, flat = Math.asin(f[2] / rr) / DEG;

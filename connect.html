@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HelioField Connectivity: Spacecraft Source Regions, Solar-Wind Polarity and Coordinated Observations | Soumyaranjan Dash</title>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8X5BSNF3VV"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-8X5BSNF3VV');
+</script>
+<meta name="description" content="Where Parker Solar Probe, Solar Orbiter, BepiColombo, STEREO-A and Earth connect to the Sun: PFSS and Schatten current-sheet footpoints, predicted solar-wind polarity and sector structure, the IRIS, Hinode, DKIST and Solar Orbiter observations of those source regions from HelioFleet, and the current sheet in coronagraph fields of view.">
+<meta name="author" content="Soumyaranjan Dash">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://sr-dash.github.io/heliofield/connect.html">
+<link rel="author" href="https://sr-dash.github.io/">
+<link rel="license" href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">
+<link rel="help" href="https://sr-dash.github.io/heliofield/guide.html#connect">
+<link rel="alternate" type="text/markdown" href="https://sr-dash.github.io/heliofield/llms.txt" title="HelioField for automated agents">
+<link rel="service-desc" type="application/json" href="https://sr-dash.github.io/heliofield/api.json" title="HelioField URL parameters, scripts and data">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#080b14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Soumyaranjan Dash Portfolio">
+<meta property="og:title" content="HelioField connectivity: spacecraft source regions and polarity">
+<meta property="og:description" content="Magnetic footpoints of the inner-heliosphere fleet, predicted solar-wind polarity, coordinated observations of the source regions from HelioFleet, and the current sheet in coronagraph fields.">
+<meta property="og:url" content="https://sr-dash.github.io/heliofield/connect.html">
+<meta property="og:image" content="https://sr-dash.github.io/heliofield/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@soumyatheory">
+<meta name="twitter:creator" content="@soumyatheory">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "HelioField connectivity",
+  "url": "https://sr-dash.github.io/heliofield/connect.html",
+  "description": "Spacecraft magnetic connectivity (PFSS and Schatten current sheet with ballistic Parker spirals), predicted solar-wind polarity and sector structure, observations of the source regions from HelioFleet, and the current sheet in coronagraph fields of view.",
+  "isPartOf": { "@id": "https://sr-dash.github.io/heliofield/#app" },
+  "author": { "@type": "Person", "@id": "https://sr-dash.github.io/#person", "name": "Soumyaranjan Dash" },
+  "relatedLink": "https://sr-dash.github.io/heliofleet/",
+  "dateModified": "2026-10-30",
+  "inLanguage": "en"
+}
+</script>
+<script>
+  (() => {
+    let t = new URLSearchParams(location.search).get("theme");
+    if (t !== "light" && t !== "dark") try { t = localStorage.getItem("hf.theme"); } catch (e) {}
+    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<link rel="stylesheet" href="css/guide.css?v=05c3dc7685">
+<link rel="stylesheet" href="css/connect.css?v=ae79e1485f">
+</head>
+<body>
+<div class="page">
+
+<header class="top">
+  <h1>Connectivity</h1>
+  <p>Where the fleet connects to the Sun, what that predicts, and who observed the source. By <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a>; with <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>.</p>
+  <button class="theme" id="theme" type="button">Light theme</button>
+  <a class="back" id="back" href="./">← Back to the 3D viewer</a>
+</header>
+
+<p class="lede">Each spacecraft is joined to the Sun along a Parker spiral at the chosen wind speed, then down a field line of the coronal model to its footpoint. The plasma reaching it now left that footpoint one travel time earlier, so the observations searched for are those made around that <b>source time</b>. <a href="guide.html#connect">How this is computed</a></p>
+
+<form class="controls" id="controls" onsubmit="return false">
+  <label>Date <input type="date" id="date" min="2010-05-01"></label>
+  <span class="step"><button type="button" id="prev" aria-label="Previous day">‹</button><button type="button" id="next" aria-label="Next day">›</button></span>
+  <label>Model
+    <select id="model">
+      <option value="0">PFSS</option>
+      <option value="5">PFSS + SCS to 5 R☉</option>
+      <option value="10">PFSS + SCS to 10 R☉</option>
+      <option value="21.5">PFSS + SCS to 21.5 R☉</option>
+    </select>
+  </label>
+  <label>Source surface <select id="rss"></select></label>
+  <label>Wind <select id="v"></select></label>
+  <label class="check"><input type="checkbox" id="sc"> Self-consistent speed</label>
+</form>
+<p class="status" id="status" role="status" aria-live="polite"></p>
+
+<section class="block" id="sec-table" aria-labelledby="h-table">
+  <h2 id="h-table">Connections</h2>
+  <p class="sub">Polarity is the sign of the coronal field where each spiral meets the model's outer boundary: <b>outward</b> (away from the Sun) or <b>inward</b>. Agreement is the share of the footpoint spread (±100 km/s, source surfaces ±0.5 R☉) with the same sign. Choose a row to follow that spacecraft below.</p>
+  <div class="scroll"><table id="table"></table></div>
+</section>
+
+<section class="block" id="sec-map" aria-labelledby="h-map">
+  <h2 id="h-map">Source regions</h2>
+  <div class="seg" role="group" aria-label="Map background">
+    <button type="button" data-bg="field" class="on" aria-pressed="true">Photospheric field</button><button type="button" data-bg="open" aria-pressed="false">Open-field regions</button>
+  </div>
+  <figure><canvas id="map" width="1440" height="720" role="img" aria-label="Carrington map of the source regions"></canvas></figure>
+  <p class="legend" id="mapLegend"></p>
+</section>
+
+<section class="block" id="sec-time" aria-labelledby="h-time">
+  <h2 id="h-time">Predicted polarity over a rotation</h2>
+  <p class="sub">Day by day, the polarity each spacecraft is connected to at the chosen wind speed, with this rotation's field. Pale cells lie within 5° of the current sheet, where a crossing is likely. Choose a day to open it.</p>
+  <figure><canvas id="timeline" width="1440" height="300" role="img" aria-label="Predicted polarity timeline"></canvas></figure>
+</section>
+
+<section class="block" id="sec-obs" aria-labelledby="h-obs">
+  <h2 id="h-obs">Observations of the source region</h2>
+  <p class="sub" id="obsSub">IRIS, Hinode/EIS, DKIST and Solar Orbiter high-resolution observations from <a href="https://sr-dash.github.io/heliofleet/sky.html#observations">HelioFleet</a> made during the source-time window, whose field contains the footpoint or lies within 5° of the footpoint spread.</p>
+  <div class="seg" id="obsBodies" role="group" aria-label="Spacecraft"></div>
+  <div class="scroll"><table id="obs"></table></div>
+</section>
+
+<section class="block" id="sec-cor" aria-labelledby="h-cor">
+  <h2 id="h-cor">Current sheet in coronagraph fields</h2>
+  <p class="sub">The model's current sheet and open field seen from each coronagraph or heliospheric imager, in its plane of the sky, with the instrument's field of view from HelioFleet. Brighter parts lie near the plane of the sky, where Thomson scattering makes structures most visible.</p>
+  <label class="inline">Instrument <select id="ins"></select></label>
+  <figure><canvas id="sky" width="900" height="900" role="img" aria-label="Coronagraph field of view with the current sheet"></canvas></figure>
+  <p class="legend" id="skyLegend"></p>
+</section>
+
+<p class="muted small">Model: the HMI rotation map covering the date, solved in your browser with HelioField's validated solver (<a href="guide.html#validation">validation</a>). Positions: HelioField's daily positions from JPL Horizons, at 12:00 UTC. Observations and instrument fields: <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>.</p>
+</div>
+
+<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="guide.html">Guide</a> · <a href="series.html">Solar-cycle series</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
+  Made by <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> · <a href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">MIT licence</a> · DOI <a href="https://doi.org/10.5281/zenodo.23487231">10.5281/zenodo.23487231</a></footer>
+
+<div class="tip" id="tip" role="status" aria-live="polite" hidden></div>
+<!-- assets:start (written by scripts/stamp_assets.py) -->
+<script type="importmap">
+{ "imports": {
+  "./js/connect-geo.js": "./js/connect-geo.js?v=dd41a244eb",
+  "./js/connect-model.js": "./js/connect-model.js?v=b8f7ec1dd0",
+  "./js/connect-worker.js": "./js/connect-worker.js?v=e02c82c7a0",
+  "./js/connect.js": "./js/connect.js?v=2ae362ac55",
+  "./js/export.js": "./js/export.js?v=c0f986b5c2",
+  "./js/history.js": "./js/history.js?v=bc8ad3f713",
+  "./js/main.js": "./js/main.js?v=f1099c73db",
+  "./js/netcdf.js": "./js/netcdf.js?v=b9a0a32cc2",
+  "./js/pfss-worker.js": "./js/pfss-worker.js?v=0a42f1cb1d",
+  "./js/pfss.js": "./js/pfss.js?v=1e0df6a8d5",
+  "./js/preview.js": "./js/preview.js?v=70e2ead2a2",
+  "./js/series.js": "./js/series.js?v=9af40c674f",
+  "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
+  "./js/theme.js": "./js/theme.js?v=5abd830f82"
+} }
+</script>
+<!-- assets:end -->
+<script type="module" src="js/connect.js?v=2ae362ac55"></script>
+</body>
+</html>

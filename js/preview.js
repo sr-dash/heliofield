@@ -3,7 +3,7 @@
 // photospheric B_r, source- or cusp-surface B_r with the neutral line, and
 // the open-field footprints with the spacecraft footpoints listed beside
 // them). It shows a new user what the files hold before running anything.
-import { surfaceBr } from "./pfss.js?v=a3f2dfa4d7";
+import { surfaceBr } from "./pfss.js?v=1e0df6a8d5";
 import { THEMES, divergingLUT } from "./theme.js?v=5abd830f82";
 
 const L1 = ["soho", "ace", "wind", "dscovr", "aditya", "imap", "swfo"];

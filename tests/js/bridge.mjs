@@ -16,6 +16,8 @@
 // from the south, column j centred on Carrington longitude (j + 0.5) 360/nx.
 import fs from "node:fs";
 import { buildExport, readme } from "../../js/export.js";
+import * as geo from "../../js/connect-geo.js";
+import { annotate } from "../../js/connect-model.js";
 import { lineOrder } from "./line-order.mjs";
 import { LMAX, TAPER_L0, taper, fieldAt } from "../../js/pfss.js";
 import { alf, analyse, fieldGrid, sample, trace, solve, surfaceBr, zeroContour, chBoundary, wsaSpeed, model, scsPolarity } from "../../js/pfss.js";
@@ -107,6 +109,19 @@ switch (req.cmd) {
     fs.writeFileSync(`${req.out}_header.json`, JSON.stringify(header, null, 1));
     fs.writeFileSync(`${req.out}_README.txt`, readme(fs.readFileSync(new URL("../../download/README.txt", import.meta.url), "utf8"), header));
     out = { bytes: nc.length, variables: Object.keys(header.variables).length };
+    break;
+  }
+  case "connect": {
+    // The connectivity page's rows: connections annotated with the polarity
+    // they predict, the footpoint polarity and the angle to the current sheet.
+    const res = solve(readMap(req.br), req.ny, req.nx, { rss: req.rss ?? 2.5, rout: req.rout ?? 0, fleet: req.fleet });
+    out = annotate(res.models[0], res.meta, res.meta.connect, res.meta.ensemble).rows;
+    break;
+  }
+  case "geo": {
+    // Geometry of the connectivity page: req.fn names a function of
+    // js/connect-geo.js, req.calls its argument lists.
+    out = req.calls.map((a) => geo[req.fn](...a));
     break;
   }
   case "wsa": {

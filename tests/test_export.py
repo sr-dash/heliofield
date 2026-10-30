@@ -26,6 +26,7 @@ FLEET = {
     "psp": dict(name="Parker Solar Probe", lon=30.0, lat=3.0, r=0.3, planet=False),
     "solo": dict(name="Solar Orbiter", lon=200.0, lat=-5.0, r=0.6, planet=False),
     "earth": dict(name="Earth", lon=341.0, lat=-7.2, r=0.99, planet=True),
+    "inner": dict(name="Inner probe", lon=60.0, lat=2.0, r=0.06, planet=False),   # inside the SCS domain
 }
 
 

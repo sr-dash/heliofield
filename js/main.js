@@ -527,11 +527,11 @@ function buildHelio() {
     const ci = m.connect.findIndex((c) => c.body === (b.ref || b.key) && c.v === vb);
     if (ci < 0) continue;
     const c = m.connect[ci], pts = [];
-    for (let j = 0; j <= 160; j++) {
+    for (let j = 0; j <= 160 && rRs > state.rTop; j++) {      // inside the SCS domain the field line reaches the spacecraft
       const r = state.rTop * Math.pow(rRs / state.rTop, j / 160);
       pts.push(sph(r, c.ss[0] - (OMEGA * (r - state.rTop) * RSUN_KM / vb) / DEG, c.ss[1]));
     }
-    G.spiral.add(line(pts, color, 0.95));
+    if (pts.length > 1) G.spiral.add(line(pts, color, 0.95));
     const cor = p.polys[nf + ci];
     if (cor?.length > 1) G.spiral.add(line(warpLine(cor).map((q) => new THREE.Vector3(...q)), color));
   }
