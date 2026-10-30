@@ -50,7 +50,15 @@ button:disabled { opacity: .55; cursor: progress; }
 button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visible {
   outline: 2px solid var(--text); outline-offset: 2px;
 }
-input[type=date] { padding: 4px 8px; font-variant-numeric: tabular-nums; }
+/* Date field as on HelioFleet: a monospaced value on a panel-coloured field,
+   with the calendar icon in the text colour; a click anywhere opens the picker. */
+input[type=date] {
+  padding: 4px 8px 4px 11px; border-radius: 8px; background: var(--panel);
+  font: 500 14.5px/1 ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: .02em; font-variant-numeric: tabular-nums;
+}
+input[type=date]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .75; margin-left: 6px; padding: 3px; border-radius: 5px; }
+input[type=date]::-webkit-calendar-picker-indicator:hover { opacity: 1; background: var(--control-hover); }
 button.primary { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
 button.primary:hover { opacity: .9; background: var(--text); }
 
@@ -74,6 +82,8 @@ button.primary:hover { opacity: .9; background: var(--text); }
 .sitenav a[aria-current="page"] { color: var(--text); font-weight: 600; border-bottom-color: var(--text); }
 .sitenav a:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
 .sitenav .sitenav-help { margin-left: auto; padding-right: 0; color: var(--text); font-weight: 600; }
+.sitenav .sitenav-fleet { align-self: center; margin: 0 0 0 16px; padding: 3px 12px; border: 1px solid var(--text); border-radius: 999px; color: var(--text); font-weight: 600; }
+.sitenav .sitenav-fleet:hover { color: var(--bg); background: var(--text); border-color: var(--text); }
 .embed .sitenav { display: none; }
 .bar > * { pointer-events: auto; }
 .brand { display: flex; flex-direction: column; gap: 1px; line-height: 1.2; margin-right: auto; }
@@ -300,10 +310,13 @@ dialog .noask { display: flex; gap: 8px; align-items: center; color: var(--muted
   .sitenav { margin: 0 -10px; padding: 0 10px; font-size: 13.5px; -webkit-mask-image: linear-gradient(to right, #000 82%, transparent); mask-image: linear-gradient(to right, #000 82%, transparent); }
   .sitenav a { padding: 8px 10px 6px; }
   .sitenav .sitenav-help { order: -1; margin-left: 0; padding-left: 0; }
+  .sitenav .sitenav-fleet { order: -1; margin: 0 6px 0 4px; padding: 2px 10px; }
   .sitenav a:first-child { padding-left: 10px; }
   .sitenav::after { content: ""; flex: none; width: 40px; }
   .brand strong { font-size: 16px; }
   .bar button, .bar input[type=date] { padding: 4px 7px; font-size: 13.5px; }
+  .bar input[type=date] { padding: 4px 4px 4px 7px; font: 500 13.5px/1 ui-sans-serif, system-ui, -apple-system, sans-serif; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+  .bar input[type=date]::-webkit-calendar-picker-indicator { margin-left: 2px; padding: 1px; }
   .theme-toggle { width: 34px; padding: 0; margin-left: auto; }
   .src { padding: 2px 6px; }
   .menu-btn { width: 36px; }
@@ -314,6 +327,17 @@ dialog .noask { display: flex; gap: 8px; align-items: center; color: var(--muted
   .embed .reset-view { right: 10px; bottom: calc(var(--bar-h) + 8px); }
   .series-panel { left: 8px; right: 8px; width: auto; top: auto; bottom: 56px; height: 48vh; }
   .embed #panel { max-height: calc(100% - var(--bar-h) - 12px); transform-origin: bottom center; }
+}
+/* Phones: keep the brand, date, theme and menu on one row */
+@media (max-width: 420px) {
+  .bar, .panel-closed .bar { gap: 4px; }
+  .date { gap: 3px; }
+  .date #prev, .date #next { padding: 4px 6px; }
+  .theme-toggle, .menu-btn { width: 32px; }
+  .src { padding: 2px 5px; font-size: 11px; }
+  /* A tap anywhere on the date opens the calendar, so the icon can go */
+  .bar input[type=date] { padding: 4px 7px; }
+  .bar input[type=date]::-webkit-calendar-picker-indicator { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   #panel, .bar { transition: none; }

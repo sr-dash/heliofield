@@ -47,6 +47,7 @@ Options:
 - PFSS + Schatten current sheet out to 21.5 R_sun, past date: https://sr-dash.github.io/heliofield/?date=2020-05-08&scs=21.5&view=fleet&layers=photo,closed,open,pil,hcs,fleet,spiral
 - Lower source surface (2.0 R_sun), past date: https://sr-dash.github.io/heliofield/?date=2014-03-12&rss=2&view=earth
 - Clean embed for another page: https://sr-dash.github.io/heliofield/?date=latest&view=earth&embed=1&controls=0&theme=light
+- The same date on HelioFleet (spacecraft positions, instrument fields, observations): https://sr-dash.github.io/heliofleet/?t=YYYY-MM-DDT12:00Z&spirals=1&wind=V, and its sky view from a spacecraft: https://sr-dash.github.io/heliofleet/sky.html?t=YYYY-MM-DDT12:00Z&obs=solo
 
 ## Connectivity page
 

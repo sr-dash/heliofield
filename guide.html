@@ -64,7 +64,7 @@
     document.documentElement.dataset.theme = t;
   })();
 </script>
-<link rel="stylesheet" href="css/guide.css?v=11a09065ae">
+<link rel="stylesheet" href="css/guide.css?v=af782edac5">
 </head>
 <body>
 <div class="wrap">
@@ -82,6 +82,7 @@
   <a href="guide.html#methods">Methods and data</a>
   <a href="guide.html#agents">Scripts &amp; API</a>
   <a class="sitenav-help" href="guide.html" aria-current="page">How to use</a>
+  <a class="sitenav-fleet" id="fleetLink" href="https://sr-dash.github.io/heliofleet/" title="The same date on HelioFleet: where the fleet is, with its Parker spirals">HelioFleet ↗</a>
 </nav>
 
 <nav class="toc" aria-label="Contents">
@@ -251,6 +252,7 @@ python plot_3d.py heliofield_model-2014-03-12_computed-2026-10-28_scs.nc --theme
 <section id="embed">
   <h3>Links and embedding</h3>
   <p>The address bar always holds the full state of the page, so any view can be bookmarked or shared. Parameters left out take their defaults.</p>
+  <p>The <b>HelioFleet ↗</b> button in the navigation bar opens <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a> at the same date (12:00 UTC), with its Parker spirals at the chosen wind speed. On the Connectivity page a second button opens HelioFleet's sky view from the selected spacecraft. HelioFleet has a <b>HelioField ↗</b> button that comes back: from its map to the viewer's fleet view, and from its sky view to the Connectivity page for that observer.</p>
   <table>
     <tr><th>Parameter</th><th>Values</th><th>Default</th></tr>
     <tr><td><code>date</code></td><td><code>YYYY-MM-DD</code> from 2010-05-01, or <code>latest</code>. A date without a daily product is computed in the browser.</td><td>latest</td></tr>

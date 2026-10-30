@@ -886,6 +886,10 @@ function syncUrl() {
   if (!state.day) return;
   const p = stateParams();
   $("embedOpen").href = base() + "?" + p;
+  // The same date on HelioFleet, with the spirals at this wind speed
+  const f = new URLSearchParams({ t: `${state.day}T12:00Z`, spirals: 1 });
+  if (state.vsw !== 400) f.set("wind", state.vsw);
+  $("fleetLink").href = "https://sr-dash.github.io/heliofleet/?" + f;
   for (const k of ["embed", "controls", "panel", "series"]) if (params.has(k)) p.set(k, params.get(k));
   if (params.has("theme")) p.set("theme", currentTheme());     // a linked theme follows later switches
   history.replaceState(null, "", "?" + p);
@@ -1169,7 +1173,10 @@ function step(k) {
 }
 $("prev").onclick = () => step(-1);
 $("next").onclick = () => step(1);
+// A click anywhere on the date field opens the calendar, not only on its icon
+const openPicker = (e) => { try { e.target.showPicker(); } catch (err) { /* older browsers */ } };
 $("day").min = FIRST; $("day").max = TODAY;
+$("day").addEventListener("click", openPicker);
 $("day").addEventListener("change", (e) => { if (e.target.value && e.target.value !== state.day) openDate(e.target.value); });
 $("latest").onclick = () => goDaily(state.dates[state.dates.length - 1]);
 

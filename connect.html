@@ -59,8 +59,8 @@
     document.documentElement.dataset.theme = t;
   })();
 </script>
-<link rel="stylesheet" href="css/guide.css?v=11a09065ae">
-<link rel="stylesheet" href="css/connect.css?v=ae79e1485f">
+<link rel="stylesheet" href="css/guide.css?v=af782edac5">
+<link rel="stylesheet" href="css/connect.css?v=0cc50a0bbd">
 </head>
 <body>
 <div class="page">
@@ -78,6 +78,7 @@
   <a href="guide.html#methods">Methods and data</a>
   <a href="guide.html#agents">Scripts &amp; API</a>
   <a class="sitenav-help" href="guide.html">How to use</a>
+  <a class="sitenav-fleet" id="fleetLink" href="https://sr-dash.github.io/heliofleet/" title="The same date on HelioFleet: where the fleet is, with its Parker spirals">HelioFleet ↗</a>
 </nav>
 
 <p class="lede">Each spacecraft is joined to the Sun along a Parker spiral at the chosen wind speed, then down a field line of the coronal model to its footpoint. The plasma reaching it now left that footpoint one travel time earlier, so the observations searched for are those made around that <b>source time</b>. <a href="guide.html#connect">How this is computed</a></p>
@@ -96,6 +97,7 @@
   <label>Source surface <select id="rss"></select></label>
   <label>Wind <select id="v"></select></label>
   <label class="check"><input type="checkbox" id="sc"> Self-consistent speed</label>
+  <a class="fleet-btn" id="fleetSky" href="https://sr-dash.github.io/heliofleet/sky.html">Sky from Parker on HelioFleet ↗</a>
 </form>
 <p class="status" id="status" role="status" aria-live="polite"></p>
 
@@ -148,10 +150,10 @@
   "./js/connect-geo.js": "./js/connect-geo.js?v=dd41a244eb",
   "./js/connect-model.js": "./js/connect-model.js?v=b8f7ec1dd0",
   "./js/connect-worker.js": "./js/connect-worker.js?v=e02c82c7a0",
-  "./js/connect.js": "./js/connect.js?v=2ae362ac55",
+  "./js/connect.js": "./js/connect.js?v=5bbeb4f4ee",
   "./js/export.js": "./js/export.js?v=c0f986b5c2",
   "./js/history.js": "./js/history.js?v=bc8ad3f713",
-  "./js/main.js": "./js/main.js?v=f1099c73db",
+  "./js/main.js": "./js/main.js?v=0db8f84ce2",
   "./js/netcdf.js": "./js/netcdf.js?v=b9a0a32cc2",
   "./js/pfss-worker.js": "./js/pfss-worker.js?v=0a42f1cb1d",
   "./js/pfss.js": "./js/pfss.js?v=1e0df6a8d5",
@@ -162,6 +164,6 @@
 } }
 </script>
 <!-- assets:end -->
-<script type="module" src="js/connect.js?v=2ae362ac55"></script>
+<script type="module" src="js/connect.js?v=5bbeb4f4ee"></script>
 </body>
 </html>

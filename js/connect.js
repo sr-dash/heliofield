@@ -88,6 +88,7 @@ function setupControls() {
   $("v").innerHTML = VS.map((v) => `<option value="${v}"${v === S.v ? " selected" : ""}>${v} km/s</option>`).join("");
   $("sc").checked = S.sc;
   const go = () => { syncUrl(); run(); };
+  $("date").onclick = (e) => { try { e.target.showPicker(); } catch (err) { /* older browsers */ } };
   $("date").onchange = (e) => { if (okDay(e.target.value)) { S.date = e.target.value; go(); } };
   $("prev").onclick = () => { S.date = addDays(S.date, -1); $("date").value = S.date; go(); };
   $("next").onclick = () => { S.date = addDays(S.date, 1); $("date").value = S.date; go(); };
@@ -117,6 +118,14 @@ function syncUrl() {
   if (S.rout) v.set("scs", S.rout);
   if (S.rss !== 2.5) v.set("rss", S.rss);
   $("back").href = "./?" + v;
+  // The same moment on HelioFleet: its map with the spirals at this speed, and
+  // the sky as the focus spacecraft sees it (positions here are at 12:00 UTC).
+  const t = `${S.date}T12:00Z`, f = new URLSearchParams({ t, spirals: 1 });
+  if (S.v !== 400) f.set("wind", S.v);
+  $("fleetLink").href = `${FLEET_URL}?${f}`;
+  const name = BODIES.find(([k]) => k === S.focus)?.[1].replace(" / L1", "") || "Earth";
+  $("fleetSky").href = `${FLEET_URL}sky.html?${new URLSearchParams({ t, obs: S.focus })}`;
+  $("fleetSky").textContent = `Sky from ${name} on HelioFleet ↗`;
 }
 
 // ------------------------------------------------------------- solving
@@ -199,7 +208,7 @@ function connections() {
 async function afterSolve(full = false) {
   if (!sol) return;
   sol.conn = connections();
-  if (!sol.conn.some((c) => c.key === S.focus)) S.focus = sol.conn[0]?.key || "earth";
+  if (!sol.conn.some((c) => c.key === S.focus)) { S.focus = sol.conn[0]?.key || "earth"; syncUrl(); }
   drawTable(); drawMap(); setupObsBodies(); drawSky();
   if (full || !timeline || timeline.v !== S.v) loadTimeline();
   loadObservations();
