@@ -329,7 +329,7 @@ If HelioField helps your research, please cite it:
 
 > Dash, S. (2026). *HelioField: the Sun's coronal magnetic field in 3D* (Version 1.2.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23487231
 
-That DOI always resolves to the latest release. Each release also has its own DOI on the [Zenodo record](https://doi.org/10.5281/zenodo.23487231); [10.5281/zenodo.23750441](https://doi.org/10.5281/zenodo.23750441) is version 1.2.0, [10.5281/zenodo.23521418](https://doi.org/10.5281/zenodo.23521418) version 1.1.0 and [10.5281/zenodo.23487232](https://doi.org/10.5281/zenodo.23487232) is version 1.0.0. GitHub's **Cite this repository** button (from [CITATION.cff](CITATION.cff)) and the [guide](https://sr-dash.github.io/heliofield/guide.html#cite) give APA and BibTeX references. Please also cite the data and model the field is built from: NSO/GONG or SDO/HMI, and PFSS (see the guide's references).
+That DOI always resolves to the latest release. Each release also has its own DOI on the [Zenodo record](https://doi.org/10.5281/zenodo.23487231); [10.5281/zenodo.23818624](https://doi.org/10.5281/zenodo.23818624) is version 1.2.1, [10.5281/zenodo.23750441](https://doi.org/10.5281/zenodo.23750441) version 1.2.0, [10.5281/zenodo.23521418](https://doi.org/10.5281/zenodo.23521418) version 1.1.0 and [10.5281/zenodo.23487232](https://doi.org/10.5281/zenodo.23487232) is version 1.0.0. GitHub's **Cite this repository** button (from [CITATION.cff](CITATION.cff)) and the [guide](https://sr-dash.github.io/heliofield/guide.html#cite) give APA and BibTeX references. Please also cite the data and model the field is built from: NSO/GONG or SDO/HMI, and PFSS (see the guide's references).
 
 ## Contributing, licence and citation
 
