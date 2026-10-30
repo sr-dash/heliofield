@@ -223,7 +223,7 @@
     if (folded) h.classList.add("panel-closed");
   })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=bf5eff1f44">
+<link rel="stylesheet" href="css/style.css?v=579a92545f">
 <!-- assets:start (written by scripts/stamp_assets.py) -->
 <script type="importmap">
 { "imports": {
@@ -259,7 +259,6 @@
     <button id="latest" class="latest" title="Back to the latest daily product">Latest</button>
     <span id="src" class="src"></span>
   </div>
-  <a class="guide-link" href="guide.html">Guide</a>
   <a class="embed-open" id="embedOpen" href="./" target="_blank" rel="noopener">HelioField ↗</a>
   <button id="themeToggle" class="theme-toggle" aria-label="Switch theme">
     <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
@@ -268,6 +267,14 @@
   <button id="menuBtn" class="menu-btn" aria-controls="panel" aria-expanded="false" aria-label="Open the menu" title="Menu (L)">
     <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
   </button>
+  <nav class="sitenav" aria-label="HelioField pages">
+    <a href="./" aria-current="page">3D viewer</a>
+    <a href="series.html">Solar-cycle series</a>
+    <a href="connect.html">Connectivity</a>
+    <a href="guide.html#methods">Methods and data</a>
+    <a href="guide.html#agents">Scripts &amp; API</a>
+    <a class="sitenav-help" href="guide.html">How to use</a>
+  </nav>
 </header>
 
 <aside id="panel" aria-label="Layers and view">
@@ -348,7 +355,6 @@
     </div>
   </details>
 
-  <p class="panel-foot"><a href="guide.html">How to use</a> · <a href="guide.html#methods">Methods and data</a> · <a href="series.html">Solar-cycle series</a> · <a href="connect.html">Connectivity</a> · <a href="guide.html#agents">Scripts &amp; API</a></p>
   <p class="panel-foot">Companion to <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, spacecraft positions around the Sun.
     Made by <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
     <a href="https://github.com/sr-dash/heliofield/issues/new/choose">Report a problem or suggest a feature</a></p>

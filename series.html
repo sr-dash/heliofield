@@ -47,7 +47,7 @@
     if (q.get("embed") === "1" && q.get("compact") === "1") document.documentElement.classList.add("compact");
   })();
 </script>
-<link rel="stylesheet" href="css/guide.css?v=05c3dc7685">
+<link rel="stylesheet" href="css/guide.css?v=11a09065ae">
 <link rel="stylesheet" href="css/series.css?v=0519b14219">
 </head>
 <body>
@@ -59,6 +59,14 @@
   <button class="theme" id="theme" type="button">Light theme</button>
   <a class="back" href="./">← Back to the viewer</a>
 </header>
+<nav class="sitenav" aria-label="HelioField pages">
+  <a href="./">3D viewer</a>
+  <a href="series.html" aria-current="page">Solar-cycle series</a>
+  <a href="connect.html">Connectivity</a>
+  <a href="guide.html#methods">Methods and data</a>
+  <a href="guide.html#agents">Scripts &amp; API</a>
+  <a class="sitenav-help" href="guide.html">How to use</a>
+</nav>
 
 <p class="lede">Each point is one Carrington rotation (about 27 days): an SDO/HMI synoptic map, extrapolated with the same PFSS model the viewer uses (source surface at 2.5 R<sub>☉</sub>). Hover or tap a chart to read every series at that rotation, or use the arrow keys once a chart has focus. <a href="guide.html#series">How these are computed</a></p>
 
