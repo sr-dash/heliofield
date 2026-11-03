@@ -7,8 +7,8 @@ authors:
     given-names: Soumyaranjan
     orcid: "https://orcid.org/0000-0003-0103-6569"
     affiliation: "National Solar Observatory"
-version: 1.2.1
-date-released: 2026-10-30
+version: 1.2.2
+date-released: 2026-11-03
 doi: 10.5281/zenodo.23487231
 identifiers:
   - type: doi
@@ -35,7 +35,10 @@ abstract: >-
   magnetograms, the source surface and its neutral line, the heliospheric
   current sheet, and the Parker-spiral magnetic connection of planets and
   spacecraft. Recent days are computed nightly; earlier dates are computed in
-  the browser from HMI Carrington-rotation maps.
+  the browser from HMI Carrington-rotation maps. A daily space-weather
+  assessment carries WSA-type speeds to Earth and the fleet with the HUX
+  kinematic model, and keeps a record of its forecasts against the solar wind
+  measured at L1 for calibrating the speed formula.
 keywords:
   - heliophysics
   - coronal magnetic field
