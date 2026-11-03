@@ -149,7 +149,29 @@ def test_record_of_a_product():
     p = next((R.product(d) for d in reversed(days) if (ROOT / "data" / d / "wsa.png").exists()), None)
     if p is None:
         pytest.skip("no daily product with a speed map")
-    rec = R.evaluate(p)
+    rec = R.evaluate(dict(p, events=None))["record"]
     assert rec["date"] == p["day"] and len(rec["fc_v"]) == 9 and len(rec["fc_b"]) == 9
     assert 200 <= rec["v"] <= 900 and rec["sector"] in (-1, 1)
     assert all(v is None or 200 <= v <= 900 for v in rec["fc_v"])
+
+
+def test_share_card_and_page(tmp_path, monkeypatch):
+    """A day's card is 1200 x 630 and its share page names it in the tags
+    the networks read, and forwards to the assessment."""
+    from PIL import Image
+    import sw_card as C
+    import sw_record as R
+    days = json.loads((ROOT / "data" / "index.json").read_text())["dates"]
+    day = next((d for d in reversed(days) if (ROOT / "data" / d / "wsa.png").exists()), None)
+    if day is None:
+        pytest.skip("no daily product with a speed map")
+    out = R.evaluate(dict(R.product(day), events=None))
+    assert out["level"] in ("good", "watch", "high", "severe") and out["record"]["level"] == out["level"]
+    monkeypatch.setattr(C, "OUT", tmp_path)
+    C.write(day, out, latest=True)
+    assert Image.open(tmp_path / f"{day}.png").size == (1200, 630)
+    assert (tmp_path / "latest.png").read_bytes() == (tmp_path / f"{day}.png").read_bytes()
+    page = (tmp_path / f"{day}.html").read_text()
+    for tag in ('property="og:image" content="https://sr-dash.github.io/heliofield/sw/', 'name="twitter:image"',
+                'name="twitter:card" content="summary_large_image"', f"spaceweather.html?date={day}"):
+        assert tag in page, tag

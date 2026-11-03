@@ -132,6 +132,7 @@ The physics is in `js/sw-model.js`, tested in `tests/test_spaceweather.py`. Para
 
 Each nightly run also keeps a time series (`scripts/sw_record.py`, running `js/sw-model.js` under Node through `scripts/sw_eval.mjs`):
 - `data/spaceweather/daily.json`: per day, the model's numbers and its daily-mean speed and sector predicted at Earth from one day before to seven days after, with the daily means measured at L1 (NASA OMNI, and NOAA SWPC real-time data until OMNI catches up). The page scores the predictions at each lead time.
+- `sw/<date>.png` and `sw/<date>.html` (`scripts/sw_card.py`): the day's share card (status, wind, peak, sector, outlook) and a page that carries it in its preview tags and forwards to the assessment, so shared posts show the card. `sw/latest.png` is the page's own preview.
 - `data/spaceweather/inputs/<year>.json`: the WSA inputs (f<sub>s</sub>, DCHB) along Earth's latitude, for `scripts/calibrate_wsa.py`, which refits the speed formula against the measurements.
 
 ## Scripts and automated agents

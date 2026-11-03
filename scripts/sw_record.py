@@ -14,6 +14,8 @@ Writes, under data/spaceweather/:
                       daily-mean speed and sector predicted for each UTC day from
                       the day before to seven days after) and `measured` (daily
                       means of the L1 solar wind, field and Kp).
+    ../sw/<date>.png, .html  the day's share card and the page that carries it
+                      (scripts/sw_card.py)
     inputs/YYYY.json  per day, the WSA inputs (f_s, DCHB) and the source-surface
                       field sign along Earth's latitude, kept after the daily
                       products are pruned, so scripts/calibrate_wsa.py can
@@ -50,6 +52,7 @@ OMNI = ("https://cdaweb.gsfc.nasa.gov/hapi/data?id=OMNI2_H0_MRG1HR"
 RTSW_WIND = "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
 RTSW_MAG = "https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json"
 KP = "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"
+EVENTS = "https://sr-dash.github.io/heliofleet/data/events.json"
 MIN_HOURS = 12          # a day needs this many hourly speeds to count
 UNITS = dict(
     v="km/s, model speed at Earth at the map time", sector="+1 away from the Sun, -1 towards",
@@ -92,7 +95,18 @@ def product(day: str) -> dict | None:
     return dict(day=day, meta=meta, speed=speed, bss=bss, cls=cls)
 
 
+def events() -> dict | None:
+    """HelioFleet's DONKI list: the sibling checkout if there is one, else the site."""
+    local = ROOT.parent / "heliofleet" / "data" / "events.json"
+    try:
+        return json.loads(local.read_text() if local.exists() else _get(EVENTS))
+    except Exception as e:
+        print(f"  events: {e}")
+        return None
+
+
 def evaluate(p: dict) -> dict:
+    """{record, level, reasons, card, counts} from the page's model."""
     r = subprocess.run(["node", str(ROOT / "scripts" / "sw_eval.mjs")], input=json.dumps(p),
                        capture_output=True, text=True, check=True)
     return json.loads(r.stdout)
@@ -202,7 +216,7 @@ def main():
     rows = {r["date"]: r for r in doc["rows"]}
     days = json.loads((DATA / "index.json").read_text())["dates"]
 
-    inputs = {}
+    inputs, ev_list, cards = {}, events(), []
     for day in days:
         p = product(day)
         if p is None:
@@ -211,12 +225,20 @@ def main():
         src = p["meta"]["source"].get("short", p["meta"]["source"].get("name"))
         if old and not a.all and old["t0"][:16] == p["meta"]["obstime"][:16] and old["src"] == src:
             continue
-        rec = evaluate(p)
+        out = evaluate(dict(p, events=ev_list))
+        rec = out["record"]
         rows.setdefault(day, dict(date=day))["model"] = {k: v for k, v in rec.items() if k != "date"}
+        cards.append((day, out))
         e = inputs_entry(p)
         if e:
             inputs.setdefault(day[:4], {})[day] = e
         print(f"  {day}: model {rec['v']} km/s, sector {rec['sector']:+d}")
+    # Share cards and pages for the days just recorded; the newest is also the
+    # page's own preview image.
+    import sw_card
+    newest = max(days) if days else None
+    for day, out in cards:
+        sw_card.write(day, out, latest=day == newest)
     for year, entries in inputs.items():
         path = OUT / "inputs" / f"{year}.json"
         path.parent.mkdir(exist_ok=True)

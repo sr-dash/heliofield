@@ -72,8 +72,7 @@ const el = (tag, attrs = {}, parent) => {
   return e;
 };
 // Status levels: colour, a distinct shape and a word, never colour alone.
-const LEVELS = ["good", "watch", "high", "severe"];
-const LEVEL_NAME = { good: "Nominal", watch: "Watch", high: "High", severe: "Severe" };
+const { LEVEL_NAME } = M;
 const ICON = {
   good: '<circle cx="8" cy="8" r="6.5"/><path d="m5 8.2 2 2 4-4.4" fill="none" stroke="var(--card)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
   watch: '<path d="M8 1.5 15 14H1z"/><path d="M8 6v3.6M8 11.6v.2" stroke="var(--card)" stroke-width="1.7" stroke-linecap="round"/>',
@@ -82,29 +81,7 @@ const ICON = {
 };
 const icon = (lv) => `<svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">${ICON[lv]}</svg>`;
 const chip = (lv, text = LEVEL_NAME[lv]) => `<span class="st st-${lv}">${icon(lv)}${text}</span>`;
-const worst = (...lv) => lv.filter(Boolean).reduce((a, b) => (LEVELS.indexOf(b) > LEVELS.indexOf(a) ? b : a), "good");
-// Ambient wind: above 500 km/s is a high-speed stream; 600 and 750 km/s
-// streams commonly bring active and storm conditions.
-const windLevel = (v) => (v < 500 ? "good" : v < 600 ? "watch" : v < 750 ? "high" : "severe");
-// DONKI's events in the week: CMEs aimed at Earth, storms, flares that could
-// send particles to Earth.
-function eventLevel(ev) {
-  if (!ev) return null;
-  const why = [];
-  let lv = "good";
-  for (const c of ev.cmes) {
-    const g = c.targets.earth;
-    if (!g || g.hit === "miss" || g.arrival < D.t0 - DAY) continue;
-    const l = g.hit === "inside" ? (c.speed >= 1500 ? "severe" : "high") : "watch";
-    lv = worst(lv, l); why.push(`a ${c.speed} km/s CME ${g.hit === "inside" ? "aimed at" : "glancing"} Earth`);
-  }
-  for (const st of ev.storms) { lv = worst(lv, st.g >= 4 ? "severe" : "high"); why.push(`a G${st.g} storm`); }
-  for (const f of ev.flares) {
-    const l = f.conn.earth === "good" ? "high" : "watch";
-    lv = worst(lv, l); why.push(`an ${f.cls} flare${f.conn.earth === "good" ? " well connected to Earth" : ""}`);
-  }
-  return { lv, why };
-}
+const { worst, windLevel } = M;
 function tile(box, label, value, note, href, lv) {
   const t = document.createElement(href ? "a" : "div");
   t.className = "tile" + (lv ? ` st-${lv}` : "");
@@ -164,12 +141,7 @@ function assess() {
   const up = upstreamRows().find((u) => u.key !== "earth" && u.lead > 0.3 && u.lead < 10 && Math.abs(u.dlat) < 8 && u.b.r > 0.7);
   if (up) paras.push(`${up.name} sees now the wind Earth should meet in about <b>${up.lead.toFixed(1)} days</b> (${Math.round(up.v)} km/s, ${sector(up.pol)}).`);
   // One overall level: the worst of the wind now, the week ahead and the events.
-  const evl = eventLevel(ev), reasons = [];
-  const lvNow = a.now ? windLevel(a.now.v) : null, lvPeak = a.peak ? windLevel(a.peak.v) : null;
-  if (lvNow && lvNow !== "good") reasons.push(`${M.windClass(a.now.v)} wind now (${Math.round(a.now.v)} km/s)`);
-  if (lvPeak && lvPeak !== "good" && a.peak.v > (a.now?.v ?? 0) + 30) reasons.push(`a high-speed stream around ${fmtDay(a.peak.t)} (${Math.round(a.peak.v)} km/s)`);
-  if (evl?.why.length) reasons.push(...evl.why);
-  const overall = worst(lvNow, lvPeak, evl?.lv);
+  const { level: overall, reasons, lvNow, lvPeak, evl } = M.overall(D, a, ev);
   const say = { good: "Quiet: nominal ambient solar wind and no large events.", watch: "Watch", high: "Elevated", severe: "Severe" }[overall];
   $("narrative").innerHTML = `<div class="overall st-${overall}">${chip(overall)}<span>${overall === "good" ? say : `${say}: ${reasons.join("; ")}.`}</span></div>` + paras.map((p) => `<p>${p}</p>`).join("");
 
@@ -522,40 +494,15 @@ function drawUpstream() {
 }
 
 // ------------------------------------------------------------- particles, CMEs
+// DONKI's events in the week, analysed by the model once the products of
+// the flare days and the positions of the CME days are at hand.
 async function eventsFor() {
   if (!events) return null;
-  const to = D.t0, from = to - 7 * DAY, within = (x) => { const t = Date.parse(x.t); return t >= from && t <= to; };
-  const fleetAt = async (t) => { try { return await fleetFor(new Date(t).toISOString().slice(0, 10)); } catch (e) { return null; } };
-  // Flares, each against the footpoints of its own day where that product exists.
-  const flares = [];
-  for (const f of events.flares.filter(within)) {
-    const loc = M.parseLocation(f.loc), t = Date.parse(f.t), day = f.t.slice(0, 10);
-    const meta = dates.includes(day) ? await getMeta(day) : D.meta, feet = M.footpoints(meta);
-    const L0 = M.earthLon(meta.L0, Date.parse(meta.obstime), t);
-    const conn = {}, dist = {};
-    if (loc) for (const p of feet) { dist[p.key] = M.angle(loc.lon + L0, loc.lat, p.foot[0], p.foot[1]); conn[p.key] = M.connection(dist[p.key]); }
-    flares.push({ ...f, tm: t, site: loc, conn, dist, feet });
-  }
-  // CMEs: cone geometry against each body, drag-based arrival in the model's wind.
-  const cmes = [];
-  for (const c of events.cmes.filter(within)) {
-    if (c.lon == null || c.lat == null) continue;
-    const t = Date.parse(c.t), t21 = c.t21 ? Date.parse(c.t21) : t + 21.5 * M.RSUN_KM / c.speed * 1000, pos = await fleetAt(t);
-    const targets = {};
-    for (const [k] of BODIES) {
-      const b = pos?.fleet[k] || D.meta.fleet[k];
-      if (!b) continue;
-      const L0 = pos ? pos.L0 : D.L0;
-      const geo = M.cmeGeometry({ lon: c.lon, lat: c.lat, half: c.half ?? 30 }, { lon: M.wrap180(b.lon - L0), lat: b.lat });
-      if (geo.hit !== "miss") {
-        const w = D.a.bodies[k]?.v ?? 400, run = M.dbm(c.speed, w, 21.5 * M.RSUN_KM, b.r * M.AU_KM);
-        Object.assign(geo, { arrival: t21 + run.t * 1000, vArr: run.v, w });
-      }
-      targets[k] = geo;
-    }
-    cmes.push({ ...c, tm: t, targets });
-  }
-  return { flares, cmes, storms: events.storms.filter(within) };
+  const days = M.eventDays(events, D.t0);
+  const metas = new Map(), fleets = new Map();
+  await Promise.all(days.flares.filter((d) => dates.includes(d)).map(async (d) => metas.set(d, await getMeta(d))));
+  await Promise.all(days.cmes.map(async (d) => { try { fleets.set(d, await fleetFor(d)); } catch (e) { /* none that day */ } }));
+  return M.eventsAnalysis(events, D, D.a, { metaFor: (d) => metas.get(d) || null, fleetAt: (d) => fleets.get(d) || null });
 }
 function drawEvents() {
   const ev = D.ev;
@@ -614,12 +561,16 @@ function shareText() {
 // Set as soon as the date is known (and again with the day's summary once it
 // has loaded), so the buttons work even while the assessment is loading.
 function setupShare() {
-  const url = `${SITE}?date=${S.date}`, text = shareText(), u = encodeURIComponent(url), tx = encodeURIComponent(text);
+  // Days in the record have a share page whose card shows the day's
+  // assessment in the post (sw/<date>.html, written nightly); others link here.
+  const carded = track?.rows?.some((r) => r.date === S.date && r.model);
+  const url = carded ? `${SITE.replace("spaceweather.html", "")}sw/${S.date}.html` : `${SITE}?date=${S.date}`;
+  const text = shareText(), tags = " #SpaceWeather #SolarWind", u = encodeURIComponent(url), tx = encodeURIComponent(text);
   const links = {
-    x: `https://x.com/intent/post?text=${tx}&url=${u}`,
+    x: `https://x.com/intent/post?text=${encodeURIComponent(text + tags)}&url=${u}`,
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${u}`,
     linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${u}`,
-    bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(text + " " + url)}`,
+    bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(text + tags + " " + url)}`,
     reddit: `https://www.reddit.com/submit?url=${u}&title=${tx}`,
     whatsapp: `https://wa.me/?text=${encodeURIComponent(text + " " + url)}`,
     email: `mailto:?subject=${encodeURIComponent("HelioField space weather, " + S.date)}&body=${encodeURIComponent(text + "\n\n" + url)}`,

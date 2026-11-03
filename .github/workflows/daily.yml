@@ -73,7 +73,7 @@ jobs:
         run: |
           git config user.name "Soumyaranjan Dash"
           git config user.email "sdash@nso.edu"
-          git add -A data
+          git add -A data sw
           if git diff --cached --quiet; then
             echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0

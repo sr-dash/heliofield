@@ -90,6 +90,8 @@ Examples:
 
 It describes the ambient wind only, uses illustrative WSA coefficients, and is not an official forecast (that is NOAA SWPC). Share buttons for X, Facebook, LinkedIn, Bluesky, Reddit, WhatsApp and email.
 
+Each recorded day also has a share card, https://sr-dash.github.io/heliofield/sw/YYYY-MM-DD.png (1200 x 630: status, wind at Earth, 7-day peak, sector, outlook), and a share page, https://sr-dash.github.io/heliofield/sw/YYYY-MM-DD.html, which carries the card in its preview tags and redirects to the assessment. The newest card is https://sr-dash.github.io/heliofield/sw/latest.png. Each row of `data/spaceweather/daily.json` also has `model.level`: `good`, `watch`, `high` or `severe`.
+
 Parameters:
 - `date`;
 - `bg=open` (coronal-hole map instead of source-surface speed);

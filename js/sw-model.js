@@ -377,3 +377,88 @@ export function record(d, a) {
     fc_v: daily.map((x) => x[0]), fc_b: daily.map((x) => x[1]),
   };
 }
+
+// ------------------------------------------------------------- status
+// Levels, mildest first. Ambient wind above 500 km/s is a high-speed
+// stream; streams of 600 and 750 km/s commonly bring active and storm
+// conditions.
+export const LEVELS = ["good", "watch", "high", "severe"];
+export const LEVEL_NAME = { good: "Nominal", watch: "Watch", high: "High", severe: "Severe" };
+export const worst = (...lv) => lv.filter(Boolean).reduce((a, b) => (LEVELS.indexOf(b) > LEVELS.indexOf(a) ? b : a), "good");
+export const windLevel = (v) => (v < 500 ? "good" : v < 600 ? "watch" : v < 750 ? "high" : "severe");
+export const fmtDay = (t) => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+
+// ------------------------------------------------------------- DONKI events
+const inWeek = (t0) => (x) => { const t = Date.parse(x.t); return t >= t0 - 7 * DAY && t <= t0; };
+// The days whose products (flares) and positions (CMEs) the analysis needs.
+export function eventDays(events, t0) {
+  return { flares: [...new Set(events.flares.filter(inWeek(t0)).map((f) => f.t.slice(0, 10)))],
+    cmes: [...new Set(events.cmes.filter(inWeek(t0)).map((c) => c.t.slice(0, 10)))] };
+}
+// The week to the map time: each flare against the footpoints of its own
+// day's product (or this day's), each CME's cone against every body with a
+// drag-based arrival in the model wind there, and the storms.
+// ctx = { metaFor(day) -> meta or null, fleetAt(day) -> { fleet, L0 } or null }.
+export function eventsAnalysis(events, d, a, ctx) {
+  const within = inWeek(d.t0);
+  const flares = events.flares.filter(within).map((f) => {
+    const loc = parseLocation(f.loc), t = Date.parse(f.t), meta = ctx.metaFor(f.t.slice(0, 10)) || d.meta, feet = footpoints(meta);
+    const L0 = earthLon(meta.L0, Date.parse(meta.obstime), t), conn = {}, dist = {};
+    if (loc) for (const p of feet) { dist[p.key] = angle(loc.lon + L0, loc.lat, p.foot[0], p.foot[1]); conn[p.key] = connection(dist[p.key]); }
+    return { ...f, tm: t, site: loc, conn, dist };
+  });
+  const cmes = events.cmes.filter(within).filter((c) => c.lon != null && c.lat != null).map((c) => {
+    const t = Date.parse(c.t), t21 = c.t21 ? Date.parse(c.t21) : t + 21.5 * RSUN_KM / c.speed * 1000, pos = ctx.fleetAt(c.t.slice(0, 10));
+    const targets = {};
+    for (const [k] of BODIES) {
+      const b = pos?.fleet[k] || d.meta.fleet[k];
+      if (!b) continue;
+      const g = cmeGeometry({ lon: c.lon, lat: c.lat, half: c.half ?? 30 }, { lon: wrap180(b.lon - (pos ? pos.L0 : d.L0)), lat: b.lat });
+      if (g.hit !== "miss") {
+        const w = a.bodies[k]?.v ?? 400, run = dbm(c.speed, w, 21.5 * RSUN_KM, b.r * AU_KM);
+        Object.assign(g, { arrival: t21 + run.t * 1000, vArr: run.v, w });
+      }
+      targets[k] = g;
+    }
+    return { ...c, tm: t, targets };
+  });
+  return { flares, cmes, storms: events.storms.filter(within) };
+}
+// What the events mean for Earth: CMEs aimed at it (unless they arrived
+// more than a day before the map), storms, and flares that could send it
+// particles.
+export function eventLevel(ev, t0) {
+  if (!ev) return null;
+  const why = [];
+  let lv = "good";
+  for (const c of ev.cmes) {
+    const g = c.targets.earth;
+    if (!g || g.hit === "miss" || g.arrival < t0 - DAY) continue;
+    lv = worst(lv, g.hit === "inside" ? (c.speed >= 1500 ? "severe" : "high") : "watch");
+    why.push(`a ${c.speed} km/s CME ${g.hit === "inside" ? "aimed at" : "glancing"} Earth`);
+  }
+  for (const st of ev.storms) { lv = worst(lv, st.g >= 4 ? "severe" : "high"); why.push(`a G${st.g} storm`); }
+  for (const f of ev.flares) {
+    lv = worst(lv, f.conn.earth === "good" ? "high" : "watch");
+    why.push(`an ${f.cls} flare${f.conn.earth === "good" ? " well connected to Earth" : ""}`);
+  }
+  return { lv, why };
+}
+// One overall level for the day: the worst of the wind now, the week ahead
+// and the events, with the reasons in words.
+export function overall(d, a, ev) {
+  const evl = eventLevel(ev, d.t0), reasons = [];
+  const lvNow = a.now ? windLevel(a.now.v) : null, lvPeak = a.peak ? windLevel(a.peak.v) : null;
+  if (lvNow && lvNow !== "good") reasons.push(`${windClass(a.now.v)} wind now (${Math.round(a.now.v)} km/s)`);
+  if (lvPeak && lvPeak !== "good" && a.peak.v > (a.now?.v ?? 0) + 30) reasons.push(`a high-speed stream around ${fmtDay(a.peak.t)} (${Math.round(a.peak.v)} km/s)`);
+  if (evl?.why.length) reasons.push(...evl.why);
+  return { level: worst(lvNow, lvPeak, evl?.lv), reasons, lvNow, lvPeak, evl };
+}
+
+// What the nightly share card draws: the outlook at Earth every 3 hours
+// from two days before the map to seven after, with far-side flags.
+export function cardSeries(d, a) {
+  const day0 = Date.parse(d.day + "T00:00:00Z");
+  return (a.ser || []).filter((p) => p.t >= day0 - 2 * DAY && p.t <= day0 + 8 * DAY && new Date(p.t).getUTCHours() % 3 === 0)
+    .map((p) => [new Date(p.t).toISOString().slice(0, 13), Math.round(p.v), Math.sign(p.b) || 1, p.age > 14 ? 1 : 0]);
+}
