@@ -605,13 +605,16 @@ function drawCycle() {
 
 // ------------------------------------------------------------- sharing
 function shareText() {
-  const a = D.a;
-  if (!a.now) return `Space weather for ${fmtDay(D.t0)} from HelioField's coronal model`;
+  const a = D?.day === S.date ? D.a : null;
+  const when = fmtDay(Date.parse(S.date + "T12:00:00Z")) + " " + S.date.slice(0, 4);
+  if (!a?.now) return `Space weather ${when} from HelioField's coronal model`;
   const up = a.peak && a.peak.v >= 500 && a.peak.v - a.now.v > 60 ? `, fast wind ~${Math.round(a.peak.v)} km/s around ${fmtDay(a.peak.t)}` : "";
-  return `Space weather ${fmtDay(D.t0)} ${D.day.slice(0, 4)} from HelioField's coronal model: ${M.windClass(a.now.v)} solar wind ~${Math.round(a.now.v)} km/s at Earth, sector pointing ${sectorFrom(a.now.b)} the Sun${up}.`;
+  return `Space weather ${when} from HelioField's coronal model: ${M.windClass(a.now.v)} solar wind ~${Math.round(a.now.v)} km/s at Earth, sector pointing ${sectorFrom(a.now.b)} the Sun${up}.`;
 }
+// Set as soon as the date is known (and again with the day's summary once it
+// has loaded), so the buttons work even while the assessment is loading.
 function setupShare() {
-  const url = `${SITE}?date=${D.day}`, text = shareText(), u = encodeURIComponent(url), tx = encodeURIComponent(text);
+  const url = `${SITE}?date=${S.date}`, text = shareText(), u = encodeURIComponent(url), tx = encodeURIComponent(text);
   const links = {
     x: `https://x.com/intent/post?text=${tx}&url=${u}`,
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${u}`,
@@ -619,17 +622,35 @@ function setupShare() {
     bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(text + " " + url)}`,
     reddit: `https://www.reddit.com/submit?url=${u}&title=${tx}`,
     whatsapp: `https://wa.me/?text=${encodeURIComponent(text + " " + url)}`,
-    email: `mailto:?subject=${encodeURIComponent("HelioField space weather, " + D.day)}&body=${encodeURIComponent(text + "\n\n" + url)}`,
+    email: `mailto:?subject=${encodeURIComponent("HelioField space weather, " + S.date)}&body=${encodeURIComponent(text + "\n\n" + url)}`,
   };
   for (const a of document.querySelectorAll(".share-btn[data-net]")) {
     a.href = links[a.dataset.net];
+    if (a.dataset.net === "email") continue;
+    // A new tab where the browser allows one; in-app and embedded browsers
+    // that block new windows get the share page in this tab instead.
+    a.onclick = (e) => {
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
+      e.preventDefault();
+      const w = window.open(a.href, "_blank");
+      if (w) w.opener = null; else location.assign(a.href);
+    };
   }
   const nat = $("shareNative");
   nat.hidden = !navigator.share;
   nat.onclick = () => navigator.share({ title: "HelioField space weather", text, url }).catch(() => {});
   $("copyLink").onclick = async (e) => {
     const b = e.currentTarget;
-    try { await navigator.clipboard.writeText(url); b.classList.add("done"); b.title = "Link copied"; } catch (err) { prompt("Copy this link", url); }
+    let ok = false;
+    try { await navigator.clipboard.writeText(url); ok = true; } catch (err) {
+      // No clipboard API (older or embedded browsers): copy through a selection.
+      const t = Object.assign(document.createElement("textarea"), { value: url });
+      t.style.cssText = "position:fixed;opacity:0"; document.body.append(t); t.select();
+      try { ok = document.execCommand("copy"); } catch (err2) { ok = false; }
+      t.remove();
+    }
+    if (!ok) { prompt("Copy this link", url); return; }
+    b.classList.add("done"); b.title = "Link copied";
     setTimeout(() => { b.classList.remove("done"); b.title = "Copy link"; }, 1600);
   };
 }
@@ -672,7 +693,7 @@ async function run() {
 function setupControls() {
   const inp = $("date");
   inp.min = dates[0]; inp.max = dates.at(-1); inp.value = S.date;
-  const go = (day) => { S.date = day; inp.value = day; syncUrl(); run(); };
+  const go = (day) => { S.date = day; inp.value = day; syncUrl(); setupShare(); run(); };
   // Days without a product (a missed night) snap to the nearest one.
   const nearest = (day) => dates.reduce((b, x) => (Math.abs(Date.parse(x) - Date.parse(day)) < Math.abs(Date.parse(b) - Date.parse(day)) ? x : b), dates.at(-1));
   inp.onclick = (e) => { try { e.target.showPicker(); } catch (err) { /* older browsers */ } };
@@ -707,7 +728,7 @@ new ResizeObserver(() => {
     dates = idx.dates;
     const want = params.get("date");
     S.date = dates.includes(want) ? want : dates.at(-1);
-    setupControls(); syncUrl();
+    setupControls(); syncUrl(); setupShare();
     [events, series, track] = await Promise.all([
       fetch(`${FLEET_URL}data/events.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("data/series/rotations.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
