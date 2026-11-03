@@ -118,6 +118,22 @@ The page also lists the HelioFleet observations (IRIS, Hinode/EIS, DKIST, Solar 
 
 It runs in its own worker (`js/connect-worker.js`) with the same solver, and its geometry (`js/connect-geo.js`) is checked against SunPy in `tests/test_connect.py`. Parameters: `date`, `scs`, `rss`, `v`, `conn`, `focus`, `ins`, `bg`.
 
+## Space-weather page
+
+[`spaceweather.html`](https://sr-dash.github.io/heliofield/spaceweather.html) turns each daily product into space-weather indicators:
+- model wind speed and magnetic sector at Earth, 13 days back to 14 ahead: WSA-type speeds from every source-surface cell (`wsa.png`, written by the daily build) carried to 1 au with the HUX kinematic model, with the days that rest on far-side data marked;
+- coronal holes near the equator, with central-meridian passage and fast-wind arrival windows;
+- the Russell–McPherron season effect and the Rosenberg–Coleman latitude effect;
+- interplanetary field strength from the open flux, and upstream lead times of the other spacecraft;
+- footpoints for particle-event connectivity against DONKI flares, and DONKI CMEs with drag-based arrival estimates;
+- solar-cycle context, and share buttons for the main social networks.
+
+The physics is in `js/sw-model.js`, tested in `tests/test_spaceweather.py`. Parameters: `date`, `bg`, `lead`, `theme`. It describes the ambient wind only and is not an official forecast.
+
+Each nightly run also keeps a time series (`scripts/sw_record.py`, running `js/sw-model.js` under Node through `scripts/sw_eval.mjs`):
+- `data/spaceweather/daily.json`: per day, the model's numbers and its daily-mean speed and sector predicted at Earth from one day before to seven days after, with the daily means measured at L1 (NASA OMNI, and NOAA SWPC real-time data until OMNI catches up). The page scores the predictions at each lead time.
+- `data/spaceweather/inputs/<year>.json`: the WSA inputs (f<sub>s</sub>, DCHB) along Earth's latitude, for `scripts/calibrate_wsa.py`, which refits the speed formula against the measurements.
+
 ## Scripts and automated agents
 
 Every view is a URL (`date`, `view`, `layers`, `rss`, `scs`, …). With `--date`,
@@ -288,9 +304,10 @@ Each day writes `data/<date>/` (about 470 kB):
 
 | File | Content |
 |---|---|
-| `meta.json` | map provenance, Carrington rotation, L0/B0, open flux, HCS polylines, fleet positions, footpoints with `fs`, `dchb`, `vwsa` per speed in `vgrid` (`connect`), and the same for other source surfaces (`ensemble`) |
+| `meta.json` | map provenance, Carrington rotation, L0/B0, open flux, HCS polylines, fleet positions, footpoints with `fs`, `dchb`, `vwsa` per speed in `vgrid` (`connect`), the same for other source surfaces (`ensemble`), and the speed map's range (`wsa`) |
 | `br.png` | photospheric B<sub>r</sub>, 360×180 equirectangular, 8-bit, ±20 G, north up, column *j* at Carrington longitude *j*+0.5° |
 | `ss.png` | source-surface B<sub>r</sub>, same grid, ±`ss_scale` G |
+| `wsa.png` | WSA-type speed traced from every source-surface cell, same grid: 0 no value, 1–255 linear over `wsa.vmin`–`wsa.vmax` km/s |
 | `lines.bin` | every polyline as little-endian int16 Carrington *xyz* in units of 10⁻⁴ R☉; lengths in `meta.counts` (field lines first, then one per `meta.connect` entry) |
 
 Everything is in the Carrington frame, so the page does no coordinate

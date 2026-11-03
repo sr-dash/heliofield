@@ -79,6 +79,7 @@
   <a href="./">3D viewer</a>
   <a href="series.html">Solar-cycle series</a>
   <a href="connect.html">Connectivity</a>
+  <a href="spaceweather.html">Space weather</a>
   <a href="guide.html#methods">Methods and data</a>
   <a href="guide.html#agents">Scripts &amp; API</a>
   <a class="sitenav-help" href="guide.html" aria-current="page">How to use</a>
@@ -111,6 +112,7 @@
   <a href="#connectivity">Spacecraft connectivity</a>
   <a href="#sources">Solar-wind sources</a>
   <a href="#connect">Connectivity page</a>
+  <a href="#spaceweather">Space-weather page</a>
   <a href="#coords">Coordinates and scale</a>
   <a href="#colours">Colours and accessibility</a>
   <a href="#validation">Validation</a>
@@ -451,6 +453,29 @@ python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet</code>
   <p><b>Limits.</b> The model is static over the rotation and current-free outside the sheets. The ballistic mapping ignores acceleration, stream interactions and coronal mass ejections, so a footpoint can be off by 10° or more; the spread shows how much. The search finds only observations in HelioFleet's catalogue, and the footprints carry the pointing recorded with each observation. Dates newer than the latest HMI rotation map use the nearest map, as the page says.</p>
 </section>
 
+<section id="spaceweather">
+  <h3>Space-weather page</h3>
+  <p>The <a href="spaceweather.html">space-weather page</a> turns one day's product into indicators for Earth and the fleet. It uses the daily magnetogram, not the HMI rotation maps, so it covers the dates that have a daily product. Everything on it describes the <b>ambient</b> solar wind and the geometry that shapes its effects. Eruptions enter only through NASA's DONKI catalogue, as HelioFleet keeps it (flares of M5 and above, CMEs of 1000 km/s and above, storms of G3 and above).</p>
+  <ul>
+    <li><b>Speed on the source surface.</b> The daily build traces a field line down from every 1° cell of the source surface and takes the WSA-type speed at its foot, as for the spacecraft connections. The map is stored as <code>wsa.png</code>. Cells whose line closes below the source surface have no value.</li>
+    <li><b>Propagation.</b> The ring of speeds at a body's latitude is carried out to its distance with the HUX kinematic model (Riley &amp; Lionello 2011), stepping 1 R<sub>☉</sub> at a time in the corotating frame:
+      <div class="eq"><i>v</i>(<i>r</i> + Δ<i>r</i>, φ) = <i>v</i>(<i>r</i>, φ) + (Ω Δ<i>r</i> / <i>v</i>) ∂<i>v</i>/∂φ</div>
+      Fast wind catches slow wind and steepens into stream interfaces, which ballistic mapping cannot show. The residual acceleration term is left out, because the WSA-type speeds stand for the final speed. The sign of the source-surface field and the source longitude ride along the same characteristics. That gives the magnetic sector and the origin of the wind at each point.</li>
+    <li><b>Outlook at Earth.</b> Earth's Carrington longitude falls by 360° per 27.2753 days, so the propagated ring becomes a time series from 13 days before to 14 days after the date. Days whose wind comes from longitudes last updated more than 14 days before the map are shaded. A synoptic map is refreshed as longitudes pass from about 60° east of central meridian onwards, so these are the far-side parts. Sector boundaries are the sign changes of the propagated field. A high-speed stream is any stretch above 500 km/s.</li>
+    <li><b>Coronal holes.</b> Open-field regions are taken from <code>open.png</code> (8-connected, wrapping in longitude). Each hole is described by its part within 35° of the equator, whose wind reaches the ecliptic. Holes whose low-latitude part covers less than 0.15% of the Sun are dropped. Fast wind from a hole at Carrington longitude λ reaches Earth when L<sub>0</sub>(<i>t</i>) + Ω (<i>r</i> − R<sub>ss</sub>) / <i>v</i> = λ, given for 700 and 500 km/s.</li>
+    <li><b>Russell–McPherron effect.</b> The interplanetary field is taken as an ideal Parker spiral in the solar equatorial plane. It is turned into Earth's GSM frame with the IAU solar pole, low-precision solar coordinates and a centred dipole with its northern pole at 80.8° N, 72.6° W. The page gives B<sub>z</sub>/|B| hour by hour and as a daily mean, for both sectors. Sectors towards the Sun are most southward near 5 April at 22 UT, and sectors away near 5 October at 10 UT, as in Russell &amp; McPherron (1973). A daily mean below −15% is called favourable for coupling, and above +15% unfavourable.</li>
+    <li><b>Rosenberg–Coleman effect.</b> Earth's heliographic latitude B<sub>0</sub> reaches ±7.25°. The share of source-surface longitudes at that latitude with outward field is compared with the sign of the polar field in that hemisphere, from the latest rotation on the <a href="#series">solar-cycle series</a>.</li>
+    <li><b>Interplanetary field strength.</b> |B<sub>r</sub>| = Φ<sub>open</sub> / 4π<i>r</i><sup>2</sup>, which assumes that |B<sub>r</sub>| <i>r</i><sup>2</sup> is the same at all latitudes, as Ulysses found. The value is wound into a Parker spiral at the model speed. PFSS open flux is typically about half the in-situ value (the open flux problem), so this is a lower bound.</li>
+    <li><b>Upstream spacecraft.</b> Each spacecraft's wind is propagated at its own latitude and distance. Its source longitude, compared with Earth's, gives how many days before or after Earth it meets wind from the same source. The estimate is flagged as loose for spacecraft more than 8° from Earth's latitude or closer than 0.5 au.</li>
+    <li><b>Particle events.</b> Footpoints are those of the <a href="#connect">connectivity page</a>, at each spacecraft's self-consistent speed, given in Stonyhurst coordinates as seen from Earth. A flare site within 30° of a footpoint counts as a good connection, 30–60° as partial, and beyond that as poor. Each flare is compared with the footpoints of its own day's product where that exists.</li>
+    <li><b>CMEs.</b> DONKI's cone fit gives each CME's direction, half-width and speed at 21.5 R<sub>☉</sub>. A body inside the cone, or within 15° of its edge (flank), gets an arrival estimate from the drag-based model (Vršnak et al. 2013) with γ = 0.2 × 10<sup>−7</sup> km<sup>−1</sup>. The ambient speed is the propagated model wind at that body.</li>
+    <li><b>Model against measurement.</b> Each night's run appends the day's numbers to <code>data/spaceweather/daily.json</code>, using the page's own code under Node. That includes the predicted daily-mean speed and sector at Earth for each UTC day from the day before to a week after. A row is kept as the forecast of its day and is replaced only if its product is rebuilt. The same run adds daily means of the solar wind measured at L1: from NASA OMNI (hourly, definitive, about a week behind) and, until OMNI has them, from NOAA SWPC's real-time solar wind. The page scores the predictions made 0–7 days ahead by mean absolute error, bias, correlation and the share of days with the right sector. Days where the measured field spends less than 70% of the time in one sector are left out of the sector score. Rows before the record began on 3 November 2026 were computed afterwards from each day's own product.</li>
+    <li><b>Calibration.</b> The run also keeps f<sub>s</sub>, DCHB and the sign of the source-surface field along Earth's latitude (<code>data/spaceweather/inputs/</code>), which outlive the pruned daily products. <code>scripts/calibrate_wsa.py</code> recomputes the speeds from them with trial coefficients for <i>v</i><sub>0</sub>, <i>v</i><sub>1</sub>, the exponent of (1 + <i>f</i><sub>s</sub>) and the boundary width <i>w</i>. It carries them to Earth with the same HUX scheme, checked against the page's to machine precision, and minimises the mean absolute error against the measured daily means. It recommends a fit only after 90 measured target days.</li>
+    <li><b>Solar-cycle context.</b> From the rotation series: current-sheet tilt, polar fields with the last sign change of their 13-rotation means, the polar field relative to the 2019 minimum, and open flux.</li>
+  </ul>
+  <p><b>Limits.</b> The WSA coefficients are illustrative, not yet calibrated against in-situ data. The model is static over a rotation and knows nothing of transients. The page does not replace official forecasts from <a href="https://www.swpc.noaa.gov/">NOAA SWPC</a> or other space-weather services. The share buttons pass the page address and a one-line summary to each network's own sharing page; nothing is sent until you confirm there.</p>
+</section>
+
 <section id="coords">
   <h3>Coordinates and scale</h3>
   <p>The whole scene is in the Carrington frame. It is fixed to the rotating Sun, with <i>z</i> along the solar rotation axis and <i>x</i> at Carrington longitude 0. The field therefore stays still from day to day, and the planets and spacecraft move around it. Earth's position in this frame is given by L<sub>0</sub> and B<sub>0</sub>, its heliographic longitude and latitude.</p>
@@ -600,7 +625,8 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
   <p>Every day's product is a set of small static files, open to anyone. They are about 470 kB per day, under <code>data/&lt;date&gt;/</code>. The list of days is in <code>data/index.json</code>.</p>
   <table>
     <tr><th>File</th><th>Content</th></tr>
-    <tr><td><code>meta.json</code></td><td>Map provenance and time, Carrington rotation, L<sub>0</sub> and B<sub>0</sub>, model settings, open flux, neutral-line polylines, body positions, and footpoints for each wind speed in <code>vgrid</code> (<code>connect</code>, with <code>fs</code>, <code>dchb</code> and <code>vwsa</code>). <code>ensemble</code> holds the same for the other source surfaces, as <code>[lon, lat, fs, dchb, vwsa]</code> per <code>connect</code> entry.</td></tr>
+    <tr><td><code>meta.json</code></td><td>Map provenance and time, Carrington rotation, L<sub>0</sub> and B<sub>0</sub>, model settings, open flux, neutral-line polylines, body positions, and footpoints for each wind speed in <code>vgrid</code> (<code>connect</code>, with <code>fs</code>, <code>dchb</code> and <code>vwsa</code>). <code>ensemble</code> holds the same for the other source surfaces, as <code>[lon, lat, fs, dchb, vwsa]</code> per <code>connect</code> entry. <code>wsa</code> names the speed map and its range.</td></tr>
+    <tr><td><code>wsa.png</code></td><td>WSA-type speed traced from every 1° cell of the source surface, 360 × 180, north row first: grey level 0 means no value, 1–255 span <code>wsa.vmin</code>–<code>wsa.vmax</code> km/s linearly.</td></tr>
     <tr><td><code>br.png</code></td><td>Photospheric B<sub>r</sub>, 360 × 180, equirectangular, 8-bit grey, ±20 G, north up. Column <i>j</i> is centred on Carrington longitude <i>j</i> + 0.5°.</td></tr>
     <tr><td><code>ss.png</code></td><td>Source-surface B<sub>r</sub> on the same grid, scaled to ±<code>ss_scale</code> G from <code>meta.json</code>.</td></tr>
     <tr><td><code>lines.bin</code></td><td>Every polyline as little-endian 16-bit integer Carrington <i>x</i>, <i>y</i>, <i>z</i> in units of 10<sup>−4</sup> R<sub>☉</sub>. Line lengths are in <code>meta.counts</code>: field lines first, then one per connectivity entry.</td></tr>
@@ -663,7 +689,7 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
 </main>
 
 </div>
-<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="series.html">Solar-cycle series</a> · <a href="connect.html">Connectivity</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
+<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="series.html">Solar-cycle series</a> · <a href="connect.html">Connectivity</a> · <a href="spaceweather.html">Space weather</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
   <a href="https://github.com/sr-dash/heliofield/issues/new/choose">Report a problem or suggest a feature</a> ·
   Companion to <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a> · Made by <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> ·
   <a href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">MIT licence</a> · DOI <a href="https://doi.org/10.5281/zenodo.23487231">10.5281/zenodo.23487231</a></footer>

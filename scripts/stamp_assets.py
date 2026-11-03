@@ -29,7 +29,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 # Each page and its entry module (None: stylesheets only)
-PAGES = {"index.html": "main.js", "series.html": "series.js", "connect.html": "connect.js", "guide.html": None}
+PAGES = {"index.html": "main.js", "series.html": "series.js", "connect.html": "connect.js", "spaceweather.html": "spaceweather.js", "guide.html": None}
 # Libraries the viewer loads from the CDN; versioned already, so not hashed
 LIBRARIES = {
     "index.html": {

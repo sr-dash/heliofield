@@ -16,6 +16,8 @@ that path, so the fallback serves the nightly build, not backfills).
                 footpoints with source diagnostics (connect, ensemble)
     br.png      photospheric Br, 360x180 equirectangular, 8-bit, +-BR_SCALE G
     ss.png      source-surface Br, same grid, +-ss_scale G (in meta)
+    wsa.png     WSA-type speed traced from every source-surface cell, same
+                grid: 0 no value, 1-255 for WSA_VMIN-WSA_VMAX km/s
     lines.bin   every polyline as int16 Carrington xyz in units of 1e-4 R_sun
 
 Everything is in the Carrington frame (z = solar rotation axis), so the page
@@ -58,6 +60,7 @@ VSW = [300, 400, 500, 600, 700, 800]   # wind speeds offered by the page [km/s]
 VGRID = list(range(200, 901, 25))      # speeds actually mapped: slider +-100 km/s
 RSS_ENS = [2.0, 3.0]                   # extra source surfaces for the footpoint spread
 CH_STEP = 1.0                          # open/closed map resolution for DCHB [deg]
+WSA_VMIN, WSA_VMAX = 200.0, 900.0      # range of the source-surface speed map, wsa.png [km/s]
 OMEGA = 2 * np.pi / (25.38 * 86400)    # Carrington sidereal rate [rad/s]
 RSUN_KM = 695700.0
 AU_KM = 149597870.7
@@ -350,7 +353,53 @@ def b_mag(out, lon, lat, r) -> np.ndarray:
     return np.linalg.norm(out.get_bvec(c).to_value("G"), axis=-1)
 
 
-def connectivity(out, tracer, fleet, rss: float = RSS, lines: bool = True):
+def wsa_at(out, tracer, bound, lon, lat, rss: float = RSS):
+    """f_s and DCHB [deg] for field lines traced down from source-surface
+    points (lon, lat) [deg], as for the fleet; NaN where a line does not
+    reach the photosphere."""
+    import astropy.units as u
+    from astropy.coordinates import SkyCoord
+    from scipy.spatial import cKDTree
+    lon, lat = np.ravel(lon), np.ravel(lat)
+    s = SkyCoord(lon * u.deg, lat * u.deg, np.full(lon.size, rss * 0.995 * RSUN_KM) * u.km, frame=out.coordinate_frame)
+    fls = tracer.trace(s, out)
+    ok = np.asarray(fls.connectivities) == 1
+    feet = fls.open_field_lines.solar_feet
+    f_lon, f_lat = feet.lon.to_value("deg") % 360, feet.lat.to_value("deg")
+    fs, dchb = np.full(lon.size, np.nan), np.full(lon.size, np.nan)
+    fs[ok] = b_mag(out, f_lon, f_lat, 1.0) / b_mag(out, lon[ok], lat[ok], rss) / rss ** 2
+    # Nearest boundary point by chord length, turned into an angle.
+    chord, _ = cKDTree(bound).query(unit(f_lon, f_lat))
+    dchb[ok] = np.degrees(2 * np.arcsin(np.clip(chord / 2, 0, 1)))
+    return fs, dchb
+
+
+def wsa_map(out, tracer, bound, rss: float = RSS) -> np.ndarray:
+    """WSA-type speed [km/s] over the source surface, on the 1-degree
+    equirectangular grid of the PNGs (north row first)."""
+    LO, LA = np.meshgrid(np.arange(0.5, 360, 1.0), np.arange(89.5, -90, -1.0))
+    fs, dchb = wsa_at(out, tracer, bound, LO, LA, rss)
+    return wsa_speed(fs, dchb).reshape(LO.shape)
+
+
+def wsa_ring(out, tracer, bound, lat: float, rss: float = RSS) -> dict:
+    """The inputs of the WSA-type speed along one latitude of the source
+    surface (Earth's), every degree of longitude from 0.5, so the speed can be
+    recomputed with other coefficients (scripts/calibrate_wsa.py)."""
+    lon = np.arange(0.5, 360, 1.0)
+    fs, dchb = wsa_at(out, tracer, bound, lon, np.full(lon.size, lat), rss)
+    r = lambda a, n: [None if not np.isfinite(x) else float(f"{x:.{n}g}") for x in a]
+    return dict(lat=round(float(lat), 3), fs=r(fs, 4), dchb=r(dchb, 3))
+
+
+def write_speed_png(path: Path, v: np.ndarray):
+    """Speeds as grey levels: 0 no value, 1-255 for WSA_VMIN-WSA_VMAX km/s."""
+    from PIL import Image
+    k = np.clip(np.round(1 + (v - WSA_VMIN) / (WSA_VMAX - WSA_VMIN) * 254), 1, 255)
+    Image.fromarray(np.where(np.isfinite(v), k, 0).astype(np.uint8), "L").save(path, optimize=True)
+
+
+def connectivity(out, tracer, fleet, rss: float = RSS, lines: bool = True, bound=None):
     """Ballistic Parker-spiral footpoint on the source surface for each body
     and wind speed in VGRID, then the PFSS line from there down to the
     photosphere, with the source diagnostics at its foot:
@@ -377,7 +426,7 @@ def connectivity(out, tracer, fleet, rss: float = RSS, lines: bool = True):
             coords.append((lon, lat))
     if not coords:
         return [], []
-    bound = ch_boundary(out, tracer, rss)
+    bound = ch_boundary(out, tracer, rss) if bound is None else bound
     lon, lat = np.array(coords).T
     s = SkyCoord(lon * u.deg, lat * u.deg, np.full(len(lon), rss * 0.995 * 696000) * u.km,
                  frame=out.coordinate_frame)
@@ -446,7 +495,10 @@ def build(day: date, force: bool = False) -> bool:
         polys.append(resample(xyz))
 
     fleet = fleet_positions(m.date)
-    jobs, conn = connectivity(out, tracer, fleet)
+    bound = ch_boundary(out, tracer, RSS)
+    jobs, conn = connectivity(out, tracer, fleet, bound=bound)
+    write_speed_png(dest / "wsa.png", wsa_map(out, tracer, bound))
+    ring = wsa_ring(out, tracer, bound, fleet["earth"]["lat"]) if "earth" in fleet else None
     # The same mapping for other source-surface heights, footpoints and
     # diagnostics only, for the footpoint spread.
     ens = []
@@ -491,7 +543,8 @@ def build(day: date, force: bool = False) -> bool:
         # Per extra source surface, one [lon, lat, fs, dchb, vwsa] (or null)
         # per connect entry, in the same order.
         ensemble=dict(rss=RSS_ENS, foot=[[(r[1] + r[2:]) if r[1] else None for r in res] for res in ens]),
-        wsa=dict(form="285 + 625/(1+fs)^(2/9) * (1 - 0.8 exp(-(dchb/2)^2))^3", ch_step_deg=CH_STEP),
+        wsa=dict(form="285 + 625/(1+fs)^(2/9) * (1 - 0.8 exp(-(dchb/2)^2))^3", ch_step_deg=CH_STEP,
+                 map="wsa.png", vmin=WSA_VMIN, vmax=WSA_VMAX, ring=ring),
     )
     (dest / "meta.json").write_text(json.dumps(meta, separators=(",", ":")))
     print(f"  {len(polys)} lines, {len(conn)} connections, "

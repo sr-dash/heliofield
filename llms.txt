@@ -75,6 +75,29 @@ Examples:
 - https://sr-dash.github.io/heliofield/connect.html?date=2025-03-22
 - https://sr-dash.github.io/heliofield/connect.html?date=2025-03-22&scs=21.5&focus=solo&ins=metis
 
+## Space-weather page
+
+`https://sr-dash.github.io/heliofield/spaceweather.html?date=YYYY-MM-DD` turns one day's product into space-weather indicators (dates with a daily product only; default: the latest). It shows:
+- an assessment in words, and tiles: model wind speed at Earth, peak in the next 7 days, magnetic sector and next sector boundary, Russell-McPherron season, interplanetary field strength from open flux, coronal holes facing Earth, sector bias at Earth's latitude (Rosenberg-Coleman), DONKI event counts;
+- the solar-wind outlook at Earth, 13 days back to 14 days ahead: WSA-type speeds on the source surface carried to 1 au with the HUX kinematic model, the sector, and which days rest on far-side data;
+- coronal holes within 35 degrees of the equator, with central-meridian passage and fast-wind arrival windows;
+- the southward share of the Parker-spiral field (GSM) through the year for both sectors;
+- upstream lead times of Parker Solar Probe, Solar Orbiter, STEREO-A and BepiColombo relative to Earth;
+- footpoints for particle-event connectivity, and the angular distance of DONKI flares (M5+) from each;
+- DONKI CMEs (1000 km/s+) with cone geometry and drag-based arrival estimates, and G3+ storms;
+- solar-cycle context from the rotation series;
+- the model against measurement: each day's predictions (same day to 7 days ahead) next to the daily-mean solar wind measured at L1, with error, bias, correlation and sector hit rate per lead time.
+
+It describes the ambient wind only, uses illustrative WSA coefficients, and is not an official forecast (that is NOAA SWPC). Share buttons for X, Facebook, LinkedIn, Bluesky, Reddit, WhatsApp and email.
+
+Parameters:
+- `date`;
+- `bg=open` (coronal-hole map instead of source-surface speed);
+- `lead` (`0`, `1`, `3`, `5` or `7` days: which predictions to compare with measurements; default 1);
+- `theme`.
+
+Example: https://sr-dash.github.io/heliofield/spaceweather.html?date=2026-11-02
+
 ## URL parameters
 
 - `date`: YYYY-MM-DD from 2010-05-01, or `latest` (default). Recent days use daily server products (GONG, or the HMI fallback). Other days are computed in the browser from the SDO/HMI Carrington-rotation map covering the date. On the full page, a computed date first shows a dialog: click **Compute**, then wait a few seconds. With `embed=1` it computes without asking, which suits browser tools.
@@ -104,7 +127,11 @@ An embedded page can also be driven with postMessage. Send `{type: "heliofield:s
   - `hcs`: source-surface neutral lines as flat `[lon, lat, ...]` lists;
   - `fleet`: each body's Carrington `lon`, `lat`, `r` in au;
   - `connect`: per body and speed, the source-surface point `ss`, the footpoint `foot`, `fs`, `dchb` and `vwsa`;
-  - `vgrid`.
+  - `vgrid`;
+  - `wsa`: the speed map's file and range.
+- `data/<date>/wsa.png`: WSA-type speed traced from every 1-degree cell of the source surface, 360 x 180 grey PNG, north row first; 0 no value, 1-255 linear over `wsa.vmin`-`wsa.vmax` km/s.
+- `data/spaceweather/daily.json`: the space-weather time series, one row per day: `model` (from that day's product: `v`, `sector`, `next_boundary`, `peak7`, `imf_nT`, `open_flux`, `rm`, `rc_away`, `holes_facing`, and `fc_v`/`fc_b`, the predicted daily-mean speed and sector at Earth for UTC days -1 to +7) and `measured` (daily means at L1: `v`, `v_min`, `v_max`, `b`, `bz`, `away`, `n`, `kp_max`, `dst_min`, `src` = `OMNI` or `SWPC RTSW`). Units in `units`.
+- `data/spaceweather/inputs/<year>.json`: per day, the WSA inputs `fs` and `dchb` and the source-surface field sign `b` along Earth's latitude (360 longitudes from 0.5 deg), with `t0`, `L0`, `lat`, `r`, `rss`, for recalibrating the speed formula (`scripts/calibrate_wsa.py`).
 - `data/history/index.json`: the archive of HMI rotation maps (`rotations`: `cr`, `start`, `stop`, `file`; `shape`; `scale_G`). Each `data/history/cr/<CR>.bin.gz` is gzipped int16 × 0.1 G, 180 × 360, rows uniform in sin(latitude) from the south, column j at Carrington longitude j + 0.5°.
 - `data/history/fleet/<year>.json`: daily Carrington positions at 12:00 UTC, and Earth's L0, B0 and Carrington rotation.
 - `data/series/rotations.json`: per Carrington rotation since 2010: open flux, open area, current-sheet tilt (north and south) and polar field.

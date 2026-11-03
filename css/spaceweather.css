@@ -1,0 +1,143 @@
+/* Space-weather page, on top of guide.css (tokens, header, footer). */
+:root, :root[data-theme="dark"] { --grid: rgba(255, 255, 255, 0.12); --tip: #141a26; --chip: rgba(127, 140, 170, .16); --shade: rgba(127, 140, 170, .13);
+  /* Status levels, each >= 5.8:1 against the card, adjacent levels >= 5.7 dE (OKLab x100), always with a shape and a word. */
+  --st-good: #56b86c; --st-watch: #e2a93b; --st-high: #f07b45; --st-severe: #f25c8c; }
+:root[data-theme="light"] { --grid: rgba(27, 32, 48, 0.13); --tip: #fffdf8; --chip: rgba(27, 32, 48, .07); --shade: rgba(27, 32, 48, .07);
+  /* >= 4.1:1 against the card, adjacent levels >= 8.7 dE. */
+  --st-good: #2f7d3f; --st-watch: #a86f00; --st-high: #c4501b; --st-severe: #9b1144; }
+
+.page { max-width: 1160px; margin: 0 auto; padding: 24px 16px 40px; }
+.lede { margin: 18px 0 14px; }
+.small { font-size: 15.5px; }
+
+/* Date and sharing. */
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 0 0 6px; font-size: 16px; }
+.controls label { display: inline-flex; align-items: center; gap: 6px; }
+.controls input, .controls .step button, .seg button {
+  font: inherit; font-size: 15.5px; color: var(--text); background: var(--card);
+  border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; min-height: 32px;
+}
+.controls .step { display: inline-flex; gap: 4px; }
+.controls .step button { width: 32px; cursor: pointer; }
+.controls .step button:disabled { opacity: .4; cursor: default; }
+.controls input[type=date] {
+  padding: 4px 8px 4px 11px; border-radius: 8px; cursor: pointer;
+  font: 500 15px/1 ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: .02em; font-variant-numeric: tabular-nums;
+}
+.controls input[type=date]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .75; margin-left: 6px; padding: 3px; border-radius: 5px; }
+.controls input[type=date]::-webkit-calendar-picker-indicator:hover { opacity: 1; background: rgba(127, 127, 127, .18); }
+.share { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
+.share-label { color: var(--muted); font-size: 15px; margin-right: 2px; }
+.share-btn {
+  color: var(--text); background: var(--card); cursor: pointer; padding: 0; width: 36px; height: 36px;
+  border: 1px solid var(--line); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+}
+.share-btn svg { width: 17px; height: 17px; fill: currentColor; }
+.share-btn svg.line { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.share-btn:hover { border-color: var(--accent); color: var(--accent); }
+.share-btn.done { border-color: var(--st-good); color: var(--st-good); }
+.share-btn:focus-visible, .seg button:focus-visible, svg:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.share-btn[hidden] { display: none; }
+@media (max-width: 760px) { .share { margin-left: 0; } }
+
+.status { color: var(--muted); font-size: 15.5px; min-height: 1.4em; margin: 4px 0 8px; }
+.status.warn { color: var(--text); }
+
+/* Sections. */
+.block { margin: 30px 0 0; }
+.block h2 { font-size: 22.5px; margin: 0 0 4px; }
+.block h3.minor { font-size: 17.5px; margin: 18px 0 6px; }
+.block .sub { color: var(--muted); font-size: 16.5px; margin: 0 0 10px; }
+.block figure { margin: 0; }
+.block canvas { display: block; width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--line); background: var(--card); }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+.scroll table { margin: 0; font-size: 15.5px; font-variant-numeric: tabular-nums; min-width: 100%; }
+/* Tables wrap within the page instead of scrolling sideways; the scroller
+   is only a last resort on a phone. Times and chips stay on one line. */
+.scroll th, .scroll td { padding: 7px 8px; white-space: normal; vertical-align: top; }
+.scroll td:first-child, .scroll th:first-child { white-space: nowrap; }
+.scroll th { font-size: 12.5px; }
+.scroll th { background: var(--card); position: sticky; top: 0; }
+td .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; vertical-align: 0; }
+td .faint, .faint { color: var(--muted); font-size: 13.5px; }
+.empty { padding: 12px; color: var(--muted); white-space: normal !important; }
+.pol { display: inline-block; padding: 1px 8px; border-radius: 10px; font-weight: 600; font-size: 14px; color: #fff; }
+.pol.out { background: var(--pos); } .pol.in { background: var(--neg); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.seg button { cursor: pointer; }
+.seg button.on { border-color: var(--text); font-weight: 650; }
+
+/* Status: a coloured shape (circle, triangle, diamond, octagon) and a word;
+   the word stays in text ink. */
+.st-good { --c: var(--st-good); } .st-watch { --c: var(--st-watch); } .st-high { --c: var(--st-high); } .st-severe { --c: var(--st-severe); }
+.st { display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px 1px 5px; border-radius: 10px; font-size: 13.5px; font-weight: 600;
+  background: color-mix(in srgb, var(--c) 15%, transparent); color: var(--text); white-space: nowrap; vertical-align: 1px; }
+.st svg { width: 14px; height: 14px; color: var(--c); flex: none; }
+.tile[class*="st-"] { border-left: 4px solid var(--c); }
+.tile .st { margin: 2px 0 4px; }
+.overall { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 0 12px; padding: 10px 14px; border-radius: 8px;
+  border: 1px solid var(--line); border-left: 6px solid var(--c); background: color-mix(in srgb, var(--c) 8%, var(--card)); }
+.overall .st { font-size: 15px; }
+
+/* Assessment. */
+.narrative { font-size: 18px; margin: 4px 0 14px; }
+.narrative p { margin: 0 0 8px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+.tile .label { font-size: 14.5px; color: var(--muted); }
+.tile .value { font-size: 24px; font-weight: 600; margin: 2px 0; font-variant-numeric: tabular-nums; }
+.tile .note { font-size: 14px; color: var(--muted); }
+.tile a { color: inherit; }
+a.tile { color: var(--text); }
+a.tile:hover { border-color: var(--accent); }
+a.tile .label::after { content: " →"; color: var(--accent); }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin: 12px 0 0; }
+.facts > div { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 16px; }
+.facts b.big { display: block; font-size: 20px; margin: 2px 0 4px; }
+.limits { font-size: 16.5px; color: var(--muted); }
+
+/* Charts (SVG). */
+.chartsvg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.chartsvg .tick { font: 13px ui-sans-serif, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.chartsvg .lab { font: 600 13.5px ui-sans-serif, system-ui, sans-serif; }
+.chartsvg .note { font: 12.5px ui-sans-serif, system-ui, sans-serif; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; font-size: 15px; margin: 4px 0 6px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 16px; height: 3px; border-radius: 2px; }
+.legend i.box { height: 12px; width: 12px; border-radius: 3px; }
+.legend i.dash { height: 0; border-top: 2px dashed var(--text); background: none; }
+details.table { margin: 6px 0 0; font-size: 15.5px; }
+details.table summary { cursor: pointer; color: var(--muted); }
+details.table .scroll { max-height: 320px; overflow: auto; margin-top: 6px; }
+
+.tip {
+  position: fixed; z-index: 40; pointer-events: none; min-width: 170px; max-width: 330px;
+  background: var(--tip); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 10px; font-size: 14.5px; box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
+}
+.tip .head { color: var(--muted); margin-bottom: 3px; }
+.tip .row { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.tip .row b { font-variant-numeric: tabular-nums; }
+.tip .row span { color: var(--muted); }
+
+footer.end { max-width: 1160px; margin: 0 auto; padding: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15.5px; }
+@media (max-width: 560px) {
+  header.top .theme { margin-left: 0; }
+  .tile .value { font-size: 21px; }
+  .narrative { font-size: 17px; }
+}
+
+/* Phones: table rows become stacked cards, each value with its column's
+   name, so nothing scrolls sideways. */
+@media (max-width: 640px) {
+  .scroll { overflow: visible; border: 0; }
+  .scroll table, .scroll tbody, .scroll tr, .scroll td { display: block; width: 100%; min-width: 0; }
+  .scroll thead { display: none; }
+  .scroll tr { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 8px; padding: 4px 0; background: var(--card); }
+  .scroll td { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border: 0; padding: 4px 12px; white-space: normal !important; text-align: right; }
+  .scroll td::before { content: attr(data-label); color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; text-align: left; flex: none; max-width: 48%; }
+  .scroll td:not([data-label]) { justify-content: flex-end; }
+  .scroll td.empty { display: block; text-align: left; }
+  details.table .scroll { max-height: 420px; overflow-y: auto; }
+}
