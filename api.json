@@ -1,7 +1,7 @@
 {
  "name": "HelioField",
  "description": "3D coronal magnetic field (PFSS, optional Schatten current sheet), heliospheric current sheet and spacecraft magnetic connectivity for any date since 2010-05-01. Every view is a URL; images can also be made without a browser with the Python scripts.",
- "version": "1.2.2",
+ "version": "1.2.3",
  "documentation": "https://sr-dash.github.io/heliofield/guide.html",
  "llms_txt": "https://sr-dash.github.io/heliofield/llms.txt",
  "license": "MIT",
@@ -449,7 +449,8 @@
     "name": "date",
     "type": "string",
     "format": "YYYY-MM-DD",
-    "default": "latest day with images"
+    "default": "latest day with images",
+    "description": "A day in the images' index: every day of the last 60, and one per Carrington rotation since May 2010."
    },
    {
     "name": "view",
@@ -465,11 +466,12 @@
     "name": "scs",
     "type": "number",
     "enum": [
+     0,
      5,
      10,
      21.5
     ],
-    "description": "PFSS + Schatten current sheet to this radius, from the HMI rotation map; omit for the day's PFSS."
+    "description": "0: PFSS from the HMI rotation map; 5, 10, 21.5: PFSS + Schatten current sheet to this radius, from the HMI rotation map. Omit for the day's PFSS (the HMI rotation map on days before the daily products)."
    },
    {
     "name": "v",
@@ -544,6 +546,7 @@
   "examples": {
    "latest": "https://sr-dash.github.io/heliofield/observations.html",
    "enhanced": "https://sr-dash.github.io/heliofield/observations.html?date=2026-11-02&view=enh"
-  }
+  },
+  "images_doi": "https://doi.org/10.5281/zenodo.23935774"
  }
 }

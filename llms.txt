@@ -102,12 +102,12 @@ Example: https://sr-dash.github.io/heliofield/spaceweather.html?date=2026-11-02
 
 ## Observations page
 
-`https://sr-dash.github.io/heliofield/observations.html?date=YYYY-MM-DD` shows the day's images (the frame nearest the map time) from SDO/AIA (94, 131, 171, 193, 211, 304, 335, 1600 A) and HMI, SOHO/LASCO C2 and C3, STEREO-A/EUVI and Solar Orbiter/EUI (174, 304 A) and PHI, with the model's field lines drawn from each spacecraft's own position. Images come from the companion repository https://github.com/sr-dash/heliofield-imagery (data: https://sr-dash.github.io/heliofield-imagery/index.json and days/<date>/index.json). Each panel compares a standard and an enhanced rendering (WOW for disk images, NRGF for LASCO, whose standard rendering is the ratio to a four-week minimum background).
+`https://sr-dash.github.io/heliofield/observations.html?date=YYYY-MM-DD` shows, for every day of the last 60 and one day per Carrington rotation back to May 2010, the images (the frame nearest the map time) from SDO/AIA (94, 131, 171, 193, 211, 304, 335, 1600 A) and HMI, SOHO/LASCO C2 and C3, STEREO-A/EUVI and Solar Orbiter/EUI (174, 304 A) and PHI, with the model's field lines drawn from each spacecraft's own position. Images come from the companion repository https://github.com/sr-dash/heliofield-imagery (DOI 10.5281/zenodo.23935774; data: https://sr-dash.github.io/heliofield-imagery/index.json and days/<date>/index.json). Each panel compares a standard and an enhanced rendering (WOW for disk images, NRGF for LASCO, whose standard rendering is the ratio to a four-week minimum background).
 
 Parameters:
 - `date`;
 - `view` (`std`, `cmp` or `enh`: where every panel's slider starts; default `cmp`);
-- `scs` (`5`, `10` or `21.5`: PFSS + Schatten current sheet from the HMI rotation map instead of the day's PFSS);
+- `scs` (`0`: PFSS from the HMI rotation map; `5`, `10` or `21.5`: PFSS + Schatten current sheet to that radius from the HMI rotation map; omitted: the day's PFSS, or the HMI rotation map on days before the daily products);
 - `v` (wind speed for the spirals beyond the model: 300 to 700 km/s);
 - `closed=0`, `open=0`, `sheet=0`, `grid=0` (hide closed lines, open lines, the current sheet, the grid and compass);
 - `alpha` (line opacity, 0 to 100) and `width` (line width, 0.3 to 4 times the default);

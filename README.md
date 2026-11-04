@@ -137,7 +137,7 @@ Each nightly run also keeps a time series (`scripts/sw_record.py`, running `js/s
 
 ## Observations page
 
-[`observations.html`](https://sr-dash.github.io/heliofield/observations.html) shows the day's images from SDO (AIA, HMI), SOHO (LASCO C2, C3), STEREO-A (EUVI) and Solar Orbiter (EUI, PHI), each with the model's field lines drawn from that spacecraft's position: the day's PFSS, or PFSS + Schatten current sheet solved in the browser. Each panel has a slider between a standard and an enhanced rendering (WOW for disk images; NRGF for LASCO, whose standard is the ratio to a four-week minimum background, as in LASCO's real-time images), a grid with north and east, and a PNG download of the enlarged view. The images are prepared nightly in a separate repository, [heliofield-imagery](https://github.com/sr-dash/heliofield-imagery), which keeps the last 60 days on a single-commit branch so it does not grow with history. Parameters: `date`, `view`, `scs`, `v`, `closed`, `open`, `sheet`, `grid`, `alpha`, `width`, `imagery`, `theme`.
+[`observations.html`](https://sr-dash.github.io/heliofield/observations.html) shows the day's images from SDO (AIA, HMI), SOHO (LASCO C2, C3), STEREO-A (EUVI) and Solar Orbiter (EUI, PHI), each with the model's field lines drawn from that spacecraft's position: the day's PFSS, or PFSS + Schatten current sheet solved in the browser. Each panel has a slider between a standard and an enhanced rendering (WOW for disk images; NRGF for LASCO, whose standard is the ratio to a four-week minimum background, as in LASCO's real-time images), a grid with north and east, and a PNG download of the enlarged view. The images are prepared nightly in a separate repository, [heliofield-imagery](https://github.com/sr-dash/heliofield-imagery) ([10.5281/zenodo.23935774](https://doi.org/10.5281/zenodo.23935774)), which keeps the last 60 days on a single-commit branch so it does not grow with history. Days before the daily products (one per Carrington rotation back to 2010) use the HMI rotation map. Parameters: `date`, `view`, `scs`, `v`, `closed`, `open`, `sheet`, `grid`, `alpha`, `width`, `imagery`, `theme`.
 
 ## Scripts and automated agents
 
@@ -349,7 +349,7 @@ keeps every day for 120 days, then one per Carrington rotation.
 
 If HelioField helps your research, please cite it:
 
-> Dash, S. (2026). *HelioField: the Sun's coronal magnetic field in 3D* (Version 1.2.2) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23487231
+> Dash, S. (2026). *HelioField: the Sun's coronal magnetic field in 3D* (Version 1.2.3) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23487231
 
 That DOI always resolves to the latest release. Each release also has its own DOI on the [Zenodo record](https://doi.org/10.5281/zenodo.23487231); [10.5281/zenodo.23903900](https://doi.org/10.5281/zenodo.23903900) is version 1.2.2, [10.5281/zenodo.23818624](https://doi.org/10.5281/zenodo.23818624) version 1.2.1, [10.5281/zenodo.23750441](https://doi.org/10.5281/zenodo.23750441) version 1.2.0, [10.5281/zenodo.23521418](https://doi.org/10.5281/zenodo.23521418) version 1.1.0 and [10.5281/zenodo.23487232](https://doi.org/10.5281/zenodo.23487232) is version 1.0.0. GitHub's **Cite this repository** button (from [CITATION.cff](CITATION.cff)) and the [guide](https://sr-dash.github.io/heliofield/guide.html#cite) give APA and BibTeX references. Please also cite the data and model the field is built from: NSO/GONG or SDO/HMI, and PFSS (see the guide's references).
 

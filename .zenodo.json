@@ -1,7 +1,7 @@
 {
   "title": "HelioField: the Sun's coronal magnetic field in 3D",
   "upload_type": "software",
-  "description": "<p>HelioField is a web tool that shows the Sun's coronal magnetic field in 3D for any date since May 2010. It draws potential-field source-surface (PFSS) field lines from NSO/GONG and SDO/HMI magnetograms, the source surface and its neutral line, the heliospheric current sheet wound into a Parker spiral, and the magnetic connection of planets and spacecraft (Parker Solar Probe, Solar Orbiter, STEREO, BepiColombo and the L1 fleet) through ballistic Parker spirals and PFSS field lines down to the photosphere. Open field lines can be extended into the heliosphere. Recent days are computed nightly from GONG maps; any other date is solved in the browser from SDO/HMI Carrington-rotation synoptic maps with a spherical-harmonic PFSS solver validated against sunkit-magex. Each spacecraft footpoint carries the flux-tube expansion factor, the distance to the coronal-hole boundary and a WSA-type speed estimate, with their spread over wind speed and source-surface height; open-field footprints show the model's coronal holes; and a solar-cycle series gives open flux, open area, current-sheet tilt and polar field for every rotation since 2010. For dates computed in the browser, the source-surface height can be varied from 1.5 to 3.5 solar radii, and a Schatten current-sheet model can be coupled beyond a cusp surface out to 21.5 solar radii. The browser solver smooths the magnetogram with a tapered spherical-harmonic expansion (degree 80) to avoid ringing. The model results can be downloaded as NetCDF files with a JSON header, preview images and Python scripts that plot them (PNG and PDF) and recompute the corona; the scripts check package versions and update themselves. A Python test suite validates the browser solver against exact PFSS solutions and against sunkit-magex, including a like-for-like comparison on the same smoothed map. The page offers dark and light themes with an accessibility-checked colour scheme, PNG and PDF snapshots, shareable links and an embeddable mode.</p><p>A daily space-weather assessment carries WSA-type solar-wind speeds from the source surface to Earth and the spacecraft with the HUX kinematic model. It gives sector boundaries, coronal-hole high-speed streams, the Russell-McPherron and Rosenberg-Coleman effects, upstream spacecraft lead times, particle-event connectivity and drag-based CME arrivals. Each day's forecasts are kept with the solar wind measured at L1 (NASA OMNI, NOAA SWPC) for calibrating the WSA coefficients.</p><p>Live site: <a href=\"https://sr-dash.github.io/heliofield/\">https://sr-dash.github.io/heliofield/</a></p>",
+  "description": "<p>HelioField is a web tool that shows the Sun's coronal magnetic field in 3D for any date since May 2010. It draws potential-field source-surface (PFSS) field lines from NSO/GONG and SDO/HMI magnetograms, the source surface and its neutral line, the heliospheric current sheet wound into a Parker spiral, and the magnetic connection of planets and spacecraft (Parker Solar Probe, Solar Orbiter, STEREO, BepiColombo and the L1 fleet) through ballistic Parker spirals and PFSS field lines down to the photosphere. Open field lines can be extended into the heliosphere. Recent days are computed nightly from GONG maps; any other date is solved in the browser from SDO/HMI Carrington-rotation synoptic maps with a spherical-harmonic PFSS solver validated against sunkit-magex. Each spacecraft footpoint carries the flux-tube expansion factor, the distance to the coronal-hole boundary and a WSA-type speed estimate, with their spread over wind speed and source-surface height; open-field footprints show the model's coronal holes; and a solar-cycle series gives open flux, open area, current-sheet tilt and polar field for every rotation since 2010. For dates computed in the browser, the source-surface height can be varied from 1.5 to 3.5 solar radii, and a Schatten current-sheet model can be coupled beyond a cusp surface out to 21.5 solar radii. The browser solver smooths the magnetogram with a tapered spherical-harmonic expansion (degree 80) to avoid ringing. The model results can be downloaded as NetCDF files with a JSON header, preview images and Python scripts that plot them (PNG and PDF) and recompute the corona; the scripts check package versions and update themselves. A Python test suite validates the browser solver against exact PFSS solutions and against sunkit-magex, including a like-for-like comparison on the same smoothed map. The page offers dark and light themes with an accessibility-checked colour scheme, PNG and PDF snapshots, shareable links and an embeddable mode.</p><p>A daily space-weather assessment carries WSA-type solar-wind speeds from the source surface to Earth and the spacecraft with the HUX kinematic model. It gives sector boundaries, coronal-hole high-speed streams, the Russell-McPherron and Rosenberg-Coleman effects, upstream spacecraft lead times, particle-event connectivity and drag-based CME arrivals. Each day's forecasts are kept with the solar wind measured at L1 (NASA OMNI, NOAA SWPC) for calibrating the WSA coefficients.</p><p>An observations page draws the model's field lines on the day's images from SDO/AIA and HMI, SOHO/LASCO, STEREO-A/EUVI and Solar Orbiter/EUI and PHI, projected from each spacecraft's position, with standard and enhanced (WOW, NRGF) renderings; the images come from the companion record HelioField imagery (10.5281/zenodo.23935774), with one day per Carrington rotation back to 2010.</p><p>Live site: <a href=\"https://sr-dash.github.io/heliofield/\">https://sr-dash.github.io/heliofield/</a></p>",
   "creators": [
     {
       "name": "Dash, Soumyaranjan",
@@ -23,7 +23,10 @@
     "SDO/HMI",
     "solar wind",
     "WSA model",
-    "HUX"
+    "HUX",
+    "SDO/AIA",
+    "SOHO/LASCO",
+    "Solar Orbiter"
   ],
   "related_identifiers": [
     {
@@ -45,7 +48,12 @@
       "identifier": "10.21105/joss.02732",
       "relation": "references",
       "resource_type": "publication-article"
+    },
+    {
+      "identifier": "10.5281/zenodo.23935774",
+      "relation": "isSupplementedBy",
+      "resource_type": "software"
     }
   ],
-  "version": "1.2.2"
+  "version": "1.2.3"
 }

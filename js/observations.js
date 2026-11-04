@@ -19,13 +19,13 @@ const FLEET_URL = "https://sr-dash.github.io/heliofleet/";
 const S = {
   // Where each panel's slider starts: 100 shows the standard image, 0 the enhanced one.
   date: params.get("date"), view: ["std", "cmp", "enh"].includes(params.get("view")) ? params.get("view") : "cmp",
-  model: ["5", "10", "21.5"].includes(params.get("scs")) ? params.get("scs") : "daily",
+  model: ["5", "10", "21.5"].includes(params.get("scs")) ? params.get("scs") : params.get("scs") === "0" ? "hmi" : "daily",
   v: [300, 400, 500, 600, 700].includes(+params.get("v")) ? +params.get("v") : 400,
   closed: params.get("closed") !== "0", open: params.get("open") !== "0", sheet: params.get("sheet") !== "0", grid: params.get("grid") !== "0",
   alpha: Math.max(0, Math.min(100, +(params.get("alpha") ?? 55))),
   width: Math.max(0.3, Math.min(4, +(params.get("width") ?? 1))),            // line width, times the default
 };
-let dates = [], day = null, field = null, images = new Map(), split = new Map();
+let dates = [], daily = new Set(), day = null, field = null, earthL0 = null, images = new Map(), split = new Map();
 const SPLIT = { std: 100, cmp: 50, enh: 0 };
 const fieldCache = new Map();
 // Lines always use the dark-theme colours: they sit on dark images.
@@ -74,13 +74,18 @@ async function scsField(date, rout) {
   const { xyz, counts } = res.lines, lines = [];
   let o = 0;
   counts.forEach((n, i) => { lines.push({ pts: xyz.subarray(3 * o, 3 * (o + n)), kind: res.meta.kind[i] }); o += n; });
+  const map = `HMI rotation map CR ${rot.cr}${exact ? "" : ", the nearest to this date"}`;
+  if (!rout) return { lines, edge: res.meta.model.rss, ribs: [], sheets: [{ r: res.meta.model.rss, lines: res.meta.hcs || [] }], label: `PFSS, ${map}` };
   return { lines, edge: res.meta.model.rout, ribs: res.meta.hcs_ribs || [],
     sheets: [{ r: res.meta.model.rcp, lines: res.meta.hcs || [] }, { r: res.meta.model.rout, lines: res.meta.hcs_out || [] }],
-    label: `PFSS + SCS to ${rout} R☉ (cusp ${res.meta.model.rcp} R☉), HMI rotation map CR ${rot.cr}${exact ? "" : ", the nearest to this date"}` };
+    label: `PFSS + SCS to ${rout} R☉ (cusp ${res.meta.model.rcp} R☉), ${map}` };
 }
+// The day's product where there is one; before HelioField's daily products
+// began, the HMI rotation map, solved here.
+const modelFor = () => (S.model === "daily" && !daily.has(S.date) ? "hmi" : S.model);
 async function getField() {
-  const key = `${S.date}|${S.model}`;
-  if (!fieldCache.has(key)) fieldCache.set(key, S.model === "daily" ? dailyField(S.date) : scsField(S.date, +S.model));
+  const m = modelFor(), key = `${S.date}|${m}`;
+  if (!fieldCache.has(key)) fieldCache.set(key, m === "daily" ? dailyField(S.date) : scsField(S.date, m === "hmi" ? 0 : +m));
   try { return await fieldCache.get(key); } catch (e) { fieldCache.delete(key); throw e; }
 }
 
@@ -262,8 +267,7 @@ function hypot2d(q, cam) { return q[0] * cam.o[0] + q[1] * cam.o[1] + q[2] * cam
 const fmtT = (s) => s.slice(0, 16).replace("T", " ");
 function caption(p) {
   const dt = (Date.parse(p.t_obs) - Date.parse(day.map_time)) / 3600000;
-  const earth = field?.meta?.fleet?.earth;
-  const sep = earth ? ((p.observer.lon - earth.lon + 540) % 360) - 180 : null;
+  const sep = earthL0 != null ? ((p.observer.lon - earthL0 + 540) % 360) - 180 : null;
   const from = { SDO: "SDO", SOHO: "SOHO", STEREO: "STEREO-A", "Solar Orbiter": "Solar Orbiter" }[p.observatory];
   return `<b>${p.label}</b><div class="meta">${fmtT(p.t_obs)} UTC (${dt >= 0 ? "+" : ""}${dt.toFixed(1)} h from the map) · from ${from}, ${(p.observer.r_rs / 215.032).toFixed(3)} au${sep != null && Math.abs(sep) > 2 ? `, ${Math.abs(sep).toFixed(0)}° ${sep > 0 ? "west" : "east"} of Earth` : ""}</div>`;
 }
@@ -344,7 +348,7 @@ $("zoom").addEventListener("click", (e) => { if (e.target === $("zoom")) $("zoom
 function syncUrl() {
   const q = new URLSearchParams({ date: S.date });
   if (S.view !== "cmp") q.set("view", S.view);
-  if (S.model !== "daily") q.set("scs", S.model);
+  if (S.model !== "daily") q.set("scs", S.model === "hmi" ? 0 : S.model);
   if (S.v !== 400) q.set("v", S.v);
   for (const k of ["closed", "open", "sheet", "grid"]) if (!S[k]) q.set(k, 0);
   if (S.alpha !== 55) q.set("alpha", S.alpha);
@@ -364,8 +368,8 @@ async function run() {
     day = await json(IMG + `days/${S.date}/index.json`);
     field = null;
     render();                              // images first, the field when it is ready
+    earthL0 = (await fleetFor(S.date).catch(() => null))?.L0 ?? null;           // Earth's longitude, for the captions
     field = await getField();
-    if (!field.meta) field.meta = (await getFieldDaily().catch(() => ({}))).meta;     // Earth's position, for the captions
     st.textContent = `${day.panels.length} images · map time ${fmtT(day.map_time)} UTC · field: ${field.label}.`;
     render();
   } catch (e) {
@@ -373,7 +377,6 @@ async function run() {
     st.textContent = `Could not load ${S.date}: ${e.message}`;
   }
 }
-const getFieldDaily = () => { const key = `${S.date}|daily`; if (!fieldCache.has(key)) fieldCache.set(key, dailyField(S.date)); return fieldCache.get(key); };
 const redraw = () => { syncUrl(); render(); };
 
 function setup() {
@@ -412,8 +415,8 @@ themeLabel();
 (async () => {
   try {
     const [img, prod] = await Promise.all([json(IMG + "index.json"), json("data/index.json")]);
-    dates = img.dates.filter((d) => prod.dates.includes(d));
-    if (!dates.length) throw new Error("no day has both images and a model yet");
+    dates = img.dates; daily = new Set(prod.dates);
+    if (!dates.length) throw new Error("no images yet");
     S.date = dates.includes(S.date) ? S.date : dates.at(-1);
     setup(); syncUrl(); run();
   } catch (e) {

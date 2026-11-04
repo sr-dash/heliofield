@@ -483,10 +483,10 @@ python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet</code>
   <h3>Observations page</h3>
   <p>The <a href="observations.html">observations page</a> shows, for each day with a daily product, the image nearest the map time from each spacecraft. It covers SDO (AIA 94, 131, 171, 193, 211, 304, 335 and 1600 Å; the HMI magnetogram), SOHO (LASCO C2 and C3), STEREO-A (EUVI) and Solar Orbiter (EUI 174 and 304 Å; the PHI magnetogram). The model's field lines are drawn on each image from that spacecraft's own position, so the same field is seen from Earth, from STEREO-A and from Solar Orbiter.</p>
   <ul>
-    <li><b>The images</b> are prepared each night by a companion repository, <a href="https://github.com/sr-dash/heliofield-imagery">heliofield-imagery</a>, from open archives: JSOC for SDO, NASA/GSFC for LASCO, the STEREO beacon, and the Royal Observatory of Belgium and ESA's archive for Solar Orbiter. Each is turned solar north up and stored at 768 pixels with the observer's Carrington position and distance, the plate scale and the Sun's centre. The last 60 days are kept, and one day per Carrington rotation before that.</li>
+    <li><b>The images</b> are prepared each night by a companion repository, <a href="https://github.com/sr-dash/heliofield-imagery">heliofield-imagery</a> (<a href="https://doi.org/10.5281/zenodo.23935774">10.5281/zenodo.23935774</a>), from open archives: JSOC for SDO, NASA/GSFC for LASCO, the STEREO beacon, and the Royal Observatory of Belgium and ESA's archive for Solar Orbiter. Each is turned solar north up and stored at 768 pixels with the observer's Carrington position and distance, the plate scale and the Sun's centre. The last 60 days are kept, and one day per Carrington rotation before that, back to May 2010: the middle day of the rotation at noon. Older rotations lack the panels their missions did not yet provide (Solar Orbiter from 2021), and their LASCO backgrounds use 5 days instead of four weeks.</li>
     <li><b>Two renderings</b> per image, compared with each panel's slider. Disk images: each instrument's usual SunPy scaling, and WOW (Wavelets Optimized Whitening; Auchère et al. 2023). LASCO: the frame divided by a background, the minimum over about four weeks of daily median images, as NRL makes LASCO's real-time images; and the normalising radial gradient filter (NRGF; Morgan et al. 2006). Both filters come from sunkit-image. Magnetograms show the line-of-sight field from −200 to +200 G.</li>
     <li><b>Projection.</b> Points of the model, in the Carrington frame, are turned into the observer's heliocentric frame and then into helioprojective angles, as SunPy does; the page matches SunPy to a thousandth of a pixel. Lines behind the Sun are hidden. On coronagraph images, lines are dimmed away from the plane of the sky, where Thomson scattering is weak. The current sheet is dashed where it lies in front of the disk, high above it.</li>
-    <li><b>The field</b> is the day's PFSS product, or, chosen on the page, the HMI rotation map with the Schatten current sheet to 5, 10 or 21.5 R<sub>☉</sub>, solved in the browser as on the <a href="#connect">connectivity page</a>. Beyond the model's outer edge, open field and the current sheet continue as Parker spirals at the chosen wind speed; these are drawn fainter.</li>
+    <li><b>The field</b> is the day's PFSS product, or, chosen on the page, the HMI rotation map with PFSS alone or with the Schatten current sheet to 5, 10 or 21.5 R<sub>☉</sub>, solved in the browser as on the <a href="#connect">connectivity page</a>. Days before the daily products began use the HMI rotation map. Beyond the model's outer edge, open field and the current sheet continue as Parker spirals at the chosen wind speed; these are drawn fainter.</li>
     <li><b>Orientation.</b> Each panel carries a compass (north up, east to the left), the limb, the solar rotation axis through the north pole, a Stonyhurst grid on the disk every 15°, and rings at 2.5, 5, 10 and 20 R<sub>☉</sub> on coronagraphs.</li>
     <li><b>Downloads.</b> The enlarged view saves a PNG of the image with its field lines and a caption naming the instrument, time, rendering, model and credit.</li>
   </ul>
@@ -688,13 +688,13 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
   <h3>Cite HelioField</h3>
   <p>If HelioField helps your research, please cite it. The DOI below always resolves to the latest release; each release also has its own DOI on the <a href="https://doi.org/10.5281/zenodo.23487231">Zenodo record</a>.</p>
   <p><b>APA</b></p>
-  <pre class="cite"><code>Dash, S. (2026). HelioField: the Sun's coronal magnetic field in 3D (Version 1.2.2) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23487231</code></pre>
+  <pre class="cite"><code>Dash, S. (2026). HelioField: the Sun's coronal magnetic field in 3D (Version 1.2.3) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23487231</code></pre>
   <p><b>BibTeX</b></p>
 <pre><code>@software{dash_heliofield_2026,
   author    = {Dash, Soumyaranjan},
   title     = {{HelioField: the Sun's coronal magnetic field in 3D}},
   year      = {2026},
-  version   = {1.2.2},
+  version   = {1.2.3},
   publisher = {Zenodo},
   doi       = {10.5281/zenodo.23487231},
   url       = {https://doi.org/10.5281/zenodo.23487231}
