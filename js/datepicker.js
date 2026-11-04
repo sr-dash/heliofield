@@ -34,13 +34,13 @@ const CSS = `
 .dp-wrap > input::-webkit-calendar-picker-indicator { display: none; }
 .dp-btn { --dp-a: var(--accent, #9cc0ff); display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 36px;
   border: 1px solid var(--line, rgba(127,127,127,.4)); border-left: 0; border-radius: 0 8px 8px 0; cursor: pointer;
-  background: var(--card, var(--surface, #141a26)); color: var(--text, var(--ink, #e8eaf0)); padding: 0 9px; }
+  background: var(--card, var(--surface, var(--panel, #141a26))); color: var(--text, var(--ink, #e8eaf0)); padding: 0 9px; }
 .dp-btn:hover { color: var(--dp-a); }
 .dp-btn:focus-visible { outline: 3px solid var(--dp-a); outline-offset: 2px; }
 .dp-btn svg { width: 19px; height: 19px; }
-.dp { --dp-a: var(--accent, #9cc0ff); --dp-bg: var(--card, var(--surface, #141a26)); --dp-ink: var(--text, var(--ink, #e8eaf0));
+.dp { --dp-a: var(--accent, #9cc0ff); --dp-bg: var(--card, var(--surface, var(--panel, #141a26))); --dp-ink: var(--text, var(--ink, #e8eaf0));
   --dp-mut: var(--muted, #a3abbb); --dp-line: var(--line, rgba(127,127,127,.35));
-  position: fixed; z-index: 1000; width: 352px; padding: 14px; border-radius: 14px; background: var(--dp-bg); color: var(--dp-ink);
+  position: fixed; z-index: 100000; width: 352px; padding: 14px; border-radius: 14px; background: var(--dp-bg); color: var(--dp-ink);
   border: 1px solid var(--dp-line); box-shadow: 0 16px 48px rgba(0,0,0,.45); font: 16px/1.3 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 .dp[hidden] { display: none; }
 .dp-head { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; }
