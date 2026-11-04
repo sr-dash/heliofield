@@ -1,0 +1,52 @@
+/* Observations page, on top of guide.css (tokens, header, footer). */
+.page { max-width: 1400px; margin: 0 auto; padding: 24px 16px 40px; }
+.lede { margin: 18px 0 14px; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 0 0 8px; font-size: 16px; }
+.controls label { display: inline-flex; align-items: center; gap: 6px; }
+.controls input, .controls select, .controls .step button, .seg button {
+  font: inherit; font-size: 15.5px; color: var(--text); background: var(--card);
+  border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; min-height: 32px;
+}
+.controls input[type=date] { font: 500 15px/1 ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace; cursor: pointer; }
+.controls .step { display: inline-flex; gap: 4px; }
+.controls .step button { width: 32px; cursor: pointer; }
+.controls .step button:disabled { opacity: .4; cursor: default; }
+.controls .check input, .controls input[type=range] { min-height: 0; padding: 0; }
+.layers { color: var(--muted); font-size: 15px; }
+.seg { display: inline-flex; gap: 0; }
+.seg button { cursor: pointer; border-radius: 0; }
+.seg button:first-child { border-radius: 6px 0 0 6px; } .seg button:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
+.seg button.on { background: var(--text); color: var(--bg); font-weight: 650; }
+.status { color: var(--muted); font-size: 15.5px; min-height: 1.4em; margin: 4px 0 10px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+.panel .view { position: relative; }
+.panel canvas { display: block; width: 100%; height: auto; background: #000; cursor: zoom-in; }
+/* The comparison slider, under the image so it hides nothing. */
+.wipe { display: block; width: calc(100% - 24px); margin: 8px 12px 0; accent-color: var(--accent); cursor: ew-resize; }
+.wipe[hidden] { display: none; }
+.zoom-tools { display: flex; align-items: center; gap: 12px; padding: 8px 14px 0; }
+.wipe-wide { flex: 1; accent-color: var(--accent); }
+.wipe-wide[hidden] { display: none; }
+.dl { font: inherit; font-size: 15px; font-weight: 600; color: var(--bg); background: var(--accent); border: 0; border-radius: 999px; padding: 6px 16px; cursor: pointer; white-space: nowrap; }
+.dl:hover { filter: brightness(1.1); }
+.panel .cap { padding: 8px 12px 10px; font-size: 14.5px; }
+.panel .cap b { font-size: 16px; }
+.panel .cap .meta { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+.panel.missing .cap { color: var(--muted); }
+.panel.missing .hole { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; padding: 20px; text-align: center; background: repeating-linear-gradient(45deg, transparent 0 10px, rgba(127, 127, 127, .06) 10px 20px); }
+
+.block { margin: 30px 0 0; }
+.block h2 { font-size: 22.5px; margin: 0 0 6px; }
+.notes { color: var(--muted); font-size: 16px; }
+.credits { color: var(--muted); font-size: 14.5px; }
+
+dialog#zoom { width: min(96vw, 1100px); max-height: 96vh; padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--text); }
+dialog#zoom::backdrop { background: rgba(0, 0, 0, .7); }
+.zoom-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; }
+.zoom-head button { font: inherit; font-size: 22px; background: none; border: 0; color: var(--text); cursor: pointer; }
+#zoomCanvas { display: block; width: 100%; height: auto; max-height: calc(96vh - 90px); object-fit: contain; background: #000; }
+.zoom-note { margin: 0; padding: 6px 14px 10px; color: var(--muted); font-size: 14px; }
+footer.end { max-width: 1400px; margin: 0 auto; padding: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15.5px; }
+@media (max-width: 560px) { header.top .theme { margin-left: 0; } .grid { grid-template-columns: 1fr; } }

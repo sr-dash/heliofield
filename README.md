@@ -135,6 +135,10 @@ Each nightly run also keeps a time series (`scripts/sw_record.py`, running `js/s
 - `sw/<date>.png` and `sw/<date>.html` (`scripts/sw_card.py`): the day's share card (status, wind, peak, sector, outlook) and a page that carries it in its preview tags and forwards to the assessment, so shared posts show the card. `sw/latest.png` is the page's own preview.
 - `data/spaceweather/inputs/<year>.json`: the WSA inputs (f<sub>s</sub>, DCHB) along Earth's latitude, for `scripts/calibrate_wsa.py`, which refits the speed formula against the measurements.
 
+## Observations page
+
+[`observations.html`](https://sr-dash.github.io/heliofield/observations.html) shows the day's images from SDO (AIA, HMI), SOHO (LASCO C2, C3), STEREO-A (EUVI) and Solar Orbiter (EUI, PHI), each with the model's field lines drawn from that spacecraft's position: the day's PFSS, or PFSS + Schatten current sheet solved in the browser. Each panel has a slider between a standard and an enhanced rendering (WOW for disk images; NRGF for LASCO, whose standard is the ratio to a four-week minimum background, as in LASCO's real-time images), a grid with north and east, and a PNG download of the enlarged view. The images are prepared nightly in a separate repository, [heliofield-imagery](https://github.com/sr-dash/heliofield-imagery), which keeps the last 60 days on a single-commit branch so it does not grow with history. Parameters: `date`, `view`, `scs`, `v`, `closed`, `open`, `sheet`, `grid`, `alpha`, `width`, `imagery`, `theme`.
+
 ## Scripts and automated agents
 
 Every view is a URL (`date`, `view`, `layers`, `rss`, `scs`, …). With `--date`,

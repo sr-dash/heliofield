@@ -26,6 +26,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://sr-dash.github.io/heliofield/observations.html</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://sr-dash.github.io/heliofield/llms.txt</loc>
     <lastmod>2026-11-03</lastmod>
     <changefreq>monthly</changefreq>

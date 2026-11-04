@@ -175,3 +175,18 @@ def test_share_card_and_page(tmp_path, monkeypatch):
     for tag in ('property="og:image" content="https://sr-dash.github.io/heliofield/sw/', 'name="twitter:image"',
                 'name="twitter:card" content="summary_large_image"', f"spaceweather.html?date={day}"):
         assert tag in page, tag
+
+
+def test_observations_page_parameters_are_documented():
+    code = (ROOT / "js" / "observations.js").read_text()
+    names = set(re.findall(r'params\.get\("([a-z]+)"\)', code))
+    api = json.loads((ROOT / "api.json").read_text())["observations"]
+    assert {p["name"] for p in api["parameters"]} == names
+    llms = (ROOT / "llms.txt").read_text()
+    for n in names:
+        assert re.search(rf"`{n}(=[^`]*)?`", llms), n
+    for page in ("index.html", "guide.html", "series.html", "connect.html", "spaceweather.html", "observations.html"):
+        assert 'href="observations.html"' in (ROOT / page).read_text(), page
+    assert 'id="observations"' in (ROOT / "guide.html").read_text()
+    # The images are read from the companion site unless the page runs locally.
+    assert "https://sr-dash.github.io/heliofield-imagery/" in code

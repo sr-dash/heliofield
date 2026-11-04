@@ -100,6 +100,22 @@ Parameters:
 
 Example: https://sr-dash.github.io/heliofield/spaceweather.html?date=2026-11-02
 
+## Observations page
+
+`https://sr-dash.github.io/heliofield/observations.html?date=YYYY-MM-DD` shows the day's images (the frame nearest the map time) from SDO/AIA (94, 131, 171, 193, 211, 304, 335, 1600 A) and HMI, SOHO/LASCO C2 and C3, STEREO-A/EUVI and Solar Orbiter/EUI (174, 304 A) and PHI, with the model's field lines drawn from each spacecraft's own position. Images come from the companion repository https://github.com/sr-dash/heliofield-imagery (data: https://sr-dash.github.io/heliofield-imagery/index.json and days/<date>/index.json). Each panel compares a standard and an enhanced rendering (WOW for disk images, NRGF for LASCO, whose standard rendering is the ratio to a four-week minimum background).
+
+Parameters:
+- `date`;
+- `view` (`std`, `cmp` or `enh`: where every panel's slider starts; default `cmp`);
+- `scs` (`5`, `10` or `21.5`: PFSS + Schatten current sheet from the HMI rotation map instead of the day's PFSS);
+- `v` (wind speed for the spirals beyond the model: 300 to 700 km/s);
+- `closed=0`, `open=0`, `sheet=0`, `grid=0` (hide closed lines, open lines, the current sheet, the grid and compass);
+- `alpha` (line opacity, 0 to 100) and `width` (line width, 0.3 to 4 times the default);
+- `imagery` (another base URL for the images);
+- `theme`.
+
+Example: https://sr-dash.github.io/heliofield/observations.html?date=2026-11-02&view=enh
+
 ## URL parameters
 
 - `date`: YYYY-MM-DD from 2010-05-01, or `latest` (default). Recent days use daily server products (GONG, or the HMI fallback). Other days are computed in the browser from the SDO/HMI Carrington-rotation map covering the date. On the full page, a computed date first shows a dialog: click **Compute**, then wait a few seconds. With `embed=1` it computes without asking, which suits browser tools.

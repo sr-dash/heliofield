@@ -80,6 +80,7 @@
   <a href="series.html">Solar-cycle series</a>
   <a href="connect.html">Connectivity</a>
   <a href="spaceweather.html">Space weather</a>
+  <a href="observations.html">Observations</a>
   <a href="guide.html#methods">Methods and data</a>
   <a href="guide.html#agents">Scripts &amp; API</a>
   <a class="sitenav-help" href="guide.html" aria-current="page">How to use</a>
@@ -113,6 +114,7 @@
   <a href="#sources">Solar-wind sources</a>
   <a href="#connect">Connectivity page</a>
   <a href="#spaceweather">Space-weather page</a>
+  <a href="#observations">Observations page</a>
   <a href="#coords">Coordinates and scale</a>
   <a href="#colours">Colours and accessibility</a>
   <a href="#validation">Validation</a>
@@ -477,6 +479,20 @@ python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet</code>
   <p><b>Share cards.</b> Each night's run also draws a 1200 × 630 card for the day (<code>sw/&lt;date&gt;.png</code>): the overall status, the wind at Earth, the week's peak, the sector and the outlook chart. It also writes a small page, <code>sw/&lt;date&gt;.html</code>, whose Open Graph and X card tags name that card and which sends visitors straight on to the assessment. Shares link to that page, so a post shows the day's card. The page's own preview is the newest card, <code>sw/latest.png</code>. The status uses the same rules as the page, from the same code.</p>
 </section>
 
+<section id="observations">
+  <h3>Observations page</h3>
+  <p>The <a href="observations.html">observations page</a> shows, for each day with a daily product, the image nearest the map time from each spacecraft. It covers SDO (AIA 94, 131, 171, 193, 211, 304, 335 and 1600 Å; the HMI magnetogram), SOHO (LASCO C2 and C3), STEREO-A (EUVI) and Solar Orbiter (EUI 174 and 304 Å; the PHI magnetogram). The model's field lines are drawn on each image from that spacecraft's own position, so the same field is seen from Earth, from STEREO-A and from Solar Orbiter.</p>
+  <ul>
+    <li><b>The images</b> are prepared each night by a companion repository, <a href="https://github.com/sr-dash/heliofield-imagery">heliofield-imagery</a>, from open archives: JSOC for SDO, NASA/GSFC for LASCO, the STEREO beacon, and the Royal Observatory of Belgium and ESA's archive for Solar Orbiter. Each is turned solar north up and stored at 768 pixels with the observer's Carrington position and distance, the plate scale and the Sun's centre. The last 60 days are kept, and one day per Carrington rotation before that.</li>
+    <li><b>Two renderings</b> per image, compared with each panel's slider. Disk images: each instrument's usual SunPy scaling, and WOW (Wavelets Optimized Whitening; Auchère et al. 2023). LASCO: the frame divided by a background, the minimum over about four weeks of daily median images, as NRL makes LASCO's real-time images; and the normalising radial gradient filter (NRGF; Morgan et al. 2006). Both filters come from sunkit-image. Magnetograms show the line-of-sight field from −200 to +200 G.</li>
+    <li><b>Projection.</b> Points of the model, in the Carrington frame, are turned into the observer's heliocentric frame and then into helioprojective angles, as SunPy does; the page matches SunPy to a thousandth of a pixel. Lines behind the Sun are hidden. On coronagraph images, lines are dimmed away from the plane of the sky, where Thomson scattering is weak. The current sheet is dashed where it lies in front of the disk, high above it.</li>
+    <li><b>The field</b> is the day's PFSS product, or, chosen on the page, the HMI rotation map with the Schatten current sheet to 5, 10 or 21.5 R<sub>☉</sub>, solved in the browser as on the <a href="#connect">connectivity page</a>. Beyond the model's outer edge, open field and the current sheet continue as Parker spirals at the chosen wind speed; these are drawn fainter.</li>
+    <li><b>Orientation.</b> Each panel carries a compass (north up, east to the left), the limb, the solar rotation axis through the north pole, a Stonyhurst grid on the disk every 15°, and rings at 2.5, 5, 10 and 20 R<sub>☉</sub> on coronagraphs.</li>
+    <li><b>Downloads.</b> The enlarged view saves a PNG of the image with its field lines and a caption naming the instrument, time, rendering, model and credit.</li>
+  </ul>
+  <p><b>Limits.</b> Quick-look, beacon and low-latency data are for context, not for measurement. An image may be taken some hours from the map time; the caption gives the difference. The LASCO background needs some days of nightly runs to reach its full four weeks.</p>
+</section>
+
 <section id="coords">
   <h3>Coordinates and scale</h3>
   <p>The whole scene is in the Carrington frame. It is fixed to the rotating Sun, with <i>z</i> along the solar rotation axis and <i>x</i> at Carrington longitude 0. The field therefore stays still from day to day, and the planets and spacecraft move around it. Earth's position in this frame is given by L<sub>0</sub> and B<sub>0</sub>, its heliographic longitude and latitude.</p>
@@ -690,7 +706,7 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
 </main>
 
 </div>
-<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="series.html">Solar-cycle series</a> · <a href="connect.html">Connectivity</a> · <a href="spaceweather.html">Space weather</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
+<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="series.html">Solar-cycle series</a> · <a href="connect.html">Connectivity</a> · <a href="spaceweather.html">Space weather</a> · <a href="observations.html">Observations</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
   <a href="https://github.com/sr-dash/heliofield/issues/new/choose">Report a problem or suggest a feature</a> ·
   Companion to <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a> · Made by <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> ·
   <a href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">MIT licence</a> · DOI <a href="https://doi.org/10.5281/zenodo.23487231">10.5281/zenodo.23487231</a></footer>

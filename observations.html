@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HelioField Observations: SDO, SOHO, STEREO and Solar Orbiter Images with the Model Field | Soumyaranjan Dash</title>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8X5BSNF3VV"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-8X5BSNF3VV');
+</script>
+<meta name="description" content="The day's images from SDO/AIA, SOHO/LASCO, STEREO-A/EUVI and Solar Orbiter/EUI, each with HelioField's PFSS or PFSS + Schatten current-sheet field lines drawn from that spacecraft's own viewpoint, in standard or WOW-enhanced rendering.">
+<meta name="author" content="Soumyaranjan Dash">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://sr-dash.github.io/heliofield/observations.html">
+<link rel="author" href="https://sr-dash.github.io/">
+<link rel="license" href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">
+<link rel="help" href="https://sr-dash.github.io/heliofield/guide.html#observations">
+<link rel="alternate" type="text/markdown" href="https://sr-dash.github.io/heliofield/llms.txt" title="HelioField for automated agents">
+<link rel="service-desc" type="application/json" href="https://sr-dash.github.io/heliofield/api.json" title="HelioField URL parameters, scripts and data">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#080b14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Soumyaranjan Dash Portfolio">
+<meta property="og:title" content="HelioField observations: the day's Sun with the model field">
+<meta property="og:description" content="SDO/AIA, SOHO/LASCO, STEREO-A and Solar Orbiter images of the day, each with the PFSS field lines seen from that spacecraft.">
+<meta property="og:url" content="https://sr-dash.github.io/heliofield/observations.html">
+<meta property="og:image" content="https://sr-dash.github.io/heliofield/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@soumyatheory">
+<meta name="twitter:creator" content="@soumyatheory">
+<script>
+  (() => {
+    let t = new URLSearchParams(location.search).get("theme");
+    if (t !== "light" && t !== "dark") try { t = localStorage.getItem("hf.theme"); } catch (e) {}
+    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<link rel="stylesheet" href="css/guide.css?v=af782edac5">
+<link rel="stylesheet" href="css/observations.css?v=e995a88584">
+</head>
+<body>
+<div class="page">
+
+<header class="top">
+  <h1>Observations</h1>
+  <p>The day's Sun from four spacecraft, with the model field seen from each. By <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a>.</p>
+  <button class="theme" id="theme" type="button">Light theme</button>
+  <a class="back" id="back" href="./">← Back to the 3D viewer</a>
+</header>
+<nav class="sitenav" aria-label="HelioField pages">
+  <a href="./">3D viewer</a>
+  <a href="series.html">Solar-cycle series</a>
+  <a href="connect.html">Connectivity</a>
+  <a href="spaceweather.html">Space weather</a>
+  <a href="observations.html" aria-current="page">Observations</a>
+  <a href="guide.html#methods">Methods and data</a>
+  <a href="guide.html#agents">Scripts &amp; API</a>
+  <a class="sitenav-help" href="guide.html">How to use</a>
+  <a class="sitenav-fleet" id="fleetLink" href="https://sr-dash.github.io/heliofleet/" title="The same date on HelioFleet: where the fleet is, with its Parker spirals">HelioFleet ↗</a>
+</nav>
+
+<p class="lede">For each day with a model, the image nearest the map time from SDO/AIA and HMI, SOHO/LASCO, STEREO-A/EUVI and Solar Orbiter/EUI and PHI. Field lines are projected from that spacecraft's position, so the same model is seen from Earth, from STEREO-A and from Solar Orbiter. Lines behind the Sun are hidden. The current sheet (the neutral line at the model's outer boundary) is drawn dashed where it lies in front of the disk: it is high above the surface there, between the spacecraft and the Sun.</p>
+
+<div class="controls" id="controls">
+  <label>Date <input type="date" id="date"></label>
+  <span class="step"><button type="button" id="prev" aria-label="Previous day">‹</button><button type="button" id="next" aria-label="Next day">›</button></span>
+  <label>Field
+    <select id="model">
+      <option value="daily">PFSS, the day's map</option>
+      <option value="5">PFSS + SCS to 5 R☉</option>
+      <option value="10">PFSS + SCS to 10 R☉</option>
+      <option value="21.5">PFSS + SCS to 21.5 R☉</option>
+    </select>
+  </label>
+  <div class="seg" role="group" aria-label="Image rendering on every panel">
+    <button type="button" data-view="std" aria-pressed="false">Standard</button><button type="button" data-view="cmp" class="on" aria-pressed="true">Compare</button><button type="button" data-view="enh" aria-pressed="false">Enhanced</button>
+  </div>
+  <label>Wind <select id="v"><option>300</option><option selected>400</option><option>500</option><option>600</option><option>700</option></select> km/s</label>
+</div>
+<div class="controls layers" role="group" aria-label="What to draw">
+  <label class="check"><input type="checkbox" id="lyClosed" checked> closed</label>
+  <label class="check"><input type="checkbox" id="lyOpen" checked> open</label>
+  <label class="check"><input type="checkbox" id="lySheet" checked> current sheet</label>
+  <label class="check"><input type="checkbox" id="lyGrid" checked> grid and north</label>
+  <label class="range">line width <input type="range" id="lw" min="0.3" max="4" step="0.1" value="1" aria-label="Line width"></label>
+  <label class="range">opacity <input type="range" id="alpha" min="0" max="100" value="55" aria-label="Line opacity"></label>
+</div>
+<p class="status" id="status" role="status" aria-live="polite"></p>
+
+<div class="grid" id="grid"></div>
+
+<section class="block" id="sec-notes" aria-labelledby="h-notes">
+  <h2 id="h-notes">About the images</h2>
+  <ul class="notes">
+    <li>Each panel's slider moves between two renderings: the <b>standard</b> image on the left of the divider and an <b>enhanced</b> one on the right. Disk images: each instrument's usual SunPy scaling, and WOW (Wavelets Optimized Whitening; Auchère et al. 2023, in sunkit-image), which equalises the contrast at all scales. LASCO: each frame divided by a background, the minimum over about four weeks of daily median images, as in NRL's and NASA's real-time images; and the normalising radial gradient filter (NRGF; Morgan et al. 2006, in sunkit-image). Magnetograms: line-of-sight field, white positive and black negative, ±200 G.</li>
+    <li>Images are turned solar north up. The field is the day's PFSS map (GONG, or HMI when GONG is late), or the HMI rotation map with the Schatten current sheet, solved in your browser. Beyond the model's outer edge, open field and the current sheet continue as Parker spirals at the chosen wind speed.</li>
+    <li>Quick-look and beacon data are for context, not for measurement. AIA images come from JSOC's 1k synoptic set; LASCO from NASA/GSFC's quick-look archive; STEREO from its space-weather beacon; Solar Orbiter EUI from the Royal Observatory of Belgium.</li>
+  </ul>
+  <p class="credits" id="credits"></p>
+</section>
+</div>
+
+<dialog id="zoom" aria-label="Enlarged panel">
+  <div class="zoom-head"><b id="zoomTitle"></b><button type="button" id="zoomClose" aria-label="Close">×</button></div>
+  <canvas id="zoomCanvas"></canvas>
+  <div class="zoom-tools"><input type="range" id="zoomWipe" class="wipe-wide" min="0" max="100" aria-label="Slide between the standard and the enhanced image"><button type="button" id="zoomDownload" class="dl">Download PNG</button></div>
+  <p class="zoom-note" id="zoomNote"></p>
+</dialog>
+
+<footer class="end">HelioField · <a href="./">Viewer</a> · <a href="guide.html">Guide</a> · <a href="spaceweather.html">Space weather</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> · <a href="https://github.com/sr-dash/heliofield-imagery">Images</a> ·
+  Made by <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a> · <a href="https://github.com/sr-dash/heliofield/blob/main/LICENSE">MIT licence</a></footer>
+<!-- assets:start (written by scripts/stamp_assets.py) -->
+<script type="importmap">
+{ "imports": {
+  "./js/connect-geo.js": "./js/connect-geo.js?v=dd41a244eb",
+  "./js/connect-model.js": "./js/connect-model.js?v=b8f7ec1dd0",
+  "./js/connect-worker.js": "./js/connect-worker.js?v=e02c82c7a0",
+  "./js/connect.js": "./js/connect.js?v=5bbeb4f4ee",
+  "./js/export.js": "./js/export.js?v=c0f986b5c2",
+  "./js/history.js": "./js/history.js?v=bc8ad3f713",
+  "./js/main.js": "./js/main.js?v=0db8f84ce2",
+  "./js/netcdf.js": "./js/netcdf.js?v=b9a0a32cc2",
+  "./js/observations.js": "./js/observations.js?v=e2669c7694",
+  "./js/pfss-worker.js": "./js/pfss-worker.js?v=0a42f1cb1d",
+  "./js/pfss.js": "./js/pfss.js?v=1e0df6a8d5",
+  "./js/preview.js": "./js/preview.js?v=70e2ead2a2",
+  "./js/series.js": "./js/series.js?v=9af40c674f",
+  "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
+  "./js/spaceweather.js": "./js/spaceweather.js?v=d6bc468559",
+  "./js/sw-model.js": "./js/sw-model.js?v=44479a9663",
+  "./js/theme.js": "./js/theme.js?v=5abd830f82"
+} }
+</script>
+<!-- assets:end -->
+<script type="module" src="js/observations.js?v=e2669c7694"></script>
+</body>
+</html>

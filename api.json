@@ -270,7 +270,8 @@
   "solar_cycle_series": "https://sr-dash.github.io/heliofield/data/series/rotations.json",
   "daily_wsa_map": "https://sr-dash.github.io/heliofield/data/{date}/wsa.png",
   "spaceweather_series": "https://sr-dash.github.io/heliofield/data/spaceweather/daily.json",
-  "spaceweather_wsa_inputs": "https://sr-dash.github.io/heliofield/data/spaceweather/inputs/{year}.json"
+  "spaceweather_wsa_inputs": "https://sr-dash.github.io/heliofield/data/spaceweather/inputs/{year}.json",
+  "imagery_index": "https://sr-dash.github.io/heliofield-imagery/index.json"
  },
  "connectivity": {
   "url": "https://sr-dash.github.io/heliofield/connect.html",
@@ -436,6 +437,113 @@
   "examples": {
    "latest": "https://sr-dash.github.io/heliofield/spaceweather.html",
    "date": "https://sr-dash.github.io/heliofield/spaceweather.html?date=2026-11-02"
+  }
+ },
+ "observations": {
+  "url": "https://sr-dash.github.io/heliofield/observations.html",
+  "url_template": "https://sr-dash.github.io/heliofield/observations.html?date={date}&view={view}&scs={scs}",
+  "description": "For one day with a daily product: the images nearest the map time from SDO/AIA and HMI, SOHO/LASCO C2 and C3, STEREO-A/EUVI and Solar Orbiter/EUI and PHI, each with the model's field lines (PFSS, or PFSS + Schatten current sheet solved in the browser) drawn from that spacecraft's position; standard and enhanced renderings (WOW, NRGF) compared with a slider; PNG download of a panel with its overlay.",
+  "images": "https://sr-dash.github.io/heliofield-imagery/index.json",
+  "parameters": [
+   {
+    "name": "date",
+    "type": "string",
+    "format": "YYYY-MM-DD",
+    "default": "latest day with images"
+   },
+   {
+    "name": "view",
+    "type": "string",
+    "enum": [
+     "std",
+     "cmp",
+     "enh"
+    ],
+    "default": "cmp"
+   },
+   {
+    "name": "scs",
+    "type": "number",
+    "enum": [
+     5,
+     10,
+     21.5
+    ],
+    "description": "PFSS + Schatten current sheet to this radius, from the HMI rotation map; omit for the day's PFSS."
+   },
+   {
+    "name": "v",
+    "type": "integer",
+    "enum": [
+     300,
+     400,
+     500,
+     600,
+     700
+    ],
+    "default": 400,
+    "unit": "km/s"
+   },
+   {
+    "name": "closed",
+    "type": "integer",
+    "enum": [
+     0
+    ]
+   },
+   {
+    "name": "open",
+    "type": "integer",
+    "enum": [
+     0
+    ]
+   },
+   {
+    "name": "sheet",
+    "type": "integer",
+    "enum": [
+     0
+    ]
+   },
+   {
+    "name": "grid",
+    "type": "integer",
+    "enum": [
+     0
+    ]
+   },
+   {
+    "name": "alpha",
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 100,
+    "default": 55
+   },
+   {
+    "name": "width",
+    "type": "number",
+    "minimum": 0.3,
+    "maximum": 4,
+    "default": 1
+   },
+   {
+    "name": "imagery",
+    "type": "string",
+    "format": "uri",
+    "description": "Base URL of the images."
+   },
+   {
+    "name": "theme",
+    "type": "string",
+    "enum": [
+     "dark",
+     "light"
+    ]
+   }
+  ],
+  "examples": {
+   "latest": "https://sr-dash.github.io/heliofield/observations.html",
+   "enhanced": "https://sr-dash.github.io/heliofield/observations.html?date=2026-11-02&view=enh"
   }
  }
 }
