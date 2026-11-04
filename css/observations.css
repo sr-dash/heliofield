@@ -7,7 +7,7 @@
   font: inherit; font-size: 15.5px; color: var(--text); background: var(--card);
   border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; min-height: 32px;
 }
-.controls input[type=date] { font: 500 15px/1 ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace; cursor: pointer; }
+.controls input[type=date] { font: 500 16px/1 ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace; cursor: pointer; min-height: 36px; }
 .controls .step { display: inline-flex; gap: 4px; }
 .controls .step button { width: 32px; cursor: pointer; }
 .controls .step button:disabled { opacity: .4; cursor: default; }

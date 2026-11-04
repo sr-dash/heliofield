@@ -14,6 +14,7 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { THEMES, divergingLUT, lutColor, currentTheme } from "./theme.js";
 import { historyIndex, rotationFor, sourceUrl, fleetFor, compute, cancel, unflatten, exportResults } from "./history.js";
 import { compose, savePNG, savePDF } from "./snapshot.js";
+import { enhance as datePicker, setMarked } from "./datepicker.js";
 
 const RSUN_KM = 695700, AU_RS = 149597870.7 / RSUN_KM;
 const OMEGA = 2 * Math.PI / (25.38 * 86400);          // Carrington sidereal [rad/s]
@@ -1173,10 +1174,10 @@ function step(k) {
 }
 $("prev").onclick = () => step(-1);
 $("next").onclick = () => step(1);
-// A click anywhere on the date field opens the calendar, not only on its icon
-const openPicker = (e) => { try { e.target.showPicker(); } catch (err) { /* older browsers */ } };
+// The site's own calendar: days with a daily product are marked; any other
+// date since 2010 is computed from the HMI rotation map.
 $("day").min = FIRST; $("day").max = TODAY;
-$("day").addEventListener("click", openPicker);
+datePicker($("day"), { label: "Date (any day since May 2010)" });
 $("day").addEventListener("change", (e) => { if (e.target.value && e.target.value !== state.day) openDate(e.target.value); });
 $("latest").onclick = () => goDaily(state.dates[state.dates.length - 1]);
 
@@ -1240,6 +1241,8 @@ async function start() {
   try {
     const idx = await fetch("data/index.json").then((r) => r.json());
     state.dates = idx.dates;
+    const daily = new Set(idx.dates);
+    setMarked($("day"), (d) => daily.has(d));
     const v = +params.get("v");
     if (VSW.includes(v)) setV(v);
     if (params.has("layers")) setLayers(params.get("layers"));

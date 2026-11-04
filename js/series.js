@@ -4,6 +4,7 @@
 // from theme.js (validated there); text always wears the page's text tokens.
 
 import { THEMES, currentTheme } from "./theme.js";
+import "./totop.js";
 
 const $ = (id) => document.getElementById(id);
 const NS = "http://www.w3.org/2000/svg";
@@ -315,7 +316,7 @@ for (const b of document.querySelectorAll(".filters button[data-range]")) {
   };
 }
 const themeBtn = $("theme"), root = document.documentElement;
-const themeLabel = () => { themeBtn.textContent = root.dataset.theme === "dark" ? "Light theme" : "Dark theme"; };
+const themeLabel = () => { const l = root.dataset.theme === "dark" ? "Switch to light theme" : "Switch to dark theme"; themeBtn.setAttribute("aria-label", l); themeBtn.title = l; };
 themeBtn.onclick = () => {
   root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
   try { localStorage.setItem("hf.theme", root.dataset.theme); } catch (e) {}

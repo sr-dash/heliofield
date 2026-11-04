@@ -59,8 +59,8 @@
     document.documentElement.dataset.theme = t;
   })();
 </script>
-<link rel="stylesheet" href="css/guide.css?v=af782edac5">
-<link rel="stylesheet" href="css/connect.css?v=0cc50a0bbd">
+<link rel="stylesheet" href="css/guide.css?v=c69696db4f">
+<link rel="stylesheet" href="css/connect.css?v=696bfb6ace">
 </head>
 <body>
 <div class="page">
@@ -68,7 +68,10 @@
 <header class="top">
   <h1>Connectivity</h1>
   <p>Where the fleet connects to the Sun, what that predicts, and who observed the source. By <a href="https://sr-dash.github.io/">Soumyaranjan Dash</a>; with <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>.</p>
-  <button class="theme" id="theme" type="button">Light theme</button>
+  <button class="theme" id="theme" type="button" aria-label="Switch theme">
+    <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+    <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+  </button>
   <a class="back" id="back" href="./">← Back to the 3D viewer</a>
 </header>
 <nav class="sitenav" aria-label="HelioField pages">
@@ -152,23 +155,25 @@
   "./js/connect-geo.js": "./js/connect-geo.js?v=dd41a244eb",
   "./js/connect-model.js": "./js/connect-model.js?v=b8f7ec1dd0",
   "./js/connect-worker.js": "./js/connect-worker.js?v=e02c82c7a0",
-  "./js/connect.js": "./js/connect.js?v=5bbeb4f4ee",
+  "./js/connect.js": "./js/connect.js?v=86fe5bf2e1",
+  "./js/datepicker.js": "./js/datepicker.js?v=143e7d6c34",
   "./js/export.js": "./js/export.js?v=c0f986b5c2",
   "./js/history.js": "./js/history.js?v=bc8ad3f713",
-  "./js/main.js": "./js/main.js?v=0db8f84ce2",
+  "./js/main.js": "./js/main.js?v=240602cbb6",
   "./js/netcdf.js": "./js/netcdf.js?v=b9a0a32cc2",
-  "./js/observations.js": "./js/observations.js?v=16c4667a1f",
+  "./js/observations.js": "./js/observations.js?v=ef65f3b999",
   "./js/pfss-worker.js": "./js/pfss-worker.js?v=0a42f1cb1d",
   "./js/pfss.js": "./js/pfss.js?v=1e0df6a8d5",
   "./js/preview.js": "./js/preview.js?v=70e2ead2a2",
-  "./js/series.js": "./js/series.js?v=9af40c674f",
+  "./js/series.js": "./js/series.js?v=fd61bb321d",
   "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
-  "./js/spaceweather.js": "./js/spaceweather.js?v=d6bc468559",
+  "./js/spaceweather.js": "./js/spaceweather.js?v=5666f85d74",
   "./js/sw-model.js": "./js/sw-model.js?v=44479a9663",
-  "./js/theme.js": "./js/theme.js?v=5abd830f82"
+  "./js/theme.js": "./js/theme.js?v=5abd830f82",
+  "./js/totop.js": "./js/totop.js?v=825b854a16"
 } }
 </script>
 <!-- assets:end -->
-<script type="module" src="js/connect.js?v=5bbeb4f4ee"></script>
+<script type="module" src="js/connect.js?v=86fe5bf2e1"></script>
 </body>
 </html>

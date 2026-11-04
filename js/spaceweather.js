@@ -6,7 +6,9 @@
 
 import { THEMES, currentTheme } from "./theme.js";
 import { fleetFor } from "./history.js";
+import "./totop.js";
 import * as M from "./sw-model.js";
+import { enhance as datePicker } from "./datepicker.js";
 
 const $ = (id) => document.getElementById(id);
 const NS = "http://www.w3.org/2000/svg";
@@ -647,7 +649,7 @@ function setupControls() {
   const go = (day) => { S.date = day; inp.value = day; syncUrl(); setupShare(); run(); };
   // Days without a product (a missed night) snap to the nearest one.
   const nearest = (day) => dates.reduce((b, x) => (Math.abs(Date.parse(x) - Date.parse(day)) < Math.abs(Date.parse(b) - Date.parse(day)) ? x : b), dates.at(-1));
-  inp.onclick = (e) => { try { e.target.showPicker(); } catch (err) { /* older browsers */ } };
+  datePicker(inp, { label: "Date", marked: (d) => dates.includes(d) });       // days with a daily product
   inp.onchange = (e) => { if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) go(nearest(e.target.value)); };
   $("prev").onclick = () => { const k = dates.indexOf(S.date); if (k > 0) go(dates[k - 1]); };
   $("next").onclick = () => { const k = dates.indexOf(S.date); if (k < dates.length - 1) go(dates[k + 1]); };
@@ -660,7 +662,7 @@ function setupControls() {
 }
 
 const themeBtn = $("theme");
-const themeLabel = () => { themeBtn.textContent = root.dataset.theme === "dark" ? "Light theme" : "Dark theme"; };
+const themeLabel = () => { const l = root.dataset.theme === "dark" ? "Switch to light theme" : "Switch to dark theme"; themeBtn.setAttribute("aria-label", l); themeBtn.title = l; };
 themeBtn.onclick = () => {
   root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
   try { localStorage.setItem("hf.theme", root.dataset.theme); } catch (e) {}

@@ -15,7 +15,7 @@
 .controls .step { display: inline-flex; gap: 4px; }
 .controls input[type=date] {
   padding: 4px 8px 4px 11px; border-radius: 8px; cursor: pointer;
-  font: 500 15px/1 ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  font: 500 16px/1 ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; min-height: 36px;
   letter-spacing: .02em; font-variant-numeric: tabular-nums;
 }
 .controls input[type=date]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .75; margin-left: 6px; padding: 3px; border-radius: 5px; }

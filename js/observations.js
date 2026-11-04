@@ -7,6 +7,8 @@
 
 import { THEMES } from "./theme.js";
 import { historyIndex, rotationFor, fleetFor } from "./history.js";
+import "./totop.js";
+import { enhance as datePicker } from "./datepicker.js";
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement, params = new URLSearchParams(location.search);
@@ -384,7 +386,8 @@ function setup() {
   inp.min = dates[0]; inp.max = dates.at(-1); inp.value = S.date;
   const go = (d) => { S.date = d; inp.value = d; syncUrl(); run(); };
   const nearest = (d) => dates.reduce((b, x) => (Math.abs(Date.parse(x) - Date.parse(d)) < Math.abs(Date.parse(b) - Date.parse(d)) ? x : b), dates.at(-1));
-  inp.onclick = (e) => { try { e.target.showPicker(); } catch (err) { /* older browsers */ } };
+  const have = new Set(dates);
+  datePicker(inp, { label: "Date", marked: (d) => have.has(d) });                 // days with images
   inp.onchange = (e) => { if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) go(nearest(e.target.value)); };
   $("prev").onclick = () => { const k = dates.indexOf(S.date); if (k > 0) go(dates[k - 1]); };
   $("next").onclick = () => { const k = dates.indexOf(S.date); if (k < dates.length - 1) go(dates[k + 1]); };
@@ -408,7 +411,7 @@ function setup() {
 }
 
 const themeBtn = $("theme");
-const themeLabel = () => { themeBtn.textContent = root.dataset.theme === "dark" ? "Light theme" : "Dark theme"; };
+const themeLabel = () => { const l = root.dataset.theme === "dark" ? "Switch to light theme" : "Switch to dark theme"; themeBtn.setAttribute("aria-label", l); themeBtn.title = l; };
 themeBtn.onclick = () => { root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark"; try { localStorage.setItem("hf.theme", root.dataset.theme); } catch (e) {} themeLabel(); };
 themeLabel();
 

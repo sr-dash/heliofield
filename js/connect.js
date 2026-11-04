@@ -8,6 +8,8 @@
 import { THEMES, currentTheme, divergingLUT } from "./theme.js";
 import { historyIndex, rotationFor, fleetFor } from "./history.js";
 import * as geo from "./connect-geo.js";
+import "./totop.js";
+import { enhance as datePicker } from "./datepicker.js";
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement, params = new URLSearchParams(location.search);
@@ -88,7 +90,7 @@ function setupControls() {
   $("v").innerHTML = VS.map((v) => `<option value="${v}"${v === S.v ? " selected" : ""}>${v} km/s</option>`).join("");
   $("sc").checked = S.sc;
   const go = () => { syncUrl(); run(); };
-  $("date").onclick = (e) => { try { e.target.showPicker(); } catch (err) { /* older browsers */ } };
+  datePicker($("date"), { label: "Date" });
   $("date").onchange = (e) => { if (okDay(e.target.value)) { S.date = e.target.value; go(); } };
   $("prev").onclick = () => { S.date = addDays(S.date, -1); $("date").value = S.date; go(); };
   $("next").onclick = () => { S.date = addDays(S.date, 1); $("date").value = S.date; go(); };
@@ -521,7 +523,7 @@ function drawSky() {
 
 // ------------------------------------------------------------- theme, start
 const themeBtn = $("theme");
-const themeLabel = () => { themeBtn.textContent = root.dataset.theme === "dark" ? "Light theme" : "Dark theme"; };
+const themeLabel = () => { const l = root.dataset.theme === "dark" ? "Switch to light theme" : "Switch to dark theme"; themeBtn.setAttribute("aria-label", l); themeBtn.title = l; };
 themeBtn.onclick = () => {
   root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
   try { localStorage.setItem("hf.theme", root.dataset.theme); } catch (e) {}

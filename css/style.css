@@ -54,7 +54,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
    with the calendar icon in the text colour; a click anywhere opens the picker. */
 input[type=date] {
   padding: 4px 8px 4px 11px; border-radius: 8px; background: var(--panel);
-  font: 500 14.5px/1 ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  font: 500 16px/1 ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; min-height: 36px;
   letter-spacing: .02em; font-variant-numeric: tabular-nums;
 }
 input[type=date]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .75; margin-left: 6px; padding: 3px; border-radius: 5px; }
@@ -315,7 +315,10 @@ dialog .noask { display: flex; gap: 8px; align-items: center; color: var(--muted
   .sitenav::after { content: ""; flex: none; width: 40px; }
   .brand strong { font-size: 16px; }
   .bar button, .bar input[type=date] { padding: 4px 7px; font-size: 13.5px; }
-  .bar input[type=date] { padding: 4px 4px 4px 7px; font: 500 13.5px/1 ui-sans-serif, system-ui, -apple-system, sans-serif; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+  .bar input[type=date] { padding: 4px 4px 4px 7px; font: 500 15px/1 ui-sans-serif, system-ui, -apple-system, sans-serif; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+  /* A tap on the date opens the calendar, so its button can go and the bar keeps one row. */
+  .bar .dp-btn { display: none; }
+  .bar .dp-wrap > input { border-radius: 8px !important; }
   .bar input[type=date]::-webkit-calendar-picker-indicator { margin-left: 2px; padding: 1px; }
   .theme-toggle { width: 34px; padding: 0; margin-left: auto; }
   .src { padding: 2px 6px; }
@@ -336,8 +339,9 @@ dialog .noask { display: flex; gap: 8px; align-items: center; color: var(--muted
   .theme-toggle, .menu-btn { width: 32px; }
   .src { padding: 2px 5px; font-size: 11px; }
   /* A tap anywhere on the date opens the calendar, so the icon can go */
-  .bar input[type=date] { padding: 4px 7px; }
+  .bar input[type=date] { padding: 4px 4px; font-size: 14px; }
   .bar input[type=date]::-webkit-calendar-picker-indicator { display: none; }
+  .bar .date { gap: 2px; }
 }
 @media (prefers-reduced-motion: reduce) {
   #panel, .bar { transition: none; }
