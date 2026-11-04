@@ -50,3 +50,23 @@ dialog#zoom::backdrop { background: rgba(0, 0, 0, .7); }
 .zoom-note { margin: 0; padding: 6px 14px 10px; color: var(--muted); font-size: 14px; }
 footer.end { max-width: 1400px; margin: 0 auto; padding: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15.5px; }
 @media (max-width: 560px) { header.top .theme { margin-left: 0; } .grid { grid-template-columns: 1fr; } }
+
+/* Embed (?embed=1): a 2 x 2 grid of panels, each with its slider, for a
+   frame on another page. */
+.embed-only { display: none; }
+.embed .embed-only { display: block; }
+.embed header.top, .embed .sitenav, .embed .lede, .embed .controls, .embed .status, .embed #sec-notes, .embed footer.end { display: none; }
+.embed body { background: transparent; }
+.embed .page { padding: 6px 10px 8px; }
+.embed .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+/* The name sits on the image, so the four panels and their sliders fit the frame. */
+.embed .panel { position: relative; }
+.embed .panel .cap { position: absolute; left: 0; top: 0; margin: 0; padding: 3px 8px; border-radius: 0 0 8px 0;
+  background: rgba(0, 0, 0, .62); color: #fff; font-size: 12.5px; pointer-events: none; }
+.embed .panel .cap b { font-size: 12.5px; font-weight: 600; color: #fff; }
+.embed .panel .cap .meta, .embed .panel .cap br { display: none; }
+.embed .wipe { display: block; margin: 3px 8px 3px; width: calc(100% - 16px); }
+.embed .embed-foot > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.embed .embed-foot > a { flex: none; }
+.embed .embed-foot { display: flex; gap: 8px; justify-content: space-between; margin: 6px 0 0; white-space: nowrap; font-size: 12.5px; color: var(--muted); }
+.embed .panel canvas { cursor: pointer; }

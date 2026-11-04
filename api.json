@@ -432,6 +432,14 @@
      "dark",
      "light"
     ]
+   },
+   {
+    "name": "embed",
+    "type": "integer",
+    "enum": [
+     1
+    ],
+    "description": "The status, four headline tiles and the wind outlook alone, for an iframe; follows theme."
    }
   ],
   "examples": {
@@ -541,6 +549,20 @@
      "dark",
      "light"
     ]
+   },
+   {
+    "name": "embed",
+    "type": "integer",
+    "enum": [
+     1
+    ],
+    "description": "Four panels alone in a 2 x 2 grid, for an iframe; a click opens the full page; follows theme."
+   },
+   {
+    "name": "panels",
+    "type": "string",
+    "default": "aia193,lasco_c2,eui174|euvi_a,hmi|phi",
+    "description": "With embed=1: comma list of panel ids from the images' index; a|b takes the first present."
    }
   ],
   "examples": {

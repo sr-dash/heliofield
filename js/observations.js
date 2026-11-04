@@ -15,6 +15,10 @@ const root = document.documentElement, params = new URLSearchParams(location.sea
 const DEG = Math.PI / 180, ARCSEC = DEG / 3600, RSUN_KM = 695700, DAY = 86400000;
 const OMEGA = 2 * Math.PI / (25.38 * 86400);
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
+// Embed (?embed=1): four panels for a frame on another page; panels= picks
+// them (ids from the images' index), each "a|b" taking the first present.
+const EMBED = params.get("embed") === "1";
+const EMBED_PANELS = (params.get("panels") || "aia193,lasco_c2,eui174|euvi_a,hmi|phi").split(",").map((s) => s.split("|"));
 // Where the images live: their own repository's site, or a local copy.
 const IMG = (params.get("imagery") || (LOCAL ? "http://localhost:8812/" : "https://sr-dash.github.io/heliofield-imagery/")).replace(/\/?$/, "/");
 const FLEET_URL = "https://sr-dash.github.io/heliofleet/";
@@ -268,6 +272,7 @@ function hypot2d(q, cam) { return q[0] * cam.o[0] + q[1] * cam.o[1] + q[2] * cam
 // ------------------------------------------------------------- page
 const fmtT = (s) => s.slice(0, 16).replace("T", " ");
 function caption(p) {
+  if (EMBED) return `<b>${p.label}</b><div class="meta">${fmtT(p.t_obs)} UTC</div>`;
   const dt = (Date.parse(p.t_obs) - Date.parse(day.map_time)) / 3600000;
   const sep = earthL0 != null ? ((p.observer.lon - earthL0 + 540) % 360) - 180 : null;
   const from = { SDO: "SDO", SOHO: "SOHO", STEREO: "STEREO-A", "Solar Orbiter": "Solar Orbiter" }[p.observatory];
@@ -282,10 +287,13 @@ function panelView(p, cv, ctl) {
   }
   return redraw;
 }
+const shown = () => (EMBED
+  ? EMBED_PANELS.map((alts) => alts.map((id) => day.panels.find((p) => p.id === id)).find(Boolean)).filter(Boolean)
+  : day.panels);
 async function render() {
   const grid = $("grid");
   grid.replaceChildren();
-  for (const p of day.panels) {
+  for (const p of shown()) {
     const card = document.createElement("figure"); card.className = "panel"; card.style.margin = "0";
     const view = document.createElement("div"); view.className = "view";
     const cv = document.createElement("canvas"); cv.setAttribute("role", "img"); cv.setAttribute("aria-label", `${p.label} with model field lines`);
@@ -296,16 +304,21 @@ async function render() {
     const cap = document.createElement("figcaption"); cap.className = "cap"; cap.innerHTML = caption(p);
     card.append(view, ctl, cap); grid.append(card);
     cv.width = p.width; cv.height = p.height;
-    cv.onclick = () => openZoom(p);
+    // In a frame the full page opens instead of the enlarged view.
+    cv.onclick = () => (EMBED ? open(`https://sr-dash.github.io/heliofield/observations.html?date=${S.date}`, "_blank", "noopener") : openZoom(p));
     panelView(p, cv, ctl)();
   }
-  const missing = ["SDO", "SOHO", "STEREO", "Solar Orbiter"].filter((o) => !day.panels.some((p) => p.observatory === o));
+  const missing = EMBED ? [] : ["SDO", "SOHO", "STEREO", "Solar Orbiter"].filter((o) => !day.panels.some((p) => p.observatory === o));
   for (const o of missing) {
     const card = document.createElement("figure"); card.className = "panel missing"; card.style.margin = "0";
     card.innerHTML = `<div class="hole">No ${o} image within 18 hours of the map time.</div><figcaption class="cap"><b>${o}</b></figcaption>`;
     grid.append(card);
   }
   $("credits").textContent = "Credits: " + Object.values(day.credits).join(". ") + ".";
+  if (EMBED) {
+    const obs = [...new Set(shown().map((p) => p.observatory))];
+    $("embedFoot").innerHTML = `<span>${fmtT(day.map_time).slice(0, 10)} · images ${obs.map((o) => ({ SDO: "SDO", SOHO: "SOHO", STEREO: "STEREO", "Solar Orbiter": "SolO" })[o]).join(", ")} (NASA/ESA)</span><a href="https://sr-dash.github.io/heliofield/observations.html?date=${S.date}" target="_blank" rel="noopener">All panels ↗</a>`;
+  }
 }
 let zoomed = null;
 async function openZoom(p) {
@@ -356,6 +369,7 @@ function syncUrl() {
   if (S.alpha !== 55) q.set("alpha", S.alpha);
   if (S.width !== 1) q.set("width", S.width);
   if (params.get("imagery")) q.set("imagery", params.get("imagery"));
+  if (EMBED) { q.set("embed", 1); if (params.get("panels")) q.set("panels", params.get("panels")); }
   if (params.get("theme")) q.set("theme", params.get("theme"));
   history.replaceState(null, "", "?" + q);
   $("back").href = `./?date=${S.date}`;

@@ -43,10 +43,12 @@
     if (t !== "light" && t !== "dark") try { t = localStorage.getItem("hf.theme"); } catch (e) {}
     if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
     document.documentElement.dataset.theme = t;
+    // Embed (?embed=1): four panels alone, for a frame.
+    if (new URLSearchParams(location.search).get("embed") === "1") document.documentElement.classList.add("embed");
   })();
 </script>
 <link rel="stylesheet" href="css/guide.css?v=c69696db4f">
-<link rel="stylesheet" href="css/observations.css?v=5793975f50">
+<link rel="stylesheet" href="css/observations.css?v=30906de99e">
 </head>
 <body>
 <div class="page">
@@ -102,6 +104,7 @@
 <p class="status" id="status" role="status" aria-live="polite"></p>
 
 <div class="grid" id="grid"></div>
+<p class="embed-only embed-foot" id="embedFoot"></p>
 
 <section class="block" id="sec-notes" aria-labelledby="h-notes">
   <h2 id="h-notes">About the images</h2>
@@ -135,19 +138,19 @@
   "./js/history.js": "./js/history.js?v=bc8ad3f713",
   "./js/main.js": "./js/main.js?v=240602cbb6",
   "./js/netcdf.js": "./js/netcdf.js?v=b9a0a32cc2",
-  "./js/observations.js": "./js/observations.js?v=ef65f3b999",
+  "./js/observations.js": "./js/observations.js?v=3301d458fd",
   "./js/pfss-worker.js": "./js/pfss-worker.js?v=0a42f1cb1d",
   "./js/pfss.js": "./js/pfss.js?v=1e0df6a8d5",
   "./js/preview.js": "./js/preview.js?v=70e2ead2a2",
   "./js/series.js": "./js/series.js?v=fd61bb321d",
   "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
-  "./js/spaceweather.js": "./js/spaceweather.js?v=5666f85d74",
+  "./js/spaceweather.js": "./js/spaceweather.js?v=a3123acdda",
   "./js/sw-model.js": "./js/sw-model.js?v=44479a9663",
   "./js/theme.js": "./js/theme.js?v=5abd830f82",
   "./js/totop.js": "./js/totop.js?v=825b854a16"
 } }
 </script>
 <!-- assets:end -->
-<script type="module" src="js/observations.js?v=ef65f3b999"></script>
+<script type="module" src="js/observations.js?v=3301d458fd"></script>
 </body>
 </html>

@@ -141,3 +141,33 @@ footer.end { max-width: 1160px; margin: 0 auto; padding: 16px; border-top: 1px s
   .scroll td.empty { display: block; text-align: left; }
   details.table .scroll { max-height: 420px; overflow-y: auto; }
 }
+
+/* Embed (?embed=1): the status, four headline tiles and the outlook, for a
+   frame on another page; everything else waits on the full page. */
+.embed-only { display: none; }
+.embed .embed-only { display: block; }
+.embed header.top, .embed .sitenav, .embed .lede, .embed .controls, .embed .status, .embed footer.end,
+.embed .block:not(#sec-summary):not(#sec-outlook), .embed .page > p.muted, .embed #outlookTable,
+.embed #sec-outlook .sub, .embed #h-summary, .embed .narrative p, .embed .tile:nth-child(n + 5) { display: none; }
+.embed body { background: transparent; font-size: 15px; }
+.embed .page { padding: 10px 12px 12px; }
+.embed .block { margin: 12px 0 0; }
+.embed #sec-summary { margin-top: 0; }
+.embed .narrative { margin: 0 0 8px; font-size: 15px; }
+.embed .overall { margin: 0; padding: 8px 12px; }
+.embed .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.embed .tile { padding: 8px 10px; }
+.embed .tile .value { font-size: 19px; }
+.embed .tile .note { display: none; }
+.embed .tile .st { margin: 2px 0 0; font-size: 12.5px; }
+.embed .tile .label { font-size: 13px; }
+.embed .legend span:nth-child(n + 4) { display: none; }
+.embed .overall { font-size: 14px; flex-wrap: nowrap; gap: 8px; }
+.embed .overall > .st { flex: none; margin: 0; }
+.embed .tile .value { display: inline-block; margin-right: 6px; vertical-align: middle; }
+.embed .tile .st { vertical-align: middle; }
+.embed a.tile { pointer-events: none; }
+.embed a.tile .label::after { content: none; }
+.embed #h-outlook { font-size: 16px; margin: 0 0 2px; }
+.embed .legend { font-size: 12.5px; gap: 2px 10px; }
+.embed .embed-foot { margin: 8px 0 0; font-size: 13px; color: var(--muted); }

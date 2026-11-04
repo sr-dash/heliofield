@@ -61,10 +61,12 @@
     if (t !== "light" && t !== "dark") try { t = localStorage.getItem("hf.theme"); } catch (e) {}
     if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
     document.documentElement.dataset.theme = t;
+    // Embed (?embed=1): the assessment and the outlook alone, for a frame.
+    if (new URLSearchParams(location.search).get("embed") === "1") document.documentElement.classList.add("embed");
   })();
 </script>
 <link rel="stylesheet" href="css/guide.css?v=c69696db4f">
-<link rel="stylesheet" href="css/spaceweather.css?v=aa5bd83540">
+<link rel="stylesheet" href="css/spaceweather.css?v=508413b3c5">
 </head>
 <body>
 <div class="page">
@@ -122,6 +124,8 @@
   <figure id="outlook"></figure>
   <details class="table" id="outlookTable"><summary>Data table</summary></details>
 </section>
+
+<p class="embed-only embed-foot" id="embedFoot"></p>
 
 <section class="block" id="sec-record" aria-labelledby="h-record">
   <h2 id="h-record">Model against measurement</h2>
@@ -208,19 +212,19 @@
   "./js/history.js": "./js/history.js?v=bc8ad3f713",
   "./js/main.js": "./js/main.js?v=240602cbb6",
   "./js/netcdf.js": "./js/netcdf.js?v=b9a0a32cc2",
-  "./js/observations.js": "./js/observations.js?v=ef65f3b999",
+  "./js/observations.js": "./js/observations.js?v=3301d458fd",
   "./js/pfss-worker.js": "./js/pfss-worker.js?v=0a42f1cb1d",
   "./js/pfss.js": "./js/pfss.js?v=1e0df6a8d5",
   "./js/preview.js": "./js/preview.js?v=70e2ead2a2",
   "./js/series.js": "./js/series.js?v=fd61bb321d",
   "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
-  "./js/spaceweather.js": "./js/spaceweather.js?v=5666f85d74",
+  "./js/spaceweather.js": "./js/spaceweather.js?v=a3123acdda",
   "./js/sw-model.js": "./js/sw-model.js?v=44479a9663",
   "./js/theme.js": "./js/theme.js?v=5abd830f82",
   "./js/totop.js": "./js/totop.js?v=825b854a16"
 } }
 </script>
 <!-- assets:end -->
-<script type="module" src="js/spaceweather.js?v=5666f85d74"></script>
+<script type="module" src="js/spaceweather.js?v=a3123acdda"></script>
 </body>
 </html>

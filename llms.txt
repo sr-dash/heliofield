@@ -96,6 +96,7 @@ Parameters:
 - `date`;
 - `bg=open` (coronal-hole map instead of source-surface speed);
 - `lead` (`0`, `1`, `3`, `5` or `7` days: which predictions to compare with measurements; default 1);
+- `embed=1` (the status, four headline tiles and the wind outlook alone, for an iframe; with `theme`);
 - `theme`.
 
 Example: https://sr-dash.github.io/heliofield/spaceweather.html?date=2026-11-02
@@ -112,6 +113,7 @@ Parameters:
 - `closed=0`, `open=0`, `sheet=0`, `grid=0` (hide closed lines, open lines, the current sheet, the grid and compass);
 - `alpha` (line opacity, 0 to 100) and `width` (line width, 0.3 to 4 times the default);
 - `imagery` (another base URL for the images);
+- `embed=1` (four panels in a 2 x 2 grid, for an iframe; a click opens the full page) and `panels` (with `embed`: comma list of panel ids, `a|b` taking the first present; default `aia193,lasco_c2,eui174|euvi_a,hmi|phi`);
 - `theme`.
 
 Example: https://sr-dash.github.io/heliofield/observations.html?date=2026-11-02&view=enh

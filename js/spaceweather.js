@@ -17,6 +17,7 @@ const DAY = 86400000, HOUR = 3600000;
 const SITE = "https://sr-dash.github.io/heliofield/spaceweather.html";
 const FLEET_URL = "https://sr-dash.github.io/heliofleet/";
 const { BODIES } = M;
+const EMBED = params.get("embed") === "1";
 const STALE_DAYS = 14;
 const LEADS = [0, 1, 3, 5, 7];
 const S = { date: null, bg: params.get("bg") === "open" ? "open" : "speed", lead: params.get("lead") !== null && LEADS.includes(+params.get("lead")) ? +params.get("lead") : 1 };
@@ -173,8 +174,8 @@ function drawOutlook() {
   const fig = $("outlook"), a = D.a, th = T(), c = ink();
   fig.replaceChildren();
   if (!a.ser) { fig.innerHTML = `<p class="empty">No speed map for this day.</p>`; return; }
-  const ser = a.ser, W = Math.max(320, fig.clientWidth), narrow = W < 600, H = narrow ? 300 : 340;
-  const m = { l: 50, r: 14, t: 14, b: 66 }, stripH = 16, plotB = H - m.b - stripH - 10;
+  const ser = a.ser, W = Math.max(320, fig.clientWidth), narrow = W < 600, H = EMBED ? 170 : narrow ? 300 : 340;
+  const m = { l: 50, r: 14, t: 14, b: EMBED ? 46 : 66 }, stripH = 16, plotB = H - m.b - stripH - 10;
   const t0 = ser[0].t, t1 = ser[ser.length - 1].t;
   const vmax = Math.max(700, Math.ceil(Math.max(...ser.map((p) => p.v)) / 100) * 100), vmin = 250;
   const X = (t) => m.l + (t - t0) / (t1 - t0) * (W - m.l - m.r), Y = (v) => m.t + (1 - (v - vmin) / (vmax - vmin)) * (plotB - m.t);
@@ -221,9 +222,9 @@ function drawOutlook() {
   el("line", { x1: X(D.t0), x2: X(D.t0), y1: m.t, y2: plotB + stripH + 10, stroke: c.text, "stroke-width": 1.5, "stroke-dasharray": "4 3" }, svg);
   for (const s of a.streams) {
     el("circle", { cx: X(s.peak.t), cy: Y(s.peak.v), r: 4.5, fill: th.chart.a, stroke: th.bg, "stroke-width": 2 }, svg);
-    el("text", { x: X(s.peak.t), y: Y(s.peak.v) - 10, "text-anchor": "middle", fill: c.text, class: "lab" }, svg).textContent = `${Math.round(s.peak.v)}`;
+    el("text", { x: X(s.peak.t), y: Y(s.peak.v) - 10, "text-anchor": "middle", fill: c.text, stroke: th.bg, "stroke-width": 4, "paint-order": "stroke", "stroke-linejoin": "round", class: "lab" }, svg).textContent = `${Math.round(s.peak.v)}`;
   }
-  el("text", { x: m.l, y: H - 8, fill: c.muted, class: "note" }, svg).textContent = narrow ? "Past days: what today's map implies." : "Past days show what today's map implies, not what was forecast then.";
+  if (!EMBED) el("text", { x: m.l, y: H - 8, fill: c.muted, class: "note" }, svg).textContent = narrow ? "Past days: what today's map implies." : "Past days show what today's map implies, not what was forecast then.";
   // Hover layer.
   const cross = el("g", { visibility: "hidden" }, svg);
   const vl = el("line", { y1: m.t, y2: plotB + stripH + 10, stroke: c.muted }, cross);
@@ -613,6 +614,7 @@ function syncUrl() {
   const q = new URLSearchParams({ date: S.date });
   if (S.bg !== "speed") q.set("bg", S.bg);
   if (S.lead !== 1) q.set("lead", S.lead);
+  if (EMBED) q.set("embed", 1);
   if (params.get("theme")) q.set("theme", params.get("theme"));
   history.replaceState(null, "", "?" + q);
   $("back").href = `./?date=${S.date}`;
@@ -622,6 +624,10 @@ function syncUrl() {
 }
 function render() {
   if (!D) return;
+  if (EMBED) {
+    const f = $("embedFoot"), full = `${SITE}?date=${D.day}`;
+    f.innerHTML = `${fmtDay(D.t0)} ${D.day.slice(0, 4)} · HelioField model wind · <a href="${full}" target="_blank" rel="noopener">Full assessment ↗</a>`;
+  }
   root.style.setProperty("--pos", T().pos); root.style.setProperty("--neg", T().neg);
   assess(); drawOutlook(); drawRecord(); drawMap(); drawHoles(); drawSeason(); drawUpstream(); drawEvents(); drawCycle(); setupShare();
   labelTables();
