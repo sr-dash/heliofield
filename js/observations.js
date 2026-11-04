@@ -395,6 +395,25 @@ async function run() {
 }
 const redraw = () => { syncUrl(); render(); };
 
+// Frames for the imagery repository's movies (?frames=1): each panel of a
+// day drawn as on this page, full size, with or without the field lines.
+// The page is driven by a headless browser; nothing here runs otherwise.
+if (params.get("frames") === "1") window.hfFrame = async (date, o = {}) => {
+  S.date = date; S.model = o.model || "hmi"; S.grid = !!o.grid;
+  if (o.alpha != null) S.alpha = o.alpha;
+  if (o.width != null) S.width = o.width;
+  images.clear();
+  const d = await json(IMG + `days/${date}/index.json`);
+  const f = o.lines ? await getField() : null, out = {};
+  for (const p of d.panels) {
+    if (o.ids && !o.ids.includes(p.id)) continue;
+    const ims = await pair(p), cv = document.createElement("canvas");
+    draw(cv, p, ims, f, ims[1] ? o.at ?? 0 : 100);
+    out[p.id] = { label: p.label, t_obs: p.t_obs, png: cv.toDataURL("image/png") };
+  }
+  return { date, cr: d.cr, field: f?.label ?? null, panels: out };
+};
+
 function setup() {
   const inp = $("date");
   inp.min = dates[0]; inp.max = dates.at(-1); inp.value = S.date;
