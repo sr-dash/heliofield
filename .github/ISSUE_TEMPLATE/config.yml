@@ -6,3 +6,6 @@ contact_links:
   - name: Spacecraft positions, coverage and observation planning
     url: https://github.com/sr-dash/heliofleet/issues/new/choose
     about: Positions and the fleet itself come from HelioFleet; ask there about a spacecraft's position or a missing mission.
+  - name: Show and tell
+    url: https://github.com/sr-dash/heliofield/discussions/categories/show-and-tell
+    about: Share a figure, a talk or a lesson that uses HelioField.

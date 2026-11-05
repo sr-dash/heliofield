@@ -1,12 +1,18 @@
 # HelioField
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23487231.svg)](https://doi.org/10.5281/zenodo.23487231)
+[![GitHub stars](https://img.shields.io/github/stars/sr-dash/heliofield?style=social)](https://github.com/sr-dash/heliofield/stargazers)
+[![Using it? Tell me](https://img.shields.io/badge/using%20it%3F-tell%20me-2ea44f)](https://github.com/sr-dash/heliofield/issues/new?template=i_use_this.yml)
+[![Show and tell](https://img.shields.io/badge/discussions-show%20and%20tell-8250df)](https://github.com/sr-dash/heliofield/discussions/categories/show-and-tell)
 
 The Sun's coronal magnetic field in 3D for any date since May 2010, with the
 heliophysics fleet placed in it. Recent days are computed nightly on the
 server; any other date is computed in the browser from an HMI rotation map. A static site: plain ES modules and three.js, no build step.
 Companion to [HelioFleet](https://sr-dash.github.io/heliofleet/), which supplies
 the spacecraft positions.
+
+> [!TIP]
+> **Using HelioField?** Please [star the repository](https://github.com/sr-dash/heliofield/stargazers) (the ☆ Star button at the top of this page). Clones and page views reach me without names, so a star is the only way I can tell who finds it useful, and it helps others find it too. Even better, [say what you use it for](https://github.com/sr-dash/heliofield/issues/new?template=i_use_this.yml) in a two-minute form, or post an example in [Show and tell](https://github.com/sr-dash/heliofield/discussions/categories/show-and-tell). If it helps your research, please cite it ([doi:10.5281/zenodo.23487231](https://doi.org/10.5281/zenodo.23487231)). I am not asking for money: there is no paid tier, and none of this changes what the tool does for you.
 
 What the page shows, for each day:
 

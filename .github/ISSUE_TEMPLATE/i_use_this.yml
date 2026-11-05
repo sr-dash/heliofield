@@ -1,0 +1,42 @@
+name: I use HelioField
+description: Tell me how you use HelioField. It takes two minutes and helps me keep it going.
+title: "[Using it] "
+labels: [user]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking a moment. Everything here is public, so share only what you are happy for others to read. A ☆ star on the repository counts too.
+  - type: input
+    id: who
+    attributes:
+      label: Who are you?
+      description: Optional. Your name, role or group, and institution, as much or as little as you like.
+  - type: textarea
+    id: what
+    attributes:
+      label: What do you use HelioField for?
+      description: Research, observation planning, teaching, outreach, curiosity, anything.
+    validations:
+      required: true
+  - type: input
+    id: link
+    attributes:
+      label: Link to your work
+      description: Optional. A paper, talk, course page, figure or post that uses it.
+  - type: dropdown
+    id: list
+    attributes:
+      label: May I mention you as a user?
+      description: For example in a talk or on the project pages.
+      options:
+        - "Yes, by name"
+        - "Yes, by institution only"
+        - "No, keep it to this issue"
+    validations:
+      required: true
+  - type: textarea
+    id: wish
+    attributes:
+      label: Anything you wish it did?
+      description: Optional. Ideas are welcome; bugs are better filed with the bug report form.
