@@ -113,3 +113,6 @@ footer.end { max-width: 1060px; margin: 0 auto; padding: 14px 16px 40px; border-
   .sitenav a:first-child { padding-left: 11px; }
   .sitenav::after { content: ""; flex: none; width: 40px; }
 }
+
+/* The request for a star, under each page's footer links. */
+footer.end .star-line { display: block; margin-top: 6px; color: var(--text); font-weight: 600; }

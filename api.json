@@ -563,6 +563,14 @@
     "type": "string",
     "default": "aia193,lasco_c2,eui174|euvi_a,hmi|phi",
     "description": "With embed=1: comma list of panel ids from the images' index; a|b takes the first present."
+   },
+   {
+    "name": "frames",
+    "type": "integer",
+    "enum": [
+     1
+    ],
+    "description": "For scripts: exposes window.hfFrame(date, {lines, ids, at, model, grid, alpha, width}), which returns each panel drawn as on the page, as PNG data URLs. The imagery repository's movies are made with it."
    }
   ],
   "examples": {

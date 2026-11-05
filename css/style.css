@@ -346,3 +346,7 @@ dialog .noask { display: flex; gap: 8px; align-items: center; color: var(--muted
 @media (prefers-reduced-motion: reduce) {
   #panel, .bar { transition: none; }
 }
+
+/* The request for a star, in the menu and the credits line. */
+.panel-foot.star-line { color: var(--text); font-weight: 600; }
+.credits .star-link { font-weight: 600; }
