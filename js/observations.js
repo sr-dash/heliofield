@@ -28,8 +28,8 @@ const S = {
   model: ["5", "10", "21.5"].includes(params.get("scs")) ? params.get("scs") : params.get("scs") === "0" ? "hmi" : "daily",
   v: [300, 400, 500, 600, 700].includes(+params.get("v")) ? +params.get("v") : 400,
   closed: params.get("closed") !== "0", open: params.get("open") !== "0", sheet: params.get("sheet") !== "0", grid: params.get("grid") !== "0",
-  alpha: Math.max(0, Math.min(100, +(params.get("alpha") ?? 55))),
-  width: Math.max(0.3, Math.min(4, +(params.get("width") ?? 1))),            // line width, times the default
+  alpha: Math.max(0, Math.min(100, +(params.get("alpha") ?? 100))),
+  width: Math.max(0.3, Math.min(4, +(params.get("width") ?? 0.9))),            // line width, times the default
 };
 let dates = [], daily = new Set(), day = null, field = null, earthL0 = null, images = new Map(), split = new Map();
 const SPLIT = { std: 100, cmp: 50, enh: 0 };
@@ -366,8 +366,8 @@ function syncUrl() {
   if (S.model !== "daily") q.set("scs", S.model === "hmi" ? 0 : S.model);
   if (S.v !== 400) q.set("v", S.v);
   for (const k of ["closed", "open", "sheet", "grid"]) if (!S[k]) q.set(k, 0);
-  if (S.alpha !== 55) q.set("alpha", S.alpha);
-  if (S.width !== 1) q.set("width", S.width);
+  if (S.alpha !== 100) q.set("alpha", S.alpha);
+  if (S.width !== 0.9) q.set("width", S.width);
   if (params.get("imagery")) q.set("imagery", params.get("imagery"));
   if (EMBED) { q.set("embed", 1); if (params.get("panels")) q.set("panels", params.get("panels")); }
   if (params.get("theme")) q.set("theme", params.get("theme"));

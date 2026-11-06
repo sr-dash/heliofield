@@ -527,14 +527,14 @@
     "type": "integer",
     "minimum": 0,
     "maximum": 100,
-    "default": 55
+    "default": 100
    },
    {
     "name": "width",
     "type": "number",
     "minimum": 0.3,
     "maximum": 4,
-    "default": 1
+    "default": 0.9
    },
    {
     "name": "imagery",

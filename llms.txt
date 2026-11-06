@@ -111,7 +111,7 @@ Parameters:
 - `scs` (`0`: PFSS from the HMI rotation map; `5`, `10` or `21.5`: PFSS + Schatten current sheet to that radius from the HMI rotation map; omitted: the day's PFSS, or the HMI rotation map on days before the daily products);
 - `v` (wind speed for the spirals beyond the model: 300 to 700 km/s);
 - `closed=0`, `open=0`, `sheet=0`, `grid=0` (hide closed lines, open lines, the current sheet, the grid and compass);
-- `alpha` (line opacity, 0 to 100) and `width` (line width, 0.3 to 4 times the default);
+- `alpha` (line opacity, 0 to 100, default 100) and `width` (line width, 0.3 to 4, default 0.9);
 - `imagery` (another base URL for the images);
 - `embed=1` (four panels in a 2 x 2 grid, for an iframe; a click opens the full page) and `panels` (with `embed`: comma list of panel ids, `a|b` taking the first present; default `aia193,lasco_c2,eui174|euvi_a,hmi|phi`); `frames=1` (for scripts: `window.hfFrame(date, {lines, ids, at, model})` returns each panel drawn as on the page, as PNG data URLs; the imagery repository's movies use it);
 - `theme`.
