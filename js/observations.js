@@ -38,6 +38,10 @@ const fieldCache = new Map();
 const C = THEMES.dark;
 
 // ------------------------------------------------------------- data
+// Older days (one per Carrington rotation) are served by the archive site,
+// so the daily site deploys only recent days; the index says which.
+let archived = new Set(), ARC = null;
+const base = (d) => (ARC && archived.has(d) ? ARC : IMG);
 const json = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(`${u}: ${r.status}`); return r.json(); });
 
 async function dailyField(date) {
@@ -100,7 +104,7 @@ async function getField() {
 function image(p, which) {
   const file = which === "enh" ? p.files.enh || p.files.wow : p.files.std;
   if (!file) return Promise.resolve(null);
-  const url = IMG + `days/${S.date}/${file}`;
+  const url = base(S.date) + `days/${S.date}/${file}`;
   if (!images.has(url)) images.set(url, new Promise((ok, fail) => {
     const im = new Image(); im.crossOrigin = "anonymous";
     im.onload = () => ok(im); im.onerror = () => fail(new Error(`image ${url}`)); im.src = url;
@@ -381,7 +385,7 @@ async function run() {
   const st = $("status");
   st.textContent = `Loading ${S.date}…`;
   try {
-    day = await json(IMG + `days/${S.date}/index.json`);
+    day = await json(base(S.date) + `days/${S.date}/index.json`);
     field = null;
     render();                              // images first, the field when it is ready
     earthL0 = (await fleetFor(S.date).catch(() => null))?.L0 ?? null;           // Earth's longitude, for the captions
@@ -403,7 +407,7 @@ if (params.get("frames") === "1") window.hfFrame = async (date, o = {}) => {
   if (o.alpha != null) S.alpha = o.alpha;
   if (o.width != null) S.width = o.width;
   images.clear();
-  const d = await json(IMG + `days/${date}/index.json`);
+  const d = await json(base(date) + `days/${date}/index.json`);
   const f = o.lines ? await getField() : null, out = {};
   for (const p of d.panels) {
     if (o.ids && !o.ids.includes(p.id)) continue;
@@ -452,6 +456,7 @@ themeLabel();
   try {
     const [img, prod] = await Promise.all([json(IMG + "index.json"), json("data/index.json")]);
     dates = img.dates; daily = new Set(prod.dates);
+    archived = new Set(img.archived || []); ARC = img.archive ? img.archive.replace(/\/?$/, "/") : null;
     if (!dates.length) throw new Error("no images yet");
     S.date = dates.includes(S.date) ? S.date : dates.at(-1);
     setup(); syncUrl(); run();
