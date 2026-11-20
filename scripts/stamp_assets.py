@@ -53,6 +53,8 @@ IN_SOURCE = [
     ("connect-worker.js", "connect-model.js", r'from "\./connect-model\.js(\?v=[0-9a-f]*)?"'),
     ("connect.js", "connect-worker.js", r'new URL\("\./connect-worker\.js(\?v=[0-9a-f]*)?"'),
     ("observations.js", "connect-worker.js", r'new URL\("\./connect-worker\.js(\?v=[0-9a-f]*)?"'),
+    ("sw-worker.js", "pfss.js", r'from "\./pfss\.js(\?v=[0-9a-f]*)?"'),
+    ("spaceweather.js", "sw-worker.js", r'new URL\("\./sw-worker\.js(\?v=[0-9a-f]*)?"'),
 ]
 
 

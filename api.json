@@ -264,6 +264,7 @@
  "data": {
   "daily_index": "https://sr-dash.github.io/heliofield/data/index.json",
   "daily_product": "https://sr-dash.github.io/heliofield/data/{date}/meta.json",
+  "daily_map_file": "https://sr-dash.github.io/heliofield/data/{date}/map.bin.gz",
   "rotation_maps": "https://sr-dash.github.io/heliofield/data/history/index.json",
   "rotation_map_file": "https://sr-dash.github.io/heliofield/data/history/cr/{cr}.bin.gz",
   "fleet_positions": "https://sr-dash.github.io/heliofield/data/history/fleet/{year}.json",
@@ -394,14 +395,14 @@
  "spaceweather": {
   "url": "https://sr-dash.github.io/heliofield/spaceweather.html",
   "url_template": "https://sr-dash.github.io/heliofield/spaceweather.html?date={date}",
-  "description": "For one date with a daily product: model solar-wind speed and magnetic sector at Earth (WSA-type speeds propagated with HUX), 27-day outlook with far-side flags, coronal holes with central-meridian passage and arrival windows, Russell-McPherron and Rosenberg-Coleman geometry, interplanetary field strength from open flux, upstream spacecraft lead times, particle-event footpoints with DONKI flares, DONKI CMEs with drag-based arrivals, G3+ storms, solar-cycle context, and a running comparison of the model's predictions (0-7 days ahead) with the solar wind measured at L1. Ambient wind only; not an official forecast.",
+  "description": "For any date since 2010-05-01 (a daily product where there is one; otherwise the HMI rotation map covering the date, solved in the browser): model solar-wind speed and magnetic sector at Earth (WSA-type speeds propagated with HUX), 27-day outlook with far-side flags, coronal holes with central-meridian passage and arrival windows, Russell-McPherron and Rosenberg-Coleman geometry, interplanetary field strength from open flux, upstream spacecraft lead times, particle-event footpoints with DONKI flares, DONKI CMEs with drag-based arrivals, G3+ storms, solar-cycle context, and a running comparison of the model's predictions (0-7 days ahead) with the solar wind measured at L1. Ambient wind only; not an official forecast.",
   "parameters": [
    {
     "name": "date",
     "type": "string",
     "format": "YYYY-MM-DD",
     "default": "latest daily product",
-    "description": "Must be one of data/index.json's dates; others snap to the nearest."
+    "description": "From 2010-05-01 to the latest daily product. A date without a daily product is solved in the browser from the HMI rotation map covering it; one that no rotation map covers yet snaps to the nearest daily product."
    },
    {
     "name": "bg",

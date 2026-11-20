@@ -66,7 +66,7 @@
   })();
 </script>
 <link rel="stylesheet" href="css/guide.css?v=2827ec9193">
-<link rel="stylesheet" href="css/spaceweather.css?v=508413b3c5">
+<link rel="stylesheet" href="css/spaceweather.css?v=5b529c9b94">
 </head>
 <body>
 <div class="page">
@@ -92,7 +92,7 @@
   <a class="sitenav-fleet" id="fleetLink" href="https://sr-dash.github.io/heliofleet/" title="The same date on HelioFleet: where the fleet is, with its Parker spirals">HelioFleet ↗</a>
 </nav>
 
-<p class="lede">An assessment built from one day's magnetogram: the PFSS model, WSA-type wind speeds on its source surface, and that wind carried out to Earth and the fleet. It describes the <b>ambient</b> solar wind and the geometry that shapes its effects; eruptions appear only through NASA's DONKI catalogue. <a href="guide.html#spaceweather">How this is computed</a></p>
+<p class="lede">An assessment built from one magnetogram, from May 2010 to today: the day's own for recent days, otherwise the HMI rotation map covering the date, solved in your browser. From it: the PFSS model, WSA-type wind speeds on its source surface, and that wind carried out to Earth and the fleet. It describes the <b>ambient</b> solar wind and the geometry that shapes its effects; eruptions appear only through NASA's DONKI catalogue. <a href="guide.html#spaceweather">How this is computed</a></p>
 
 <div class="controls" id="controls">
   <label>Date <input type="date" id="date"></label>
@@ -121,6 +121,7 @@
 <section class="block" id="sec-outlook" aria-labelledby="h-outlook">
   <h2 id="h-outlook">Solar wind at Earth</h2>
   <p class="sub">WSA-type speed on the source surface at Earth's latitude, carried out to 1 au with the HUX kinematic model, which lets fast wind run into slow wind. The strip below is the magnetic sector: <b>away</b> from the Sun or <b>towards</b> it. Shaded days come from parts of the map last updated more than two weeks earlier, on the far side; trust them least.</p>
+  <p class="mapstamp" data-stamp aria-live="off"></p>
   <figure id="outlook"></figure>
   <details class="table" id="outlookTable"><summary>Data table</summary></details>
 </section>
@@ -141,6 +142,7 @@
   <div class="seg" role="group" aria-label="Map background">
     <button type="button" data-bg="speed" class="on" aria-pressed="true">Wind speed on the source surface</button><button type="button" data-bg="open" aria-pressed="false">Coronal holes (open field)</button>
   </div>
+  <p class="mapstamp" data-stamp aria-live="off"></p>
   <figure><canvas id="map" width="1440" height="800" role="img" aria-label="Carrington map of wind speed, coronal holes and footpoints"></canvas></figure>
   <p class="legend" id="mapLegend"></p>
   <p class="sub">Coronal holes reaching within 35° of the equator, largest first. High-speed wind from a hole usually arrives at Earth two to four days after it crosses the central meridian.</p>
@@ -179,7 +181,7 @@
 
 <section class="block" id="sec-cycle" aria-labelledby="h-cycle">
   <h2 id="h-cycle">Solar-cycle context</h2>
-  <p class="sub">From the latest SDO/HMI rotation map on the <a href="series.html">solar-cycle series</a>.</p>
+  <p class="sub">From the SDO/HMI rotation map nearest the date on the <a href="series.html">solar-cycle series</a>.</p>
   <div class="tiles" id="cycle"></div>
 </section>
 
@@ -206,27 +208,28 @@
 <script type="importmap">
 { "imports": {
   "./js/connect-geo.js": "./js/connect-geo.js?v=dd41a244eb",
-  "./js/connect-model.js": "./js/connect-model.js?v=b8f7ec1dd0",
-  "./js/connect-worker.js": "./js/connect-worker.js?v=e02c82c7a0",
-  "./js/connect.js": "./js/connect.js?v=86fe5bf2e1",
+  "./js/connect-model.js": "./js/connect-model.js?v=133ca1d905",
+  "./js/connect-worker.js": "./js/connect-worker.js?v=3b3e7acef2",
+  "./js/connect.js": "./js/connect.js?v=ade6562ab8",
   "./js/datepicker.js": "./js/datepicker.js?v=46a3c76193",
-  "./js/export.js": "./js/export.js?v=c0f986b5c2",
-  "./js/history.js": "./js/history.js?v=bc8ad3f713",
+  "./js/export.js": "./js/export.js?v=33dfedded5",
+  "./js/history.js": "./js/history.js?v=5da3400c36",
   "./js/main.js": "./js/main.js?v=240602cbb6",
   "./js/netcdf.js": "./js/netcdf.js?v=b9a0a32cc2",
-  "./js/observations.js": "./js/observations.js?v=d47b1e50d4",
-  "./js/pfss-worker.js": "./js/pfss-worker.js?v=0a42f1cb1d",
-  "./js/pfss.js": "./js/pfss.js?v=1e0df6a8d5",
-  "./js/preview.js": "./js/preview.js?v=70e2ead2a2",
+  "./js/observations.js": "./js/observations.js?v=344e8e8ba2",
+  "./js/pfss-worker.js": "./js/pfss-worker.js?v=18e7f5af66",
+  "./js/pfss.js": "./js/pfss.js?v=3d7963269f",
+  "./js/preview.js": "./js/preview.js?v=af65d10ef1",
   "./js/series.js": "./js/series.js?v=fd61bb321d",
   "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
-  "./js/spaceweather.js": "./js/spaceweather.js?v=a3123acdda",
-  "./js/sw-model.js": "./js/sw-model.js?v=44479a9663",
+  "./js/spaceweather.js": "./js/spaceweather.js?v=bcab509178",
+  "./js/sw-model.js": "./js/sw-model.js?v=a74bcf9cca",
+  "./js/sw-worker.js": "./js/sw-worker.js?v=d0ff468e6b",
   "./js/theme.js": "./js/theme.js?v=5abd830f82",
   "./js/totop.js": "./js/totop.js?v=825b854a16"
 } }
 </script>
 <!-- assets:end -->
-<script type="module" src="js/spaceweather.js?v=a3123acdda"></script>
+<script type="module" src="js/spaceweather.js?v=bcab509178"></script>
 </body>
 </html>

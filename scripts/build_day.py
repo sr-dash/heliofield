@@ -14,6 +14,8 @@ that path, so the fallback serves the nightly build, not backfills).
 
     meta.json   map provenance, scales, open flux, HCS polylines, fleet,
                 footpoints with source diagnostics (connect, ensemble)
+    map.bin.gz  the input map itself, in the rotation maps' int16 format, so
+                the browser solves (connectivity, observations) use it too
     br.png      photospheric Br, 360x180 equirectangular, 8-bit, +-BR_SCALE G
     ss.png      source-surface Br, same grid, +-ss_scale G (in meta)
     wsa.png     WSA-type speed traced from every source-surface cell, same
@@ -116,15 +118,7 @@ def load_map(url: str):
 
 def load_hmi(day: date):
     """The HMI daily synoptic frame as a GONG-like 180x360 map, or None if
-    JSOC's current frame is not from `day`.
-
-    sunpy cannot read this file as it stands: CUNIT2 is 'sin(deg)', and CRVAL1
-    is Carrington time (360*CR - lon) with CDELT1 = -0.5, so longitude
-    actually increases along x. The header is rebuilt from those facts, and
-    the map is averaged 2x2 onto GONG's grid so the solve costs the same.
-    """
-    import sunpy.map
-    from astropy.io import fits
+    JSOC's current frame is not from `day`."""
     try:
         # JSOC answers cloud runners but drops the odd connection; retry.
         raw = _get(HMI, 120, tries=4)
@@ -133,10 +127,26 @@ def load_hmi(day: date):
         return None
     CACHE.mkdir(exist_ok=True)
     (CACHE / "hmi_daily.fits").write_bytes(raw)
-    with fits.open(CACHE / "hmi_daily.fits") as f:
-        h, d = f[0].header, f[0].data.astype(float)
+    return hmi_map(CACHE / "hmi_daily.fits", day)
+
+
+def hmi_map(path: Path, day: date | None = None, keys: dict | None = None):
+    """(map, source) from an HMI daily synoptic frame file; None if `day` is
+    given and the frame is from another day. `keys` stands in for header
+    keywords a file lacks (JSOC's storage copies carry none).
+
+    sunpy cannot read this file as it stands: CUNIT2 is 'sin(deg)', and CRVAL1
+    is Carrington time (360*CR - lon) with CDELT1 = -0.5, so longitude
+    actually increases along x. The header is rebuilt from those facts, and
+    the map is averaged 2x2 onto GONG's grid so the solve costs the same.
+    """
+    import sunpy.map
+    from astropy.io import fits
+    with fits.open(path) as f:
+        h, d = dict(f[-1].header), f[-1].data.astype(float)
+    h.update(keys or {})
     trec = h["T_REC"]                               # 2026.10.17_15:24:00.000_TAI
-    if trec[:10].replace(".", "-") != day.isoformat():
+    if day and trec[:10].replace(".", "-") != day.isoformat():
         print(f"  HMI frame is {trec}, not {day}")
         return None
     ny, nx = d.shape
@@ -188,6 +198,24 @@ def to_equirect(smap, nlat: int = 180) -> np.ndarray:
     for j in range(nx):
         out[:, j] = np.interp(s_dst, s_src, data[:, j])
     return out
+
+
+MAP_SCALE = 0.1      # G per int16 unit of map.bin.gz, as the rotation maps
+
+
+def write_map(path: Path, smap):
+    """The input map itself, for the pages that solve in the browser: in the
+    rotation maps' format (data/history/cr/*.bin.gz), 180x360 int16 of
+    MAP_SCALE G, rows uniform in sin(latitude) from south to north, column j
+    centred on Carrington longitude j + 0.5 (rolled as in to_equirect)."""
+    import gzip
+    import astropy.units as u
+    data = np.nan_to_num(smap.data)
+    nx = data.shape[1]
+    lon0 = smap.pixel_to_world(0 * u.pix, 0 * u.pix).lon.to_value("deg") % 360
+    data = np.roll(data, int(round(lon0 / (360 / nx) - 0.5)), axis=1)
+    q = np.clip(np.round(data / MAP_SCALE), -32767, 32767).astype("<i2")
+    path.write_bytes(gzip.compress(q.tobytes(), 9, mtime=0))
 
 
 def write_png(path: Path, field: np.ndarray, scale: float):
@@ -479,6 +507,7 @@ def build(day: date, force: bool = False) -> bool:
     tracer = tracing.PerformanceTracer()
 
     dest.mkdir(parents=True, exist_ok=True)
+    write_map(dest / "map.bin.gz", m)
     write_png(dest / "br.png", to_equirect(m), BR_SCALE)
     ss = out.source_surface_br.data
     ss_scale = float(np.nanpercentile(np.abs(ss), 99.5)) or 1.0
@@ -553,14 +582,25 @@ def build(day: date, force: bool = False) -> bool:
 
 
 def write_index():
+    """data/index.json: the dates with a product, and for those whose input
+    map is published (map.bin.gz) its source and time, so the pages that
+    solve in the browser use the same map as the day's product."""
     days = sorted(p.name for p in DATA.iterdir() if (p / "meta.json").exists())
+    maps = {}
+    for d in days:
+        if (DATA / d / "map.bin.gz").exists():
+            meta = json.loads((DATA / d / "meta.json").read_text())
+            maps[d] = [meta["source"].get("short", "GONG"), meta["obstime"][:16] + "Z"]
     path = DATA / "index.json"
-    # Rewrite only when the date list changes, so a run that built nothing
+    # Rewrite only when the dates or maps change, so a run that built nothing
     # leaves nothing to commit.
-    if path.exists() and json.loads(path.read_text()).get("dates") == days:
-        return
+    if path.exists():
+        old = json.loads(path.read_text())
+        if old.get("dates") == days and old.get("maps") == maps:
+            return
     (DATA / "index.json").write_text(json.dumps(dict(
-        dates=days, updated=datetime.now(timezone.utc).isoformat(timespec="seconds"))))
+        dates=days, maps=maps, map_scale_G=MAP_SCALE,
+        updated=datetime.now(timezone.utc).isoformat(timespec="seconds"))))
 
 
 def prune(keep_days: int = 120):

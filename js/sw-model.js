@@ -87,12 +87,14 @@ export const earthLon = (lon0, t0, t) => wrap(lon0 - RATE * (t - t0) / DAY);
 // as longitudes pass from about 60 deg east of central meridian onwards, so
 // a source longitude was last updated wrap(src - (L0 - 60)) / RATE days
 // before t0.
-export function series(rings, lon0, t0, from, to, stepMs = 3600000 * 2) {
+// ageOf(src), when given, replaces that rule: a rotation map's longitudes
+// were each observed once, some before the date and some after.
+export function series(rings, lon0, t0, from, to, stepMs = 3600000 * 2, ageOf = null) {
   const out = [];
   for (let t = from; t <= to; t += stepMs) {
     const lon = earthLon(lon0, t0, t), src = wrap(Math.atan2(ringValue(rings.sin, lon), ringValue(rings.cos, lon)) / DEG);
     out.push({ t, lon, v: ringValue(rings.v, lon), b: ringValue(rings.b, lon), src,
-      age: wrap(src - (lon0 - 60)) / RATE });
+      age: ageOf ? ageOf(src) : wrap(src - (lon0 - 60)) / RATE });
   }
   return out;
 }
@@ -300,7 +302,7 @@ export const BODIES = [["earth", "Earth / L1"], ["psp", "Parker Solar Probe"], [
 const noon = (day) => Date.parse(day + "T12:00:00Z");
 
 // Everything the page and the daily record derive from one product:
-// d = { day, meta, speed, bss, cls, t0, L0, rss } with the PNGs decoded
+// d = { day, meta, speed, bss, cls, t0, L0, rss, ageOf? } with the PNGs decoded
 // (speed in km/s or NaN; bss = source-surface B_r / ss_scale; cls = -1, 0, 1).
 export function analyse(d) {
   const m = d.meta, E = m.fleet.earth, out = { bodies: {} };
@@ -317,7 +319,7 @@ export function analyse(d) {
   const e = out.bodies.earth;
   if (e) {
     const from = noon(d.day) - 13 * DAY, to = noon(d.day) + 14 * DAY;
-    out.ser = series(e.rings, E.lon, d.t0, from, to);
+    out.ser = series(e.rings, E.lon, d.t0, from, to, undefined, d.ageOf);
     out.cross = crossings(out.ser);
     out.streams = streams(out.ser, 500);
     out.now = out.ser.reduce((a, p) => (Math.abs(p.t - d.t0) < Math.abs(a.t - d.t0) ? p : a));

@@ -5,7 +5,7 @@
 // fast CMEs with drag-based arrivals. The physics is in sw-model.js.
 
 import { THEMES, currentTheme } from "./theme.js";
-import { fleetFor } from "./history.js";
+import { fleetFor, fieldFor, historyIndex } from "./history.js";
 import "./totop.js";
 import * as M from "./sw-model.js";
 import { enhance as datePicker } from "./datepicker.js";
@@ -35,8 +35,36 @@ const sector = (b) => (b > 0 ? "away" : "towards");
 const sectorFrom = (b) => (b > 0 ? "away from" : "towards");
 const polTag = (b) => `<span class="pol ${b > 0 ? "out" : "in"}">${b > 0 ? "away" : "towards"}</span>`;
 const noon = (day) => Date.parse(day + "T12:00:00Z");
+const addDays = (day, k) => new Date(noon(day) + k * DAY).toISOString().slice(0, 10);
+let FIRST = "2010-05-01";
+// The map and date on each figure drawn from it, so they stay in view when
+// the status line has scrolled away.
+function stamp(d) {
+  const m = d.meta, html = m.computed
+    ? `Map: <b>${esc(m.source.name)}</b>, solved in your browser · PFSS 2.5 R☉ · for <b>${d.day}</b> 12:00 UTC · <span class="near">a rotation map holds data from after this date too</span>`
+    : `Map: <b>${esc(m.source.name)}</b>, <b>${fmtT(d.t0)} UTC</b> · PFSS 2.5 R☉ · the daily product for <b>${d.day}</b>`;
+  for (const e of document.querySelectorAll("[data-stamp]")) e.innerHTML = html;
+}
 
 // ------------------------------------------------------------- loading
+// Dates before the daily products are solved here, from the HMI rotation
+// map, by js/sw-worker.js; one worker, so a rotation's field is reused.
+let worker = null, seq = 0;
+const waiting = new Map();
+function solveHere(msg, onProgress) {
+  worker ??= (() => {
+    const w = new Worker(new URL("./sw-worker.js?v=d0ff468e6b", import.meta.url), { type: "module" });
+    w.onmessage = (e) => {
+      const p = waiting.get(e.data.id);
+      if (!p) return;
+      if (e.data.type === "progress") return p.onProgress?.(e.data.stage, e.data.f);
+      waiting.delete(e.data.id);
+      e.data.type === "error" ? p.reject(new Error(e.data.message)) : p.resolve(e.data);
+    };
+    return w;
+  })();
+  return new Promise((resolve, reject) => { const id = ++seq; waiting.set(id, { resolve, reject, onProgress }); worker.postMessage({ ...msg, id }); });
+}
 function grey(url) {
   return new Promise((ok, fail) => {
     const img = new Image();
@@ -56,7 +84,28 @@ const getMeta = (day) => {
   return metaCache.get(day);
 };
 
-async function load(day) {
+// A day's product: the daily one where it exists; otherwise the same
+// quantities solved here from the rotation map covering the date, or, for a
+// date no rotation map covers yet, the nearest daily product.
+async function load(day, onProgress) {
+  if (dates.includes(day)) return loadDaily(day);
+  const field = await fieldFor(day);
+  if (field.kind === "daily") return loadDaily(field.day);
+  const pos = await fleetFor(day), t0 = noon(day);
+  const res = await solveHere({ url: new URL(field.url, location.href).href, key: field.key, scale: field.scale, shape: field.shape, fleet: pos.fleet }, onProgress);
+  const meta = {
+    date: day, obstime: new Date(t0).toISOString().slice(0, 19) + "Z", computed: true,
+    source: { name: field.label, short: field.short, file: field.rot.file }, carrington_rotation: pos.CR, L0: pos.L0, B0: pos.B0,
+    model: { ...res.meta.model, rss: 2.5 }, open_flux_Mx: res.meta.open_flux_Mx, ss_scale: res.meta.ss_scale, hcs: res.meta.hcs,
+    fleet: pos.fleet, connect: res.meta.connect, ensemble: res.meta.ensemble, wsa: {},
+  };
+  // Each longitude of a rotation map was observed once, as it crossed the
+  // central meridian: from 360 at the rotation's start to 0 at its end.
+  const a = Date.parse(field.rot.start), b = Date.parse(field.rot.stop);
+  const ageOf = (lon) => Math.abs(t0 - (a + (1 - M.wrap(lon) / 360) * (b - a))) / DAY;
+  return { day, meta, speed: res.speed, bss: res.bss, cls: res.cls, t0, L0: pos.L0, rss: 2.5, field, ageOf };
+}
+async function loadDaily(day) {
   const meta = await getMeta(day);
   if (!meta) throw new Error(`no product for ${day}`);
   const base = `data/${day}/`, wsa = meta.wsa || {};
@@ -180,7 +229,7 @@ function drawOutlook() {
   const vmax = Math.max(700, Math.ceil(Math.max(...ser.map((p) => p.v)) / 100) * 100), vmin = 250;
   const X = (t) => m.l + (t - t0) / (t1 - t0) * (W - m.l - m.r), Y = (v) => m.t + (1 - (v - vmin) / (vmax - vmin)) * (plotB - m.t);
   const leg = document.createElement("div"); leg.className = "legend";
-  leg.innerHTML = `<span><i style="background:${th.chart.a}"></i>speed at Earth, km/s</span><span><i class="box" style="background:${th.pos}"></i>away</span><span><i class="box" style="background:${th.neg}"></i>towards</span><span><i class="box" style="background:${c.shade};border:1px solid ${c.grid}"></i>far-side data, over ${STALE_DAYS} days old</span><span><i class="dash"></i>${fmtDay(D.t0)}, the map</span>`;
+  leg.innerHTML = `<span><i style="background:${th.chart.a}"></i>speed at Earth, km/s</span><span><i class="box" style="background:${th.pos}"></i>away</span><span><i class="box" style="background:${th.neg}"></i>towards</span><span><i class="box" style="background:${c.shade};border:1px solid ${c.grid}"></i>${D.ageOf ? `data observed over ${STALE_DAYS} days from this date` : `far-side data, over ${STALE_DAYS} days old`}</span><span><i class="dash"></i>${fmtDay(D.t0)}, the map</span>`;
   fig.append(leg);
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, class: "chartsvg", role: "img", tabindex: 0,
     "aria-label": `Model solar-wind speed and sector at Earth, ${fmtDay(t0)} to ${fmtDay(t1)}. Arrow keys read values; the data table lists them.` });
@@ -224,7 +273,9 @@ function drawOutlook() {
     el("circle", { cx: X(s.peak.t), cy: Y(s.peak.v), r: 4.5, fill: th.chart.a, stroke: th.bg, "stroke-width": 2 }, svg);
     el("text", { x: X(s.peak.t), y: Y(s.peak.v) - 10, "text-anchor": "middle", fill: c.text, stroke: th.bg, "stroke-width": 4, "paint-order": "stroke", "stroke-linejoin": "round", class: "lab" }, svg).textContent = `${Math.round(s.peak.v)}`;
   }
-  if (!EMBED) el("text", { x: m.l, y: H - 8, fill: c.muted, class: "note" }, svg).textContent = narrow ? "Past days: what today's map implies." : "Past days show what today's map implies, not what was forecast then.";
+  if (!EMBED) el("text", { x: m.l, y: H - 8, fill: c.muted, class: "note" }, svg).textContent = D.ageOf
+    ? (narrow ? "A rotation map: a hindcast." : "From a rotation map, which holds data from after this date too: a hindcast, not a forecast.")
+    : (narrow ? "Past days: what today's map implies." : "Past days show what today's map implies, not what was forecast then.");
   // Hover layer.
   const cross = el("g", { visibility: "hidden" }, svg);
   const vl = el("line", { y1: m.t, y2: plotB + stripH + 10, stroke: c.muted }, cross);
@@ -238,7 +289,7 @@ function drawOutlook() {
     dot.setAttribute("cx", x); dot.setAttribute("cy", Y(p.v));
     const b = svg.getBoundingClientRect();
     showTip(`<div class="head">${fmtHour(p.t)}</div><div class="row"><b>${Math.round(p.v)} km/s</b>${chip(windLevel(p.v), M.windClass(p.v))}</div>
-      <div class="row">${polTag(p.b)}<span>sector</span></div><div class="row"><span>source ${p.src.toFixed(0)}° Carrington, data ${p.age.toFixed(0)} d old</span></div>`,
+      <div class="row">${polTag(p.b)}<span>sector</span></div><div class="row"><span>source ${p.src.toFixed(0)}° Carrington, data ${p.age.toFixed(0)} d ${D.ageOf ? "from this date" : "old"}</span></div>`,
     px ?? b.left + x / W * b.width, py ?? b.top + 40);
   };
   const nearest = (cx) => { const b = svg.getBoundingClientRect(), x = (cx - b.left) / b.width * W; return Math.round((x - m.l) / (W - m.l - m.r) * (ser.length - 1)); };
@@ -257,7 +308,7 @@ function drawOutlook() {
   det.querySelector(".scroll")?.remove();
   const rows = ser.filter((p) => new Date(p.t).getUTCHours() % 6 === 0);
   const wrap = document.createElement("div"); wrap.className = "scroll";
-  wrap.innerHTML = `<table><thead><tr><th>Time (UTC)</th><th>Speed</th><th>Sector</th><th>Source (Carrington)</th><th>Data age</th></tr></thead><tbody>${
+  wrap.innerHTML = `<table><thead><tr><th>Time (UTC)</th><th>Speed</th><th>Sector</th><th>Source (Carrington)</th><th>${D.ageOf ? "Data from this date" : "Data age"}</th></tr></thead><tbody>${
     rows.map((p) => `<tr><td>${fmtT(p.t)}</td><td>${Math.round(p.v)} km/s ${p.v >= 500 ? chip(windLevel(p.v), "") : ""}</td><td>${sector(p.b)}</td><td>${p.src.toFixed(1)}°</td><td>${p.age.toFixed(1)} d</td></tr>`).join("")}</tbody></table>`;
   det.append(wrap);
   labelTables();
@@ -538,7 +589,7 @@ function drawCycle() {
   const box = $("cycle");
   box.replaceChildren();
   if (!series) { box.textContent = "The solar-cycle series could not be loaded."; return; }
-  const s = series, i = s.cr.length - 1, when = `CR ${s.cr[i]}, centred on ${s.mid[i]}`;
+  const s = series, t = Date.parse(D.day), i = s.mid.reduce((b, m, j) => (Math.abs(Date.parse(m) - t) < Math.abs(Date.parse(s.mid[b]) - t) ? j : b), s.mid.length - 1), when = `CR ${s.cr[i]}, centred on ${s.mid[i]}`;
   const mean = (k, j) => { const a = s[k].slice(Math.max(0, j - 6), j + 7).filter(Number.isFinite); return a.reduce((x, y) => x + y, 0) / a.length; };
   // The latest sign change of each polar field's 13-rotation mean.
   const reversal = (k) => { for (let j = i - 6; j > 6; j--) if (Math.sign(mean(k, j)) !== Math.sign(mean(k, j - 1))) return s.mid[j]; return null; };
@@ -619,8 +670,7 @@ function syncUrl() {
   history.replaceState(null, "", "?" + q);
   $("back").href = `./?date=${S.date}`;
   $("fleetLink").href = `${FLEET_URL}?${new URLSearchParams({ t: `${S.date}T12:00Z`, spirals: 1 })}`;
-  const k = dates.indexOf(S.date);
-  $("prev").disabled = k <= 0; $("next").disabled = k < 0 || k >= dates.length - 1;
+  $("prev").disabled = S.date <= FIRST; $("next").disabled = S.date >= dates.at(-1);
 }
 function render() {
   if (!D) return;
@@ -636,13 +686,17 @@ async function run() {
   const status = $("status");
   status.className = "status"; status.textContent = `Loading ${S.date}…`;
   try {
-    const d = await load(S.date);
+    const d = await load(S.date, (stage, f) => { status.textContent = `Solving ${S.date} from the rotation map: ${stage} ${Math.round(100 * f)}%`; });
+    if (d.day !== S.date) { S.date = d.day; $("date").value = d.day; syncUrl(); }      // a date no map covers: the nearest product
     d.a = M.analyse(d);
     d.feet = M.footpoints(d.meta);
     D = d;
     D.ev = await eventsFor();
     const src = d.meta.source;
-    status.textContent = `Map: ${src.name}, ${fmtT(d.t0)} UTC (CR ${d.meta.carrington_rotation}) · PFSS, source surface ${d.rss} R☉ · WSA-type speeds with illustrative coefficients.`;
+    status.textContent = d.meta.computed
+      ? `Map: ${src.name}, solved in your browser · PFSS, source surface ${d.rss} R☉ · spacecraft and outlook at 12:00 UTC · WSA-type speeds with illustrative coefficients.`
+      : `Map: ${src.name}, ${fmtT(d.t0)} UTC (CR ${d.meta.carrington_rotation}) · PFSS, source surface ${d.rss} R☉ · WSA-type speeds with illustrative coefficients.`;
+    stamp(d);
     render();
   } catch (err) {
     console.error(err);
@@ -651,14 +705,14 @@ async function run() {
 }
 function setupControls() {
   const inp = $("date");
-  inp.min = dates[0]; inp.max = dates.at(-1); inp.value = S.date;
+  inp.min = FIRST; inp.max = dates.at(-1); inp.value = S.date;
   const go = (day) => { S.date = day; inp.value = day; syncUrl(); setupShare(); run(); };
-  // Days without a product (a missed night) snap to the nearest one.
-  const nearest = (day) => dates.reduce((b, x) => (Math.abs(Date.parse(x) - Date.parse(day)) < Math.abs(Date.parse(b) - Date.parse(day)) ? x : b), dates.at(-1));
-  datePicker(inp, { label: "Date", marked: (d) => dates.includes(d) });       // days with a daily product
-  inp.onchange = (e) => { if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) go(nearest(e.target.value)); };
-  $("prev").onclick = () => { const k = dates.indexOf(S.date); if (k > 0) go(dates[k - 1]); };
-  $("next").onclick = () => { const k = dates.indexOf(S.date); if (k < dates.length - 1) go(dates[k + 1]); };
+  // Any date since 2010: a daily product where there is one (marked), else
+  // solved here from the rotation map.
+  datePicker(inp, { label: "Date", marked: (d) => dates.includes(d) });
+  inp.onchange = (e) => { const v = e.target.value; if (/^\d{4}-\d{2}-\d{2}$/.test(v)) go(v < FIRST ? FIRST : v > dates.at(-1) ? dates.at(-1) : v); };
+  $("prev").onclick = () => { if (S.date > FIRST) go(addDays(S.date, -1)); };
+  $("next").onclick = () => { if (S.date < dates.at(-1)) go(addDays(S.date, 1)); };
   for (const b of document.querySelectorAll("[data-bg]")) b.onclick = () => {
     S.bg = b.dataset.bg;
     for (const x of document.querySelectorAll("[data-bg]")) { x.classList.toggle("on", x === b); x.setAttribute("aria-pressed", x === b); }
@@ -685,8 +739,9 @@ new ResizeObserver(() => {
   try {
     const idx = await fetch("data/index.json").then((r) => r.json());
     dates = idx.dates;
+    FIRST = (await historyIndex()).first_day || "2010-05-01";
     const want = params.get("date");
-    S.date = dates.includes(want) ? want : dates.at(-1);
+    S.date = /^\d{4}-\d{2}-\d{2}$/.test(want || "") && want >= FIRST && want <= dates.at(-1) ? want : dates.at(-1);
     setupControls(); syncUrl(); setupShare();
     [events, series, track] = await Promise.all([
       fetch(`${FLEET_URL}data/events.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null),

@@ -445,7 +445,7 @@ python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet</code>
 
 <section id="connect">
   <h3>Connectivity page</h3>
-  <p>The <a href="connect.html">connectivity page</a> follows the in-situ spacecraft (Parker Solar Probe, Solar Orbiter, BepiColombo, STEREO-A and Earth with the L1 monitors) back to their sources for one date. It combines this model with <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>'s catalogue of observations and its instrument fields. The field is the HMI rotation map covering the date, solved in the browser with PFSS or PFSS + Schatten current sheet at the chosen source-surface height, as in the viewer. Positions are HelioField's daily positions at 12:00 UTC.</p>
+  <p>The <a href="connect.html">connectivity page</a> follows the in-situ spacecraft (Parker Solar Probe, Solar Orbiter, BepiColombo, STEREO-A and Earth with the L1 monitors) back to their sources for one date. It combines this model with <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>'s catalogue of observations and its instrument fields. The field is the day's own map where it has a daily product, the same map as the 3D viewer and the space-weather page, and otherwise the HMI rotation map covering the date. Either is solved in the browser with PFSS or PFSS + Schatten current sheet at the chosen source-surface height, as in the viewer. Positions are HelioField's daily positions at 12:00 UTC.</p>
   <ul>
     <li><b>Connection.</b> Each spacecraft is joined to the model's outer boundary (the source surface, or the outer edge of the current-sheet model) along a ballistic Parker spiral at the chosen speed, or at its footpoint's own WSA-type speed (self-consistent). It then follows a field line down to the photosphere, as described under <a href="#connectivity">spacecraft connectivity</a> and <a href="#sources">solar-wind sources</a>.</li>
     <li><b>Source time.</b> Plasma reaching a spacecraft at distance <i>r</i> left the outer boundary a travel time (<i>r</i> − <i>R</i><sub>edge</sub>) / <i>v</i> earlier: about 4 days for 1 au at 400 km/s, hours for Parker Solar Probe near perihelion. The page gives this <b>source time</b> for each spacecraft.</li>
@@ -455,12 +455,12 @@ python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet</code>
     <li><b>Observations of the source region.</b> HelioFleet's footprints of IRIS, Hinode/EIS, DKIST and Solar Orbiter (EUI-HRI, PHI-HRT, SPICE) are searched over the <b>source-time window</b>. That is the range of source times for speeds ±100 km/s around the one used, widened by 6 hours. For each observation, the footpoint and its spread are projected into the observation's view (Earth's, or Solar Orbiter's from its recorded position) at the observation's time. The observation is listed when its field contains the footpoint or lies within 5° of the spread. The projections follow SunPy's conventions and match SunPy to 0.0001″ (<code>tests/test_connect.py</code>).</li>
     <li><b>Coronagraph fields.</b> The model's open field and current sheet are projected onto the plane of the sky of each coronagraph or heliospheric imager whose spacecraft has a position on the date. Plane-of-sky radii are used for coronagraphs and elongation for wide-field imagers. Beyond the model's outer boundary, the current sheet and the open field are carried out as Parker spirals at the chosen speed. Structures are drawn brighter near the plane of the sky, where Thomson scattering makes them most visible. The fields of view (inner and outer limits, and the side for half-field imagers) are HelioFleet's.</li>
   </ul>
-  <p><b>Limits.</b> The model is static over the rotation and current-free outside the sheets. The ballistic mapping ignores acceleration, stream interactions and coronal mass ejections, so a footpoint can be off by 10° or more; the spread shows how much. The search finds only observations in HelioFleet's catalogue, and the footprints carry the pointing recorded with each observation. Dates newer than the latest HMI rotation map use the nearest map, as the page says.</p>
+  <p><b>Limits.</b> The model is static over the rotation and current-free outside the sheets. The ballistic mapping ignores acceleration, stream interactions and coronal mass ejections, so a footpoint can be off by 10° or more; the spread shows how much. The search finds only observations in HelioFleet's catalogue, and the footprints carry the pointing recorded with each observation. A date with neither (a missed night) uses the nearest map in time, as the page says. Every figure is labelled with the map it was drawn from and its date.</p>
 </section>
 
 <section id="spaceweather">
   <h3>Space-weather page</h3>
-  <p>The <a href="spaceweather.html">space-weather page</a> turns one day's product into indicators for Earth and the fleet. It uses the daily magnetogram, not the HMI rotation maps, so it covers the dates that have a daily product. Everything on it describes the <b>ambient</b> solar wind and the geometry that shapes its effects. Eruptions enter only through NASA's DONKI catalogue, as HelioFleet keeps it (flares of M5 and above, CMEs of 1000 km/s and above, storms of G3 and above).</p>
+  <p>The <a href="spaceweather.html">space-weather page</a> turns one day's product into indicators for Earth and the fleet. It covers every date since May 2010. A date with a daily product uses that product, as made on the server. Any other date is solved in your browser from the HMI rotation map covering it, as in the viewer: the PFSS field at 2.5 R<sub>☉</sub>, the WSA-type speed traced from every degree of the source surface, the open-field regions and the spacecraft connections, in about ten seconds. A rotation map is built over about 27 days, so such a date is a hindcast: part of its data was observed after the date. The outlook shades the days whose source longitudes were observed more than 14 days from the date. The browser's tapered solution opens more polar field than the server's (see <a href="#smoothing">smoothing</a>), so speeds above about 40° latitude run higher on computed dates; at the latitudes of Earth and the spacecraft the two agree to about 10–20 km/s on the same map. Every figure is labelled with the map it was drawn from and its date. Everything on it describes the <b>ambient</b> solar wind and the geometry that shapes its effects. Eruptions enter only through NASA's DONKI catalogue, as HelioFleet keeps it (flares of M5 and above, CMEs of 1000 km/s and above, storms of G3 and above).</p>
   <ul>
     <li><b>Speed on the source surface.</b> The daily build traces a field line down from every 1° cell of the source surface and takes the WSA-type speed at its foot, as for the spacecraft connections. The map is stored as <code>wsa.png</code>. Cells whose line closes below the source surface have no value.</li>
     <li><b>Propagation.</b> The ring of speeds at a body's latitude is carried out to its distance with the HUX kinematic model (Riley &amp; Lionello 2011), stepping 1 R<sub>☉</sub> at a time in the corotating frame:
@@ -489,7 +489,7 @@ python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet</code>
     <li><b>The images</b> are prepared each night by a companion repository, <a href="https://github.com/sr-dash/heliofield-imagery">heliofield-imagery</a> (<a href="https://doi.org/10.5281/zenodo.23935774">10.5281/zenodo.23935774</a>), from open archives: JSOC for SDO, NASA/GSFC for LASCO, the STEREO beacon, and the Royal Observatory of Belgium and ESA's archive for Solar Orbiter. Each is turned solar north up and stored at 768 pixels with the observer's Carrington position and distance, the plate scale and the Sun's centre. The last 60 days are kept, and one day per Carrington rotation before that, back to May 2010: the middle day of the rotation at noon. Older rotations lack the panels their missions did not yet provide (Solar Orbiter from 2021), and their LASCO backgrounds use 5 days instead of four weeks.</li>
     <li><b>Two renderings</b> per image, compared with each panel's slider. Disk images: each instrument's usual SunPy scaling, and WOW (Wavelets Optimized Whitening; Auchère et al. 2023). LASCO: the frame divided by a background, the minimum over about four weeks of daily median images, as NRL makes LASCO's real-time images; and the normalising radial gradient filter (NRGF; Morgan et al. 2006). Both filters come from sunkit-image. Magnetograms show the line-of-sight field from −200 to +200 G.</li>
     <li><b>Projection.</b> Points of the model, in the Carrington frame, are turned into the observer's heliocentric frame and then into helioprojective angles, as SunPy does; the page matches SunPy to a thousandth of a pixel. Lines behind the Sun are hidden. On coronagraph images, lines are dimmed away from the plane of the sky, where Thomson scattering is weak. The current sheet is dashed where it lies in front of the disk, high above it.</li>
-    <li><b>The field</b> is the day's PFSS product, or, chosen on the page, the HMI rotation map with PFSS alone or with the Schatten current sheet to 5, 10 or 21.5 R<sub>☉</sub>, solved in the browser as on the <a href="#connect">connectivity page</a>. Days before the daily products began use the HMI rotation map. Beyond the model's outer edge, open field and the current sheet continue as Parker spirals at the chosen wind speed; these are drawn fainter.</li>
+    <li><b>The field</b> is the day's PFSS product, or, chosen on the page, the HMI rotation map with PFSS alone, or PFSS with the Schatten current sheet to 5, 10 or 21.5 R<sub>☉</sub> from the day's own map (the rotation map on days without one), solved in the browser as on the <a href="#connect">connectivity page</a>. Days before the daily products began use the HMI rotation map. Beyond the model's outer edge, open field and the current sheet continue as Parker spirals at the chosen wind speed; these are drawn fainter.</li>
     <li><b>Orientation.</b> Each panel carries a compass (north up, east to the left), the limb, the solar rotation axis through the north pole, a Stonyhurst grid on the disk every 15°, and rings at 2.5, 5, 10 and 20 R<sub>☉</sub> on coronagraphs.</li>
     <li><b>Downloads.</b> The enlarged view saves a PNG of the image with its field lines and a caption naming the instrument, time, rendering, model and credit.</li>
   </ul>
@@ -730,22 +730,23 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
 <script type="importmap">
 { "imports": {
   "./js/connect-geo.js": "./js/connect-geo.js?v=dd41a244eb",
-  "./js/connect-model.js": "./js/connect-model.js?v=b8f7ec1dd0",
-  "./js/connect-worker.js": "./js/connect-worker.js?v=e02c82c7a0",
-  "./js/connect.js": "./js/connect.js?v=86fe5bf2e1",
+  "./js/connect-model.js": "./js/connect-model.js?v=133ca1d905",
+  "./js/connect-worker.js": "./js/connect-worker.js?v=3b3e7acef2",
+  "./js/connect.js": "./js/connect.js?v=ade6562ab8",
   "./js/datepicker.js": "./js/datepicker.js?v=46a3c76193",
-  "./js/export.js": "./js/export.js?v=c0f986b5c2",
-  "./js/history.js": "./js/history.js?v=bc8ad3f713",
+  "./js/export.js": "./js/export.js?v=33dfedded5",
+  "./js/history.js": "./js/history.js?v=5da3400c36",
   "./js/main.js": "./js/main.js?v=240602cbb6",
   "./js/netcdf.js": "./js/netcdf.js?v=b9a0a32cc2",
-  "./js/observations.js": "./js/observations.js?v=d47b1e50d4",
-  "./js/pfss-worker.js": "./js/pfss-worker.js?v=0a42f1cb1d",
-  "./js/pfss.js": "./js/pfss.js?v=1e0df6a8d5",
-  "./js/preview.js": "./js/preview.js?v=70e2ead2a2",
+  "./js/observations.js": "./js/observations.js?v=344e8e8ba2",
+  "./js/pfss-worker.js": "./js/pfss-worker.js?v=18e7f5af66",
+  "./js/pfss.js": "./js/pfss.js?v=3d7963269f",
+  "./js/preview.js": "./js/preview.js?v=af65d10ef1",
   "./js/series.js": "./js/series.js?v=fd61bb321d",
   "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
-  "./js/spaceweather.js": "./js/spaceweather.js?v=a3123acdda",
-  "./js/sw-model.js": "./js/sw-model.js?v=44479a9663",
+  "./js/spaceweather.js": "./js/spaceweather.js?v=bcab509178",
+  "./js/sw-model.js": "./js/sw-model.js?v=a74bcf9cca",
+  "./js/sw-worker.js": "./js/sw-worker.js?v=d0ff468e6b",
   "./js/theme.js": "./js/theme.js?v=5abd830f82",
   "./js/totop.js": "./js/totop.js?v=825b854a16"
 } }

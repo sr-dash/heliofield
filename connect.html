@@ -60,7 +60,7 @@
   })();
 </script>
 <link rel="stylesheet" href="css/guide.css?v=2827ec9193">
-<link rel="stylesheet" href="css/connect.css?v=696bfb6ace">
+<link rel="stylesheet" href="css/connect.css?v=56f95e50c0">
 </head>
 <body>
 <div class="page">
@@ -117,6 +117,7 @@
   <div class="seg" role="group" aria-label="Map background">
     <button type="button" data-bg="field" class="on" aria-pressed="true">Photospheric field</button><button type="button" data-bg="open" aria-pressed="false">Open-field regions</button>
   </div>
+  <p class="mapstamp" data-stamp aria-live="off"></p>
   <figure><canvas id="map" width="1440" height="720" role="img" aria-label="Carrington map of the source regions"></canvas></figure>
   <p class="legend" id="mapLegend"></p>
 </section>
@@ -124,6 +125,7 @@
 <section class="block" id="sec-time" aria-labelledby="h-time">
   <h2 id="h-time">Predicted polarity over a rotation</h2>
   <p class="sub">Day by day, the polarity each spacecraft is connected to at the chosen wind speed, with this rotation's field. Pale cells lie within 5° of the current sheet, where a crossing is likely. Choose a day to open it.</p>
+  <p class="mapstamp" data-stamp aria-live="off"></p>
   <figure><canvas id="timeline" width="1440" height="300" role="img" aria-label="Predicted polarity timeline"></canvas></figure>
 </section>
 
@@ -138,11 +140,12 @@
   <h2 id="h-cor">Current sheet in coronagraph fields</h2>
   <p class="sub">The model's current sheet and open field seen from each coronagraph or heliospheric imager, in its plane of the sky, with the instrument's field of view from HelioFleet. Brighter parts lie near the plane of the sky, where Thomson scattering makes structures most visible.</p>
   <label class="inline">Instrument <select id="ins"></select></label>
+  <p class="mapstamp" data-stamp aria-live="off"></p>
   <figure><canvas id="sky" width="900" height="900" role="img" aria-label="Coronagraph field of view with the current sheet"></canvas></figure>
   <p class="legend" id="skyLegend"></p>
 </section>
 
-<p class="muted small">Model: the HMI rotation map covering the date, solved in your browser with HelioField's validated solver (<a href="guide.html#validation">validation</a>). Positions: HelioField's daily positions from JPL Horizons, at 12:00 UTC. Observations and instrument fields: <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>.</p>
+<p class="muted small">Model: the day's own map where it has a daily product, otherwise the HMI rotation map covering the date, solved in your browser with HelioField's validated solver (<a href="guide.html#validation">validation</a>). Positions: HelioField's daily positions from JPL Horizons, at 12:00 UTC. Observations and instrument fields: <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>.</p>
 </div>
 
 <footer class="end">HelioField · <a href="./">Viewer</a> · <a href="guide.html">Guide</a> · <a href="series.html">Solar-cycle series</a> · <a href="spaceweather.html">Space weather</a> · <a href="observations.html">Observations</a> · <a href="https://github.com/sr-dash/heliofield">Source</a> ·
@@ -155,27 +158,28 @@
 <script type="importmap">
 { "imports": {
   "./js/connect-geo.js": "./js/connect-geo.js?v=dd41a244eb",
-  "./js/connect-model.js": "./js/connect-model.js?v=b8f7ec1dd0",
-  "./js/connect-worker.js": "./js/connect-worker.js?v=e02c82c7a0",
-  "./js/connect.js": "./js/connect.js?v=86fe5bf2e1",
+  "./js/connect-model.js": "./js/connect-model.js?v=133ca1d905",
+  "./js/connect-worker.js": "./js/connect-worker.js?v=3b3e7acef2",
+  "./js/connect.js": "./js/connect.js?v=ade6562ab8",
   "./js/datepicker.js": "./js/datepicker.js?v=46a3c76193",
-  "./js/export.js": "./js/export.js?v=c0f986b5c2",
-  "./js/history.js": "./js/history.js?v=bc8ad3f713",
+  "./js/export.js": "./js/export.js?v=33dfedded5",
+  "./js/history.js": "./js/history.js?v=5da3400c36",
   "./js/main.js": "./js/main.js?v=240602cbb6",
   "./js/netcdf.js": "./js/netcdf.js?v=b9a0a32cc2",
-  "./js/observations.js": "./js/observations.js?v=d47b1e50d4",
-  "./js/pfss-worker.js": "./js/pfss-worker.js?v=0a42f1cb1d",
-  "./js/pfss.js": "./js/pfss.js?v=1e0df6a8d5",
-  "./js/preview.js": "./js/preview.js?v=70e2ead2a2",
+  "./js/observations.js": "./js/observations.js?v=344e8e8ba2",
+  "./js/pfss-worker.js": "./js/pfss-worker.js?v=18e7f5af66",
+  "./js/pfss.js": "./js/pfss.js?v=3d7963269f",
+  "./js/preview.js": "./js/preview.js?v=af65d10ef1",
   "./js/series.js": "./js/series.js?v=fd61bb321d",
   "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
-  "./js/spaceweather.js": "./js/spaceweather.js?v=a3123acdda",
-  "./js/sw-model.js": "./js/sw-model.js?v=44479a9663",
+  "./js/spaceweather.js": "./js/spaceweather.js?v=bcab509178",
+  "./js/sw-model.js": "./js/sw-model.js?v=a74bcf9cca",
+  "./js/sw-worker.js": "./js/sw-worker.js?v=d0ff468e6b",
   "./js/theme.js": "./js/theme.js?v=5abd830f82",
   "./js/totop.js": "./js/totop.js?v=825b854a16"
 } }
 </script>
 <!-- assets:end -->
-<script type="module" src="js/connect.js?v=86fe5bf2e1"></script>
+<script type="module" src="js/connect.js?v=ade6562ab8"></script>
 </body>
 </html>

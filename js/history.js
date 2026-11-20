@@ -29,6 +29,41 @@ export function rotationFor(idx, day) {
 
 export const sourceUrl = (cr) => `${JSOC}hmi.Synoptic_Mr_small.${cr}.fits`;
 
+let daily = null;
+export async function dailyIndex() {
+  daily ??= fetch("data/index.json").then((r) => (r.ok ? r.json() : { dates: [] })).catch(() => ({ dates: [] }));
+  return daily;
+}
+
+const SOURCE = { GONG: "NSO/GONG synoptic map", HMI: "SDO/HMI daily synoptic frame" };
+const fmtTime = (t) => `${t.slice(0, 10)} ${t.slice(11, 16)} UTC`;
+
+// The input map every page uses for a date, by one rule: the day's own map
+// where its daily product publishes one, else the HMI rotation map covering
+// the date. A date neither covers (a missed night, or days after the latest
+// rotation map) gets whichever is nearer in time, flagged exact = false.
+// { kind: "daily" | "rotation", url, key, scale, shape, exact, day?, rot?,
+//   label (map and its date, for on-map captions), short (a badge) }.
+// rotation: true always takes the rotation map (the movies' frames).
+export async function fieldFor(day, { rotation = false } = {}) {
+  const [idx, di] = await Promise.all([historyIndex(), dailyIndex()]);
+  const maps = rotation ? {} : di.maps || {};
+  const ofDay = (d) => {
+    const [src, t] = maps[d];
+    return { kind: "daily", day: d, url: `data/${d}/map.bin.gz`, key: `day:${d}`, scale: di.map_scale_G ?? 0.1, shape: [180, 360],
+      src, obstime: t, label: `${SOURCE[src] || src}, ${fmtTime(t)}`, short: `${src} daily ${d}` };
+  };
+  const ofRot = (rot, exact) => ({ kind: "rotation", rot, url: `data/history/${rot.file}`, key: rot.cr, scale: idx.scale_G, shape: idx.shape, exact,
+    label: `SDO/HMI rotation map CR ${rot.cr}, ${rot.start.slice(0, 10)} to ${rot.stop.slice(0, 10)}`, short: `HMI CR ${rot.cr}` });
+  if (maps[day]) return { ...ofDay(day), exact: true };
+  const { rot, exact } = rotationFor(idx, day);
+  if (exact) return ofRot(rot, true);
+  const t = Date.parse(`${day}T12:00:00Z`), days = Object.keys(maps);
+  const near = days.length ? days.reduce((b, d) => (Math.abs(Date.parse(d) - t) < Math.abs(Date.parse(b) - t) ? d : b)) : null;
+  const gapRot = Math.min(Math.abs(Date.parse(rot.start) - t), Math.abs(Date.parse(rot.stop) - t));
+  return near && Math.abs(Date.parse(`${near}T12:00:00Z`) - t) < gapRot ? { ...ofDay(near), exact: false } : ofRot(rot, false);
+}
+
 // Earth's L0/B0 and each body's Carrington position at 12:00 UTC.
 export async function fleetFor(day) {
   const y = +day.slice(0, 4);
@@ -52,7 +87,7 @@ export async function fleetFor(day) {
 let worker = null, seq = 0, pending = null;
 function getWorker() {
   if (!worker) {
-    worker = new Worker(new URL("./pfss-worker.js?v=0a42f1cb1d", import.meta.url), { type: "module" });
+    worker = new Worker(new URL("./pfss-worker.js?v=18e7f5af66", import.meta.url), { type: "module" });
     worker.onmessage = (e) => {
       const m = e.data;
       if (!pending || m.id !== pending.id) return;

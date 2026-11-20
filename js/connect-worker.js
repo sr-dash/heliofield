@@ -3,8 +3,8 @@
 // sheet), each spacecraft's magnetic connection at every speed of the grid,
 // the polarity that connection predicts at the spacecraft, how close it runs
 // to the current sheet, and the same polarity day by day over a rotation.
-import { solve, connectOnly, surfaceBr, VGRID } from "./pfss.js?v=1e0df6a8d5";
-import { annotate, topPolarity, toSheet } from "./connect-model.js?v=b8f7ec1dd0";
+import { solve, connectOnly, surfaceBr, VGRID } from "./pfss.js?v=3d7963269f";
+import { annotate, topPolarity, toSheet } from "./connect-model.js?v=133ca1d905";
 
 const DEG = Math.PI / 180;
 let last = null;   // { key, br, coef, rss, rout, models, meta }

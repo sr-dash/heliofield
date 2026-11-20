@@ -2,7 +2,7 @@
 // field where the spiral meets the outer boundary, the polarity at the
 // footpoint, and the angle to the current sheet. Shared by the connectivity
 // worker and the test suite.
-import { scsPolarity, sample } from "./pfss.js?v=1e0df6a8d5";
+import { scsPolarity, sample } from "./pfss.js?v=3d7963269f";
 
 const DEG = Math.PI / 180;
 const cart = (r, lon, lat) => [r * Math.cos(lat * DEG) * Math.cos(lon * DEG), r * Math.cos(lat * DEG) * Math.sin(lon * DEG), r * Math.sin(lat * DEG)];

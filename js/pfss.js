@@ -648,11 +648,37 @@ export function solve(br, ny, nx, { rss = 2.5, rout = 0, L = LMAX, taperL0 = TAP
     },
     brTex: textureFromSinLat(br, ny, nx, 20),
     ssTex: textureFromEquirect(ss, ssScale),
+    ss,   // B_r on the drawn surface [G], 1-degree rows south first
+
     // Open-field footprints in the daily products' classes (0 closed,
     // 128 open inward, 255 open outward), 1-degree rows south first.
     footTex: Uint8Array.from(models[0].pol, (p) => (p > 0 ? 255 : p < 0 ? 128 : 0)),
     models, coef,
   };
+}
+
+// WSA-type speed [km/s] over the source surface, on the 1-degree grid of the
+// daily products' wsa.png (north row first, row i at latitude 89.5 - i,
+// column j at longitude j + 0.5): each cell's field line traced down from the
+// source surface, with fs and DCHB at its foot as for the fleet; NaN where it
+// does not reach the photosphere. As build_day.wsa_map, for a PFSS model
+// (scripts' version takes |B| at the foot from the solution; here from the
+// grid, a few per cent lower, which moves the speed by well under 1%).
+export function wsaGrid(m, progress) {
+  const out = new Float64Array(360 * 180).fill(NaN), v = [0, 0, 0];
+  for (let i = 0; i < 180; i++) {
+    const lat = 89.5 - i;
+    for (let j = 0; j < 360; j++) {
+      const lon = j + 0.5, t = trace(m.G, cart(m.rss * 0.995, lon, lat));
+      if (!t.ends.includes("sun") || t.pts.length < 2) continue;
+      const a = t.pts[0], b = t.pts[t.pts.length - 1], f = Math.hypot(...a) < Math.hypot(...b) ? a : b, rr = Math.hypot(...f);
+      const flon = ((Math.atan2(f[1], f[0]) / DEG) + 360) % 360, flat = Math.asin(f[2] / rr) / DEG;
+      const fs = bMag(m.G, cart(1, flon, flat), v) / bMag(m.G, cart(m.rss, lon, lat), v) / (m.rss * m.rss);
+      out[i * 360 + j] = wsaSpeed(fs, dchb(m.bound, flon, flat));
+    }
+    if (i % 6 === 5) progress?.((i + 1) / 180);
+  }
+  return out;
 }
 
 // Connectivity: each body joined to the model's outer boundary (the source

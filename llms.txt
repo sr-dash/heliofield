@@ -77,7 +77,7 @@ Examples:
 
 ## Space-weather page
 
-`https://sr-dash.github.io/heliofield/spaceweather.html?date=YYYY-MM-DD` turns one day's product into space-weather indicators (dates with a daily product only; default: the latest). It shows:
+`https://sr-dash.github.io/heliofield/spaceweather.html?date=YYYY-MM-DD` turns one day's field into space-weather indicators (any date from 2010-05-01; default: the latest). Dates with a daily product use it; others are solved in the browser from the HMI rotation map covering the date, a hindcast whose map holds data from after the date too. It shows:
 - an assessment in words, and tiles: model wind speed at Earth, peak in the next 7 days, magnetic sector and next sector boundary, Russell-McPherron season, interplanetary field strength from open flux, coronal holes facing Earth, sector bias at Earth's latitude (Rosenberg-Coleman), DONKI event counts;
 - the solar-wind outlook at Earth, 13 days back to 14 days ahead: WSA-type speeds on the source surface carried to 1 au with the HUX kinematic model, the sector, and which days rest on far-side data;
 - coronal holes within 35 degrees of the equator, with central-meridian passage and fast-wind arrival windows;
@@ -108,7 +108,7 @@ Example: https://sr-dash.github.io/heliofield/spaceweather.html?date=2026-11-02
 Parameters:
 - `date`;
 - `view` (`std`, `cmp` or `enh`: where every panel's slider starts; default `cmp`);
-- `scs` (`0`: PFSS from the HMI rotation map; `5`, `10` or `21.5`: PFSS + Schatten current sheet to that radius from the HMI rotation map; omitted: the day's PFSS, or the HMI rotation map on days before the daily products);
+- `scs` (`0`: PFSS from the HMI rotation map; `5`, `10` or `21.5`: PFSS + Schatten current sheet to that radius from the day's own map where it has a daily product, else the HMI rotation map; omitted: the day's PFSS, or the HMI rotation map on days before the daily products);
 - `v` (wind speed for the spirals beyond the model: 300 to 700 km/s);
 - `closed=0`, `open=0`, `sheet=0`, `grid=0` (hide closed lines, open lines, the current sheet, the grid and compass);
 - `alpha` (line opacity, 0 to 100, default 100) and `width` (line width, 0.3 to 4, default 0.9);
@@ -141,7 +141,8 @@ An embedded page can also be driven with postMessage. Send `{type: "heliofield:s
 
 ## Data (JSON and binary, CORS-free static files on the site)
 
-- `data/index.json`: dates with daily products (`dates`, `updated`).
+- `data/index.json`: dates with daily products (`dates`, `updated`), and for each the input map's source and time (`maps`: date -> [`GONG` or `HMI`, time]; `map_scale_G`).
+- `data/<date>/map.bin.gz`: a daily product's input map, in the rotation maps' format (gzipped int16 × `map_scale_G`, 180 × 360, rows uniform in sin(latitude) from the south, column j at Carrington longitude j + 0.5°). The connectivity and observations pages solve it in the browser.
 - `data/<date>/meta.json`: a daily product. It holds:
   - `model`, `source`, `L0`, `B0` and `open_flux_Mx`;
   - `hcs`: source-surface neutral lines as flat `[lon, lat, ...]` lists;

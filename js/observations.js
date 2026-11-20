@@ -6,7 +6,7 @@
 // sheet solved in the browser by the connectivity page's worker.
 
 import { THEMES } from "./theme.js";
-import { historyIndex, rotationFor, fleetFor } from "./history.js";
+import { fieldFor, fleetFor } from "./history.js";
 import "./totop.js";
 import { enhance as datePicker } from "./datepicker.js";
 
@@ -65,7 +65,7 @@ let worker = null, seq = 0;
 const waiting = new Map();
 function call(msg, onProgress) {
   worker ??= (() => {
-    const w = new Worker(new URL("./connect-worker.js?v=e02c82c7a0", import.meta.url), { type: "module" });
+    const w = new Worker(new URL("./connect-worker.js?v=3b3e7acef2", import.meta.url), { type: "module" });
     w.onmessage = (e) => {
       const p = waiting.get(e.data.id);
       if (!p) return;
@@ -78,13 +78,15 @@ function call(msg, onProgress) {
   return new Promise((resolve, reject) => { const id = ++seq; waiting.set(id, { resolve, reject, onProgress }); worker.postMessage({ ...msg, id }); });
 }
 async function scsField(date, rout) {
-  const idx = await historyIndex(), { rot, exact } = rotationFor(idx, date), pos = await fleetFor(date);
-  const res = await call({ type: "solve", url: new URL(`data/history/${rot.file}`, location.href).href, key: rot.cr, scale: idx.scale_G,
-    shape: idx.shape, rss: 2.5, rout, fleet: pos.fleet }, (stage, f) => { $("status").textContent = `Solving the field for ${date}: ${stage} ${Math.round(100 * f)}%`; });
+  // The day's own map where it has one (as every page), except for the
+  // explicit "HMI rotation map" choice (rout 0), which the movies use.
+  const field = await fieldFor(date, { rotation: !rout }), exact = field.exact, pos = await fleetFor(date);
+  const res = await call({ type: "solve", url: new URL(field.url, location.href).href, key: field.key, scale: field.scale,
+    shape: field.shape, rss: 2.5, rout, fleet: pos.fleet }, (stage, f) => { $("status").textContent = `Solving the field for ${date}: ${stage} ${Math.round(100 * f)}%`; });
   const { xyz, counts } = res.lines, lines = [];
   let o = 0;
   counts.forEach((n, i) => { lines.push({ pts: xyz.subarray(3 * o, 3 * (o + n)), kind: res.meta.kind[i] }); o += n; });
-  const map = `HMI rotation map CR ${rot.cr}${exact ? "" : ", the nearest to this date"}`;
+  const map = `${field.label}${exact ? "" : ", the nearest to this date"}`;
   if (!rout) return { lines, edge: res.meta.model.rss, ribs: [], sheets: [{ r: res.meta.model.rss, lines: res.meta.hcs || [] }], label: `PFSS, ${map}` };
   return { lines, edge: res.meta.model.rout, ribs: res.meta.hcs_ribs || [],
     sheets: [{ r: res.meta.model.rcp, lines: res.meta.hcs || [] }, { r: res.meta.model.rout, lines: res.meta.hcs_out || [] }],

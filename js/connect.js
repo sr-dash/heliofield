@@ -6,10 +6,10 @@
 // coronagraph fields of view HelioFleet defines.
 
 import { THEMES, currentTheme, divergingLUT } from "./theme.js";
-import { historyIndex, rotationFor, fleetFor } from "./history.js";
+import { fieldFor, dailyIndex, fleetFor } from "./history.js";
 import * as geo from "./connect-geo.js";
 import "./totop.js";
-import { enhance as datePicker } from "./datepicker.js";
+import { enhance as datePicker, setMarked } from "./datepicker.js";
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement, params = new URLSearchParams(location.search);
@@ -65,7 +65,7 @@ let worker = null, seq = 0;
 const waiting = new Map();
 function call(msg, onProgress) {
   worker ??= (() => {
-    const w = new Worker(new URL("./connect-worker.js?v=e02c82c7a0", import.meta.url), { type: "module" });
+    const w = new Worker(new URL("./connect-worker.js?v=3b3e7acef2", import.meta.url), { type: "module" });
     w.onmessage = (e) => {
       const p = waiting.get(e.data.id);
       if (!p) return;
@@ -90,7 +90,9 @@ function setupControls() {
   $("v").innerHTML = VS.map((v) => `<option value="${v}"${v === S.v ? " selected" : ""}>${v} km/s</option>`).join("");
   $("sc").checked = S.sc;
   const go = () => { syncUrl(); run(); };
+  // Days with their own daily map are marked; others use the rotation map.
   datePicker($("date"), { label: "Date" });
+  dailyIndex().then((di) => { const m = di.maps || {}; setMarked($("date"), (d) => !!m[d]); });
   $("date").onchange = (e) => { if (okDay(e.target.value)) { S.date = e.target.value; go(); } };
   $("prev").onclick = () => { S.date = addDays(S.date, -1); $("date").value = S.date; go(); };
   $("next").onclick = () => { S.date = addDays(S.date, 1); $("date").value = S.date; go(); };
@@ -135,11 +137,11 @@ async function run() {
   const status = $("status");
   status.className = "status"; status.textContent = `Solving ${S.date}…`;
   try {
-    const idx = await historyIndex(), { rot, exact } = rotationFor(idx, S.date), pos = await fleetFor(S.date);
-    const res = await call({ type: "solve", url: new URL(`data/history/${rot.file}`, location.href).href, key: rot.cr, scale: idx.scale_G,
-      shape: idx.shape, rss: S.rss, rout: S.rout, fleet: pos.fleet },
+    const field = await fieldFor(S.date), exact = field.exact, pos = await fleetFor(S.date);
+    const res = await call({ type: "solve", url: new URL(field.url, location.href).href, key: field.key, scale: field.scale,
+      shape: field.shape, rss: S.rss, rout: S.rout, fleet: pos.fleet },
     (stage, f) => { status.textContent = `Solving ${S.date}: ${stage} ${Math.round(100 * f)}%`; });
-    sol = { ...res, pos, rot, exact };
+    sol = { ...res, pos, field, exact };
     // Direction of travel (inertial) for ram-side imagers: tomorrow's position,
     // moved back by one day of the Carrington frame's rotation.
     try {
@@ -148,13 +150,23 @@ async function run() {
         .map(([k, b]) => [k, [b.r * geo.AU_RS * Math.cos(b.lat * DEG) * Math.cos((b.lon + rate) * DEG), b.r * geo.AU_RS * Math.cos(b.lat * DEG) * Math.sin((b.lon + rate) * DEG), b.r * geo.AU_RS * Math.sin(b.lat * DEG)]]));
     } catch (e) { sol.timelineNext = null; }
     status.className = exact ? "status" : "status warn";
-    status.textContent = `Field: SDO/HMI rotation map CR ${rot.cr} (${rot.start.slice(0, 10)} to ${rot.stop.slice(0, 10)})`
-      + (exact ? "" : `, the nearest to ${S.date}: no rotation map covers this date yet`) + ` · ${res.meta.model.name}`
+    status.textContent = `Field: ${field.label}, solved in your browser`
+      + (exact ? "" : `; the nearest map to ${S.date}, which has no map of its own`) + ` · ${res.meta.model.name}`
       + `${S.rout ? `, cusp ${res.meta.model.rcp} R☉, edge ${S.rout} R☉` : `, source surface ${S.rss.toFixed(1)} R☉`} · positions at 12:00 UTC.`;
+    stamp(field, res.meta.model, exact);
     await afterSolve(true);
   } catch (err) {
     status.className = "status warn"; status.textContent = "Could not compute: " + err.message;
   }
+}
+
+// The map and date on every figure drawn from it, so the source stays in
+// view when the status line has scrolled away.
+function stamp(field, model, exact) {
+  const m = model.rout ? `PFSS + SCS, cusp ${model.rcp} R☉, edge ${model.rout} R☉` : `PFSS, source surface ${model.rss} R☉`;
+  const html = `Map: <b>${field.label}</b> · ${m} · for <b>${S.date}</b>, spacecraft at 12:00 UTC`
+    + (exact ? "" : ` · <span class="near">the nearest map: ${S.date} has none of its own</span>`);
+  for (const e of document.querySelectorAll("[data-stamp]")) e.innerHTML = html;
 }
 
 // The speed each body is connected at: the chosen one, or (self-consistent)
