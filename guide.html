@@ -445,7 +445,7 @@ python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet</code>
 
 <section id="connect">
   <h3>Connectivity page</h3>
-  <p>The <a href="connect.html">connectivity page</a> follows the in-situ spacecraft (Parker Solar Probe, Solar Orbiter, BepiColombo, STEREO-A and Earth with the L1 monitors) back to their sources for one date. It combines this model with <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>'s catalogue of observations and its instrument fields. The field is the day's own map where it has a daily product, the same map as the 3D viewer and the space-weather page, and otherwise the HMI rotation map covering the date. Either is solved in the browser with PFSS or PFSS + Schatten current sheet at the chosen source-surface height, as in the viewer. Positions are HelioField's daily positions at 12:00 UTC.</p>
+  <p>The <a href="connect.html">connectivity page</a> follows the in-situ spacecraft (Parker Solar Probe, Solar Orbiter, BepiColombo, STEREO-A and Earth with the L1 monitors) back to their sources for one date. It combines this model with <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>'s catalogue of observations and its instrument fields. The field is the day's own map where it has a daily product, the same map as the 3D viewer and the space-weather page, and otherwise the HMI rotation map covering the date. Either is solved in the browser with PFSS or PFSS + Schatten current sheet at the chosen source-surface height, as in the viewer. Positions are HelioField's daily positions at 12:00 UTC. Without a date in the link it opens the latest daily product, and each spacecraft connects at its self-consistent speed (below), as on the space-weather page, so the two pages put every footpoint in the same place; <b>Self-consistent speed</b> can be turned off for one speed for all. The speed is written beside each spacecraft on the map.</p>
   <ul>
     <li><b>Connection.</b> Each spacecraft is joined to the model's outer boundary (the source surface, or the outer edge of the current-sheet model) along a ballistic Parker spiral at the chosen speed, or at its footpoint's own WSA-type speed (self-consistent). It then follows a field line down to the photosphere, as described under <a href="#connectivity">spacecraft connectivity</a> and <a href="#sources">solar-wind sources</a>.</li>
     <li><b>Source time.</b> Plasma reaching a spacecraft at distance <i>r</i> left the outer boundary a travel time (<i>r</i> − <i>R</i><sub>edge</sub>) / <i>v</i> earlier: about 4 days for 1 au at 400 km/s, hours for Parker Solar Probe near perihelion. The page gives this <b>source time</b> for each spacecraft.</li>
@@ -732,7 +732,7 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
   "./js/connect-geo.js": "./js/connect-geo.js?v=dd41a244eb",
   "./js/connect-model.js": "./js/connect-model.js?v=133ca1d905",
   "./js/connect-worker.js": "./js/connect-worker.js?v=3b3e7acef2",
-  "./js/connect.js": "./js/connect.js?v=ade6562ab8",
+  "./js/connect.js": "./js/connect.js?v=99578b869d",
   "./js/datepicker.js": "./js/datepicker.js?v=46a3c76193",
   "./js/export.js": "./js/export.js?v=33dfedded5",
   "./js/history.js": "./js/history.js?v=5da3400c36",
@@ -744,7 +744,7 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
   "./js/preview.js": "./js/preview.js?v=af65d10ef1",
   "./js/series.js": "./js/series.js?v=fd61bb321d",
   "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
-  "./js/spaceweather.js": "./js/spaceweather.js?v=bcab509178",
+  "./js/spaceweather.js": "./js/spaceweather.js?v=7f29520a20",
   "./js/sw-model.js": "./js/sw-model.js?v=a74bcf9cca",
   "./js/sw-worker.js": "./js/sw-worker.js?v=d0ff468e6b",
   "./js/theme.js": "./js/theme.js?v=5abd830f82",

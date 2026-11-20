@@ -447,11 +447,11 @@ function drawMap() {
   for (const f of D.feet) {
     const x = X(f.foot[0]), y = Y(f.foot[1]);
     g.beginPath(); g.arc(x, y, 7, 0, 2 * Math.PI); g.fillStyle = color(f.key); g.fill(); g.lineWidth = 2.5; g.strokeStyle = th.bg; g.stroke();
-    g.font = "15px system-ui, sans-serif"; const tw = g.measureText(f.name).width;
+    g.font = "15px system-ui, sans-serif"; const label = `${f.name} · ${f.v} km/s`, tw = g.measureText(label).width;
     let lx = x + 11, ly = y - 9;
     for (const dy of [0, 22, -22, 44, -44]) { const bx = [lx, ly + dy - 14, lx + tw, ly + dy + 4]; if (!placed.some((p) => bx[0] < p[2] && p[0] < bx[2] && bx[1] < p[3] && p[1] < bx[3])) { ly += dy; placed.push(bx); break; } }
     g.fillStyle = c.card; g.globalAlpha = 0.78; g.fillRect(lx - 3, ly - 15, tw + 6, 20); g.globalAlpha = 1;
-    g.fillStyle = c.text; g.textAlign = "left"; g.fillText(f.name, lx, ly);
+    g.fillStyle = c.text; g.textAlign = "left"; g.fillText(label, lx, ly);
   }
   // Colour bar for the speed.
   if (useSpeed) {

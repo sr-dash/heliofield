@@ -61,11 +61,11 @@ Options:
 - the model current sheet in coronagraph fields (LASCO, COR1/COR2, Metis, WISPR, SoloHI, VELC, CCOR, ASPIICS, PUNCH NFI).
 
 Parameters:
-- `date`;
+- `date` (default: the latest daily product);
 - `scs` (`5`, `10` or `21.5`);
 - `rss`;
 - `v`;
-- `conn=sc`;
+- `conn=fixed` (every spacecraft at speed `v`; the default is the self-consistent speed, as on the space-weather page);
 - `focus` (`psp`, `solo`, `bepi`, `sta`, `stb` or `earth`);
 - `ins` (instrument id);
 - `bg=open`;

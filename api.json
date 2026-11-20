@@ -329,9 +329,11 @@
     "name": "conn",
     "type": "string",
     "enum": [
+     "fixed",
      "sc"
     ],
-    "description": "Self-consistent speeds (each spacecraft at its footpoint's WSA-type speed)."
+    "default": "sc",
+    "description": "sc (default): self-consistent speeds, each spacecraft at its footpoint's WSA-type speed, as on the space-weather page; fixed: every spacecraft at speed v."
    },
    {
     "name": "focus",

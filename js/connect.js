@@ -44,11 +44,13 @@ const INSTRUMENTS = [
 const today = new Date().toISOString().slice(0, 10);
 const okDay = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v || "") && v >= "2010-05-01";
 const S = {
-  date: okDay(params.get("date")) ? params.get("date") : today,
+  date: okDay(params.get("date")) ? params.get("date") : null,   // none given: the latest daily product (set at start)
   rout: [0, 5, 10, 21.5].includes(+params.get("scs")) ? +params.get("scs") : 0,
   rss: RSS.includes(+params.get("rss")) ? +params.get("rss") : 2.5,
   v: VS.includes(+params.get("v")) ? +params.get("v") : 400,
-  sc: params.get("conn") === "sc",
+  // Self-consistent speed by default, as on the space-weather page, so the
+  // two pages put the footpoints in the same place; conn=fixed for one speed.
+  sc: params.get("conn") !== "fixed",
   bg: params.get("bg") === "open" ? "open" : "field",
   focus: params.get("focus") || "psp",
   ins: params.get("ins") || "c3",
@@ -112,7 +114,7 @@ function syncUrl() {
   if (S.rout) q.set("scs", S.rout);
   if (S.rss !== 2.5) q.set("rss", S.rss);
   if (S.v !== 400) q.set("v", S.v);
-  if (S.sc) q.set("conn", "sc");
+  if (!S.sc) q.set("conn", "fixed");
   if (S.bg !== "field") q.set("bg", S.bg);
   if (S.focus !== "psp") q.set("focus", S.focus);
   if (S.ins !== "c3") q.set("ins", S.ins);
@@ -320,14 +322,14 @@ function drawMap() {
     g.beginPath(); g.arc(fx, fy, focus ? 9 : 7, 0, 2 * Math.PI); g.fillStyle = col; g.fill(); g.lineWidth = 2.5; g.strokeStyle = th.bg; g.stroke();
     // Labels avoid each other.
     g.font = `${focus ? 600 : 400} 15px system-ui, sans-serif`;
-    const tw = g.measureText(c.name).width;
+    const label = `${c.name} · ${c.v} km/s`, tw = g.measureText(label).width;
     let lx = fx + 12, ly = fy - 10;
     for (const dy of [0, 22, -22, 44, -44]) {
       const box = [lx, ly + dy - 14, lx + tw, ly + dy + 4];
       if (!placed.some((p) => box[0] < p[2] && p[0] < box[2] && box[1] < p[3] && p[1] < box[3])) { ly += dy; placed.push(box); break; }
     }
     g.fillStyle = cs.getPropertyValue("--card").trim(); g.globalAlpha = 0.75; g.fillRect(lx - 3, ly - 15, tw + 6, 20); g.globalAlpha = 1;
-    g.fillStyle = ink; g.textAlign = "left"; g.fillText(c.name, lx, ly);
+    g.fillStyle = ink; g.textAlign = "left"; g.fillText(label, lx, ly);
   }
   $("mapLegend").innerHTML = [
     `<span><i style="background:${th.hcs}"></i>neutral line at ${sol.meta.model.rcp || S.rss} R☉</span>`,
@@ -542,6 +544,9 @@ themeBtn.onclick = () => {
   themeLabel(); if (sol) { drawTable(); drawMap(); drawTimeline(); drawSky(); }
 };
 themeLabel();
-setupControls();
-syncUrl();
-run();
+// Without a date, open the latest daily product, as the space-weather page does.
+(async () => {
+  if (!S.date) S.date = (await dailyIndex()).dates?.at(-1) || today;
+  setupControls(); syncUrl();
+  run();
+})();
