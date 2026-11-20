@@ -6,7 +6,7 @@
 // coronagraph fields of view HelioFleet defines.
 
 import { THEMES, currentTheme, divergingLUT } from "./theme.js";
-import { fieldFor, dailyIndex, fleetFor } from "./history.js";
+import { fieldFor, dailyIndex, fleetFor, openMapUrl, openClasses } from "./history.js";
 import * as geo from "./connect-geo.js";
 import "./totop.js";
 import { enhance as datePicker, setMarked } from "./datepicker.js";
@@ -144,6 +144,10 @@ async function run() {
       shape: field.shape, rss: S.rss, rout: S.rout, fleet: pos.fleet },
     (stage, f) => { status.textContent = `Solving ${S.date}: ${stage} ${Math.round(100 * f)}%`; });
     sol = { ...res, pos, field, exact };
+    // At the default model, the open-field map is the server's of the same
+    // map, as the 3D viewer and the space-weather page show; otherwise this
+    // solution's own.
+    sol.openCls = S.rss === 2.5 && !S.rout ? await openClasses(openMapUrl(field)) : null;
     // Direction of travel (inertial) for ram-side imagers: tomorrow's position,
     // moved back by one day of the Carrington frame's rotation.
     try {
@@ -230,6 +234,48 @@ async function afterSolve(full = false) {
   loadObservations();
 }
 
+// ------------------------------------------------------------- map hover
+// Each body's details on hover (or tap) over its footpoint or its point on
+// the outer boundary; a click also follows that body below.
+let mapHits = [];
+function showTip(html, px, py) {
+  const box = $("tip");
+  box.innerHTML = html; box.hidden = false;
+  const tw = box.offsetWidth, th = box.offsetHeight;
+  const left = px + 16 + tw > innerWidth - 8 ? px - 16 - tw : px + 16;
+  box.style.left = `${Math.max(8, left)}px`; box.style.top = `${Math.min(Math.max(8, py - th / 2), innerHeight - th - 8)}px`;
+}
+const hideTip = () => { $("tip").hidden = true; };
+const ll = (p) => `${p[0].toFixed(1)}°, ${p[1] >= 0 ? "+" : ""}${p[1].toFixed(1)}°`;
+function bodyTip(c) {
+  const r = c.row, rEdge = sol.meta.model.rout || sol.meta.model.rss, row = (k, v) => `<div class="row"><span>${k}</span><b>${v}</b></div>`;
+  return `<div class="head"><span class="dot" style="background:${color(c.key)}"></span><b>${c.name}</b> · ${c.b.r.toFixed(3)} au</div>`
+    + row("Wind", `${c.v} km/s${S.sc ? " (self-consistent)" : ""}`)
+    + row("Footpoint", r.foot ? ll(r.foot) : "does not reach the Sun")
+    + row(`At ${rEdge} R☉`, r.inside ? `at the spacecraft, ${r.r.toFixed(1)} R☉` : ll(r.ss))
+    + (r.fs != null ? row("f<sub>s</sub> · DCHB · v<sub>WSA</sub>", `${r.fs.toFixed(1)} · ${r.dchb.toFixed(1)}° · ${r.vwsa.toFixed(0)} km/s`) : "")
+    + row("Polarity", r.pol > 0 ? "outward" : "inward")
+    + row("Travel time", `${fmtDur(c.dt)}, left ${fmtT(c.src)} UTC`);
+}
+function hitAt(e) {
+  const cv = $("map"), b = cv.getBoundingClientRect(), k = cv.width / b.width;
+  const x = (e.clientX - b.left) * k, y = (e.clientY - b.top) * k, reach = Math.max(14, 16 * k);
+  let best = null, d0 = reach;
+  for (const h of mapHits) { const d = Math.hypot(h.x - x, h.y - y); if (d < d0) { d0 = d; best = h; } }
+  return best;
+}
+{
+  const cv = $("map");
+  cv.addEventListener("pointermove", (e) => { const h = sol && hitAt(e); cv.style.cursor = h ? "pointer" : ""; h ? showTip(bodyTip(h.c), e.clientX, e.clientY) : hideTip(); });
+  cv.addEventListener("pointerleave", hideTip);
+  cv.addEventListener("click", (e) => {
+    const h = sol && hitAt(e);
+    if (!h) return hideTip();
+    showTip(bodyTip(h.c), e.clientX, e.clientY);
+    if (S.focus !== h.c.key) { S.focus = h.c.key; syncUrl(); drawTable(); drawMap(); setupObsBodies(); loadObservations(); }
+  });
+}
+
 // ------------------------------------------------------------- table
 function drawTable() {
   const rEdge = sol.meta.model.rout || sol.meta.model.rss;
@@ -270,7 +316,7 @@ function drawMap() {
   for (let i = 0; i < 180; i++) for (let j = 0; j < 360; j++) {
     const src = i * 360 + j, dst = 4 * ((179 - i) * 360 + j);
     let c;
-    if (S.bg === "open") { const p = sol.pol[src]; c = p > 0 ? cp : p < 0 ? cn : cc; }
+    if (S.bg === "open") { const p = sol.openCls ? sol.openCls[(179 - i) * 360 + j] : sol.pol[src]; c = p > 0 ? cp : p < 0 ? cn : cc; }
     else { const s = Math.max(-1, Math.min(1, sol.phot[src] / 20)), k = Math.round((s + 1) / 2 * 255) * 4; c = [lut[k], lut[k + 1], lut[k + 2]]; }
     img.data.set([c[0], c[1], c[2], 255], dst);
   }
@@ -304,8 +350,9 @@ function drawMap() {
     pts.forEach(([lon, lat], k) => { const x = X(lon), y = Y(lat); k && Math.abs(lon - pts[k - 1][0]) < 180 ? g.lineTo(x, y) : g.moveTo(x, y); });
     g.closePath(); g.stroke();
   }
-  // Each body: spread, outer-boundary point, footpoint.
-  const placed = [];
+  // Each body: spread, outer-boundary point, footpoint. Names and numbers
+  // are in the hover details (and the table), not on the map.
+  mapHits = [];
   for (const c of sol.conn) {
     const col = color(c.key), r = c.row, focus = c.key === S.focus;
     g.globalAlpha = focus ? 0.55 : 0.3; g.fillStyle = col;
@@ -314,30 +361,23 @@ function drawMap() {
     const sx = X(r.ss[0]), sy = Y(r.ss[1]);
     g.fillStyle = col; g.strokeStyle = th.bg; g.lineWidth = 2;
     g.fillRect(sx - 6, sy - 6, 12, 12); g.strokeRect(sx - 6, sy - 6, 12, 12);
+    mapHits.push({ c, x: sx, y: sy });
     if (!r.foot) continue;
     const fx = X(r.foot[0]), fy = Y(r.foot[1]);
     if (Math.abs(r.ss[0] - r.foot[0]) < 180) {
       g.setLineDash([5, 5]); g.strokeStyle = col; g.lineWidth = focus ? 2 : 1.2; g.beginPath(); g.moveTo(sx, sy); g.lineTo(fx, fy); g.stroke(); g.setLineDash([]);
     }
     g.beginPath(); g.arc(fx, fy, focus ? 9 : 7, 0, 2 * Math.PI); g.fillStyle = col; g.fill(); g.lineWidth = 2.5; g.strokeStyle = th.bg; g.stroke();
-    // Labels avoid each other.
-    g.font = `${focus ? 600 : 400} 15px system-ui, sans-serif`;
-    const label = `${c.name} · ${c.v} km/s`, tw = g.measureText(label).width;
-    let lx = fx + 12, ly = fy - 10;
-    for (const dy of [0, 22, -22, 44, -44]) {
-      const box = [lx, ly + dy - 14, lx + tw, ly + dy + 4];
-      if (!placed.some((p) => box[0] < p[2] && p[0] < box[2] && box[1] < p[3] && p[1] < box[3])) { ly += dy; placed.push(box); break; }
-    }
-    g.fillStyle = cs.getPropertyValue("--card").trim(); g.globalAlpha = 0.75; g.fillRect(lx - 3, ly - 15, tw + 6, 20); g.globalAlpha = 1;
-    g.fillStyle = ink; g.textAlign = "left"; g.fillText(label, lx, ly);
+    mapHits.push({ c, x: fx, y: fy });
   }
   $("mapLegend").innerHTML = [
+    ...sol.conn.map((c) => `<span><i class="box" style="background:${color(c.key)};border-radius:50%"></i>${c.name}</span>`),
     `<span><i style="background:${th.hcs}"></i>neutral line at ${sol.meta.model.rcp || S.rss} R☉</span>`,
     S.rout ? `<span><i style="background:repeating-linear-gradient(90deg,${th.hcs} 0 6px,transparent 6px 10px)"></i>current sheet at ${S.rout} R☉</span>` : "",
     `<span><i class="box" style="background:${muted}"></i>square: where the spiral meets the model's outer boundary</span>`,
-    `<span><i class="box" style="background:${muted};border-radius:50%"></i>circle: footpoint · dots: spread</span>`,
+    `<span><i class="box" style="background:${muted};border-radius:50%"></i>circle: footpoint · dots: spread · hover or tap a body for its details</span>`,
     focusMatches.length ? `<span><i style="background:${ink}"></i>outlines: observations of ${sol.conn.find((c) => c.key === S.focus)?.name} (bright: contain the footpoint)</span>` : "",
-    S.bg === "open" ? `<span><i class="box" style="background:${th.pos}"></i>open outward <i class="box" style="background:${th.neg}"></i>open inward</span>` : `<span>B<sub>r</sub> of the smoothed model map, ±20 G</span>`,
+    S.bg === "open" ? `<span><i class="box" style="background:${th.pos}"></i>open outward</span><span><i class="box" style="background:${th.neg}"></i>open inward</span><span>${sol.openCls ? "open field: the server's map at 2.5 R☉, as in the 3D viewer and on the space-weather page" : "open field: this solution's"}</span>` : `<span>B<sub>r</sub> of the smoothed model map, ±20 G</span>`,
   ].join("");
 }
 

@@ -125,7 +125,8 @@ Example: https://sr-dash.github.io/heliofield/observations.html?date=2026-11-02&
 - `cam`: `lon,lat,dist`, a fixed camera (Carrington longitude and latitude in degrees, distance in display units). Overrides `view`.
 - `layers`: comma list from `photo` (surface B_r), `foot` (open-field footprints), `closed`, `open` (field lines), `ext` (open lines continued into the heliosphere), `ss` (source-surface B_r), `pil` (neutral line), `hcs` (current sheet), `fleet` (planets and spacecraft), `spiral` (connections to the Sun), `cloud` (footpoint spread). Default: `photo,closed,open,pil,fleet,spiral`.
 - `v`: solar-wind speed for the spirals and connections: 300, 400 (default), 500, 600, 700 or 800 km/s.
-- `conn`: `sc` lets each spacecraft connect at its own footpoint's estimated speed.
+- `conn`: `fixed` connects every spacecraft at speed `v`; the default (`sc`) lets each connect at its own footpoint's estimated speed, as on the connectivity and space-weather pages.
+- `rss` and `scs` apply on any date: on a day with a daily product, a value other than the default re-solves that day's map in the browser.
 - `ext`: `radial` continues open lines straight out instead of as Parker spirals.
 - `rmax`: how far the current sheet and extended lines reach, 0.1–1.8 au (default 1.2).
 - `scale`: `true` for true distances (default: log distances beyond the source surface).

@@ -12,7 +12,7 @@ import { Line2 } from "three/addons/lines/Line2.js";
 import { LineGeometry } from "three/addons/lines/LineGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { THEMES, divergingLUT, lutColor, currentTheme } from "./theme.js";
-import { historyIndex, rotationFor, sourceUrl, fleetFor, compute, cancel, unflatten, exportResults } from "./history.js";
+import { historyIndex, rotationFor, sourceUrl, fleetFor, fieldFor, compute, cancel, unflatten, exportResults } from "./history.js";
 import { compose, savePNG, savePDF } from "./snapshot.js";
 import { enhance as datePicker, setMarked } from "./datepicker.js";
 
@@ -29,8 +29,8 @@ const EMBED = root.classList.contains("embed");
 const state = {
   dates: [], day: null, product: null,
   vsw: 400, rmaxAu: 1.2, logScale: true, rss: 2.5, nLines: 250, extMode: "spiral",
-  connMode: "fixed",
-  rssWant: 2.5,   // source surface for dates computed in the browser
+  connMode: "sc",   // self-consistent by default, as on the connectivity and space-weather pages
+  rssWant: 2.5,   // source surface wanted; other than 2.5, or with SCS, any date is solved in the browser
   routWant: 0,    // outer edge of the SCS model [R_sun], 0 for PFSS alone
   rIn: 2.5,       // PFSS outer boundary drawn (cusp surface with SCS)
   rTop: 2.5,      // where the heliosphere starts (source surface, or SCS edge)
@@ -260,7 +260,7 @@ async function loadFoot(p) {
   if (!p.computed) {
     try { return (p.foot = { tex: nearest(await loadTex(`data/${p.day}/open.png`)), cr: null }); } catch (e) { /* none for this day */ }
   }
-  const cr = p.computed ? p.meta.map_cr : rotationFor(await historyIndex(), p.day).rot.cr;
+  const cr = p.meta.map_cr ?? rotationFor(await historyIndex(), p.day).rot.cr;
   return (p.foot = { tex: nearest(await loadTex(`data/history/open/${cr}.png`)), cr });
 }
 async function buildFoot() {
@@ -673,36 +673,37 @@ function setRmax(r) {
   if (state.product) buildHelio();
 }
 $("rmax").addEventListener("input", (e) => { setRmax(+e.target.value); syncUrl(); });
-// Source-surface height. Only a date computed in the browser can be
-// re-solved; daily products are solved on the server at 2.5 R_sun. The
-// value is kept for the next computed date either way.
+// Source-surface height and model. A daily product is PFSS at 2.5 R_sun,
+// solved on the server; any other setting re-solves the date in the
+// browser, from the day's own map where it has one.
 const RSS_MIN = 1.5, RSS_MAX = 3.5;
 function rssControl() {
   const daily = !!state.product && !state.product.computed;
-  const rout = daily ? 0 : state.routWant;
+  const rout = state.routWant;
   for (const [id, on] of [["modelPfss", !rout], ["modelScs", !!rout]]) {
-    $(id).classList.toggle("on", on); $(id).setAttribute("aria-pressed", on); $(id).disabled = daily;
+    $(id).classList.toggle("on", on); $(id).setAttribute("aria-pressed", on);
   }
   $("routSeg").hidden = !rout;
   for (const b of $("routSeg").querySelectorAll("button")) {
     const on = +b.dataset.rout === rout;
     b.classList.toggle("on", on); b.setAttribute("aria-pressed", on);
   }
-  $("rss").disabled = daily;
-  const r = daily ? state.rss : state.rssWant;
+  const r = state.rssWant;
   $("rss").value = r; $("rssOut").textContent = r.toFixed(1);
+  const map = state.product?.meta.map_day || (daily && state.product) ? "this day's map" : "this rotation map";
   $("rssNote").innerHTML = daily
-    ? `This daily product is PFSS at 2.5 R<sub>☉</sub>, solved on the server. Pick a date with the HMI badge to change the model. <a href="guide.html#model">More</a>`
+    ? `This daily product is PFSS at 2.5 R<sub>☉</sub>, solved on the server. Another height or the current-sheet model re-solves this day's map in your browser. <a href="guide.html#model">More</a>`
     : rout
-      ? `PFSS to the cusp surface at ${(0.92 * state.rssWant).toFixed(2)} R<sub>☉</sub>, then the current-sheet model to ${rout} R<sub>☉</sub>. Changes re-solve this rotation in your browser. <a href="guide.html#scs">More</a>`
-      : `Changes re-solve this rotation in your browser. <a href="guide.html#rss">What the height changes</a>`;
+      ? `PFSS to the cusp surface at ${(0.92 * state.rssWant).toFixed(2)} R<sub>☉</sub>, then the current-sheet model to ${rout} R<sub>☉</sub>. Changes re-solve ${map} in your browser. <a href="guide.html#scs">More</a>`
+      : `Changes re-solve ${map} in your browser. <a href="guide.html#rss">What the height changes</a>`;
 }
-// The coronal model for computed dates: PFSS alone (rout 0) or coupled to
-// the Schatten current-sheet model out to rout.
+// The coronal model: PFSS alone (rout 0) or coupled to the Schatten
+// current-sheet model out to rout. A change re-solves the date shown.
+const modelDiffers = () => !!state.product && ((state.product.meta.model.rout || 0) !== state.routWant || state.product.meta.model.rss !== state.rssWant);
 async function setModel(rout) {
   state.routWant = ROUTS.includes(+rout) ? +rout : 0;
   rssControl();
-  if (state.product?.computed && (state.product.meta.model.rout || 0) !== state.routWant) await openDate(state.day, { ask: false });
+  if (modelDiffers()) await openDate(state.day, { ask: false });
   else { syncUrl(); postState(); }
 }
 $("modelPfss").onclick = () => setModel(0);
@@ -711,7 +712,7 @@ for (const b of $("routSeg").querySelectorAll("button")) b.onclick = () => setMo
 async function setRss(r) {
   r = +Math.min(RSS_MAX, Math.max(RSS_MIN, r)).toFixed(1);
   state.rssWant = r; rssControl();
-  if (state.product?.computed && state.product.meta.model.rss !== r) await openDate(state.day, { ask: false });
+  if (modelDiffers()) await openDate(state.day, { ask: false });
 }
 $("rss").addEventListener("input", (e) => { $("rssOut").textContent = (+e.target.value).toFixed(1); });
 $("rss").addEventListener("change", (e) => { setRss(+e.target.value); });
@@ -732,7 +733,7 @@ function info() {
     ["Field for", state.product.computed ? `${state.day} (12:00 UTC)` : m.obstime.replace("T", " ").replace("Z", " UTC")],
     ["Magnetogram", `<a href="${src.url}" title="${src.file}">${src.name}</a>`],
   ];
-  if (state.product.computed) rows.push(["Map covers", `${m.map_start.slice(0, 10)} – ${m.map_stop.slice(0, 10)}`]);
+  if (state.product.computed && m.map_start) rows.push(["Map covers", `${m.map_start.slice(0, 10)} – ${m.map_stop.slice(0, 10)}`]);
   rows.push(
     ["Carrington rotation", m.carrington_rotation],
     ["Earth L<sub>0</sub>, B<sub>0</sub>", `${m.L0.toFixed(1)}°, ${m.B0.toFixed(1)}°`],
@@ -749,7 +750,7 @@ function info() {
     ["Computed", state.product.computed ? "in your browser" : "daily, on the server"],
   );
   $("info").innerHTML = `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`
-    + (state.product.computed && !m.exact ? `<p class="note warn">No rotation map covers this date, so the nearest one (CR ${m.map_cr}) is used.</p>` : "");
+    + (state.product.computed && !m.exact ? `<p class="note warn">This date has no map of its own, so the nearest one (${m.map_cr ? `CR ${m.map_cr}` : m.map_day}) is used.</p>` : "");
 }
 function feet() {
   const m = state.product.meta, S = sources(m), sc = state.connMode === "sc";
@@ -871,13 +872,13 @@ function stateParams() {
   const on = Object.keys(LAYERS).filter((g) => $(LAYERS[g]).checked);
   if (on.length !== DEFAULT_ON.length || on.some((g) => !DEFAULT_ON.includes(g))) p.set("layers", on.join(","));
   if (state.extMode === "radial") p.set("ext", "radial");
-  if (state.connMode === "sc") p.set("conn", "sc");
+  if (state.connMode === "fixed") p.set("conn", "fixed");
   if (state.rmaxAu !== DEFAULTS.rmax) p.set("rmax", state.rmaxAu);
   if (!state.logScale) p.set("scale", "true");
   if (+$("ssAlpha").value !== DEFAULTS.ss) p.set("ss", $("ssAlpha").value);
   if (state.nLines !== DEFAULTS.lines) p.set("lines", state.nLines);
-  if (state.product?.computed && state.rssWant !== DEFAULTS.rss) p.set("rss", state.rssWant);
-  if (state.product?.computed && state.routWant) p.set("scs", state.routWant);
+  if (state.rssWant !== DEFAULTS.rss) p.set("rss", state.rssWant);
+  if (state.routWant) p.set("scs", state.routWant);
   if (view) p.set("view", view); else p.set("cam", camParam());
   if (controls.autoRotate) p.set("rotate", "1");
   return p;
@@ -946,7 +947,7 @@ function snapshotCanvas() {
     renderer, scene, camera, stage, legend,
     title: `HelioField · ${state.day}`,
     lines: [
-      `${m.source.name}${state.product.computed ? ` (CR ${m.map_cr})` : ""} · ${m.model.rout ? `PFSS + SCS, cusp ${m.model.rcp.toFixed(2)} R☉, to ${m.model.rout} R☉` : `PFSS, source surface ${state.rss.toFixed(1)} R☉`} · ${state.connMode === "sc" ? `self-consistent WSA-type wind (from ${state.vsw} km/s)` : `solar wind ${state.vsw} km/s`} · open flux ${(m.open_flux_Mx / 1e22).toFixed(2)} × 10²² Mx`,
+      `${m.source.name}${m.map_cr ? ` (CR ${m.map_cr})` : ""} · ${m.model.rout ? `PFSS + SCS, cusp ${m.model.rcp.toFixed(2)} R☉, to ${m.model.rout} R☉` : `PFSS, source surface ${state.rss.toFixed(1)} R☉`} · ${state.connMode === "sc" ? `self-consistent WSA-type wind (from ${state.vsw} km/s)` : `solar wind ${state.vsw} km/s`} · open flux ${(m.open_flux_Mx / 1e22).toFixed(2)} × 10²² Mx`,
       viewCaption(),
       `Earth: L0 ${m.L0.toFixed(1)}°, B0 ${m.B0.toFixed(1)}° (Carrington longitude and latitude of the Sun–Earth line)`,
     ],
@@ -1096,34 +1097,38 @@ function recover() {
   if (!state.product && fallbackDay) goDaily(fallbackDay);
   else $("day").value = state.day || "";
 }
-// Open any date. Daily products load directly; any other date since 2010 is
-// computed in the browser from the HMI rotation map that covers it.
+// Open any date. A daily product loads directly at the default model; any
+// other date since 2010, or another model, is computed in the browser from
+// the map the date uses on every page (history.fieldFor): the day's own map
+// where it has one, else the HMI rotation map covering it.
 async function openDate(day, { ask = true } = {}) {
   day = String(day).slice(0, 10);
   if (day === "latest") day = state.dates[state.dates.length - 1];
-  if (state.dates.includes(day)) return goDaily(day);
+  if (state.dates.includes(day) && state.rssWant === DEFAULTS.rss && !state.routWant) return goDaily(day);
   if (day < FIRST || day > TODAY) { $("day").value = state.day || ""; return false; }
   const ticket = ++loading;
   try {
-    const idx = await historyIndex();
-    const { rot, exact } = rotationFor(idx, day);
-    const sameRot = state.product?.computed && state.product.meta.map_cr === rot.cr && state.product.meta.model.rss === state.rssWant
+    const field = await fieldFor(day), rot = field.rot, exact = field.exact;
+    const sameRot = state.product?.computed && state.product.meta.map_key === field.key && state.product.meta.model.rss === state.rssWant
       && (state.product.meta.model.rout || 0) === state.routWant;
-    if (ask && askAgain && !sameRot && !(await confirmCompute(day, rot, exact))) { $("day").value = state.day || ""; return false; }
+    // Only a rotation map asks first: it is a different map from the day's.
+    if (ask && askAgain && !sameRot && field.kind === "rotation" && !(await confirmCompute(day, rot, exact))) { $("day").value = state.day || ""; return false; }
     if (!sameRot) {
       fallbackDay = state.product && !state.product.computed ? state.day : state.dates[state.dates.length - 1];
       clearScene();
       showProgress(true, day);
     }
     const pos = await fleetFor(day);
-    const res = await compute({ url: `data/history/${rot.file}`, key: rot.cr, scale: idx.scale_G, shape: idx.shape, fleet: pos.fleet, reuse: sameRot, rss: state.rssWant, rout: state.routWant },
+    const res = await compute({ url: field.url, key: field.key, scale: field.scale, shape: field.shape, fleet: pos.fleet, reuse: sameRot, rss: state.rssWant, rout: state.routWant },
       (stage, f) => { $("busyStage").textContent = STAGES[stage] || stage; $("busyBar").value = f; });
     if (ticket !== loading) return false;
     let product;
     const sourceMeta = {
-      date: day, obstime: `${day}T12:00:00Z`, L0: pos.L0, B0: pos.B0, carrington_rotation: pos.CR,
-      map_cr: rot.cr, map_start: rot.start, map_stop: rot.stop, exact, fleet: pos.fleet,
-      source: { name: "SDO/HMI rotation map", short: `HMI CR ${rot.cr}`, file: `hmi.Synoptic_Mr_small.${rot.cr}`, url: sourceUrl(rot.cr) },
+      date: day, obstime: `${day}T12:00:00Z`, L0: pos.L0, B0: pos.B0, carrington_rotation: pos.CR, map_key: field.key, exact, fleet: pos.fleet,
+      ...(rot ? { map_cr: rot.cr, map_start: rot.start, map_stop: rot.stop,
+        source: { name: "SDO/HMI rotation map", short: `HMI CR ${rot.cr}`, file: `hmi.Synoptic_Mr_small.${rot.cr}`, url: sourceUrl(rot.cr) } }
+        : { map_day: field.day,
+          source: { name: field.label, short: `${field.src} ${field.day.slice(5)}`, file: `data/${field.day}/map.bin.gz`, url: field.url } }),
     };
     if (res.type === "connect") {
       // Same rotation: keep the field, replace the connectivity.
@@ -1164,7 +1169,7 @@ async function goDaily(day) {
 function step(k) {
   if (!state.day) return;
   const i = state.dates.indexOf(state.day);
-  if (i >= 0 && i + k >= 0 && i + k < state.dates.length) return goDaily(state.dates[i + k]);
+  if (i >= 0 && i + k >= 0 && i + k < state.dates.length) return openDate(state.dates[i + k], { ask: false });
   const next = addDays(state.day, k);
   if (next > TODAY || next < FIRST) return;
   if (k > 0 && state.dates.length && next >= state.dates[0] && !state.dates.includes(next)) {
@@ -1179,7 +1184,7 @@ $("next").onclick = () => step(1);
 $("day").min = FIRST; $("day").max = TODAY;
 datePicker($("day"), { label: "Date (any day since May 2010)" });
 $("day").addEventListener("change", (e) => { if (e.target.value && e.target.value !== state.day) openDate(e.target.value); });
-$("latest").onclick = () => goDaily(state.dates[state.dates.length - 1]);
+$("latest").onclick = () => openDate(state.dates[state.dates.length - 1], { ask: false });
 
 addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.("input,select,textarea,dialog")) return;
@@ -1216,11 +1221,11 @@ addEventListener("message", async (e) => {
   if (d.view) view = d.view;
   if (d.rss != null && Number.isFinite(+d.rss)) {
     state.rssWant = +Math.min(RSS_MAX, Math.max(RSS_MIN, +d.rss)).toFixed(1);
-    if (!d.date && state.product?.computed) d.date = state.day;
+    if (!d.date && state.product) d.date = state.day;
   }
   if (d.scs != null) {
     state.routWant = ROUTS.includes(+d.scs) ? +d.scs : 0;
-    if (!d.date && state.product?.computed) d.date = state.day;
+    if (!d.date && state.product) d.date = state.day;
   }
   rssControl();
   if (d.date) await openDate(d.date, { ask: false });   // reports its own state
@@ -1249,7 +1254,7 @@ async function start() {
     const r = +params.get("rmax");
     if (r >= 0.1 && r <= 1.8) setRmax(r);
     if (params.get("ext") === "radial") setExtMode("radial");
-    if (params.get("conn") === "sc") setConnMode("sc");
+    setConnMode(params.get("conn") === "fixed" ? "fixed" : "sc");
     if (params.get("scale") === "true") setScale(false);
     const a = params.get("ss");
     if (a !== null && +a >= 0 && +a <= 1) $("ssAlpha").value = a;
@@ -1266,6 +1271,7 @@ async function start() {
     const want = params.get("date");
     let ok = false;
     if (want && want !== "latest") ok = await openDate(want, { ask: !EMBED });
+    if (!ok) ok = await openDate(state.dates[state.dates.length - 1], { ask: false });
     if (!ok) await goDaily(state.dates[state.dates.length - 1]);
     const cam = (params.get("cam") || "").split(",").map(Number);
     if (view) setView(view, true);

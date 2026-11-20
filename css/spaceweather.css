@@ -181,3 +181,7 @@ footer.end { max-width: 1160px; margin: 0 auto; padding: 16px; border-top: 1px s
 .mapstamp .near { color: var(--text); }
 .mapstamp + figure canvas { border-top-left-radius: 0; border-top-right-radius: 0; }
 .mapstamp + figure:not(:has(canvas)) { border: 1px solid var(--line); border-top: 0; border-radius: 0 0 6px 6px; padding: 6px 8px 0; }
+.tip .kv { display: flex; justify-content: space-between; gap: 14px; white-space: nowrap; }
+.tip .kv span { color: var(--muted); }
+.tip .kv b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.tip .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }

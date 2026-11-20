@@ -81,9 +81,11 @@
     "name": "conn",
     "type": "string",
     "enum": [
-     "sc"
+     "sc",
+     "fixed"
     ],
-    "description": "sc: each spacecraft connects at the WSA-type speed of its own footpoint."
+    "default": "sc",
+    "description": "sc (default): each spacecraft connects at the WSA-type speed of its own footpoint, as on the connectivity and space-weather pages; fixed: every spacecraft at speed v."
    },
    {
     "name": "ext",

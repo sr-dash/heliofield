@@ -5,7 +5,7 @@
 // fast CMEs with drag-based arrivals. The physics is in sw-model.js.
 
 import { THEMES, currentTheme } from "./theme.js";
-import { fleetFor, fieldFor, historyIndex } from "./history.js";
+import { fleetFor, fieldFor, historyIndex, openMapUrl, openClasses } from "./history.js";
 import "./totop.js";
 import * as M from "./sw-model.js";
 import { enhance as datePicker } from "./datepicker.js";
@@ -92,7 +92,10 @@ async function load(day, onProgress) {
   const field = await fieldFor(day);
   if (field.kind === "daily") return loadDaily(field.day);
   const pos = await fleetFor(day), t0 = noon(day);
-  const res = await solveHere({ url: new URL(field.url, location.href).href, key: field.key, scale: field.scale, shape: field.shape, fleet: pos.fleet }, onProgress);
+  const [res, open] = await Promise.all([
+    solveHere({ url: new URL(field.url, location.href).href, key: field.key, scale: field.scale, shape: field.shape, fleet: pos.fleet }, onProgress),
+    openClasses(openMapUrl(field)),     // the same open-field map as the 3D viewer and the connectivity page
+  ]);
   const meta = {
     date: day, obstime: new Date(t0).toISOString().slice(0, 19) + "Z", computed: true,
     source: { name: field.label, short: field.short, file: field.rot.file }, carrington_rotation: pos.CR, L0: pos.L0, B0: pos.B0,
@@ -103,7 +106,7 @@ async function load(day, onProgress) {
   // central meridian: from 360 at the rotation's start to 0 at its end.
   const a = Date.parse(field.rot.start), b = Date.parse(field.rot.stop);
   const ageOf = (lon) => Math.abs(t0 - (a + (1 - M.wrap(lon) / 360) * (b - a))) / DAY;
-  return { day, meta, speed: res.speed, bss: res.bss, cls: res.cls, t0, L0: pos.L0, rss: 2.5, field, ageOf };
+  return { day, meta, speed: res.speed, bss: res.bss, cls: open || res.cls, t0, L0: pos.L0, rss: 2.5, field, ageOf };
 }
 async function loadDaily(day) {
   const meta = await getMeta(day);
@@ -442,16 +445,12 @@ function drawMap() {
     g.beginPath(); g.arc(x, y, 13, 0, 2 * Math.PI); g.fillStyle = c.card; g.fill(); g.lineWidth = 2; g.strokeStyle = c.text; g.stroke();
     g.fillStyle = c.text; g.textAlign = "center"; g.font = "700 14px system-ui, sans-serif"; g.fillText(String(hl.n), x, y + 5);
   }
-  // Footpoints.
-  const placed = [];
+  // Footpoints; names and numbers are in the hover details, not on the map.
+  mapHits = [];
   for (const f of D.feet) {
     const x = X(f.foot[0]), y = Y(f.foot[1]);
     g.beginPath(); g.arc(x, y, 7, 0, 2 * Math.PI); g.fillStyle = color(f.key); g.fill(); g.lineWidth = 2.5; g.strokeStyle = th.bg; g.stroke();
-    g.font = "15px system-ui, sans-serif"; const label = `${f.name} · ${f.v} km/s`, tw = g.measureText(label).width;
-    let lx = x + 11, ly = y - 9;
-    for (const dy of [0, 22, -22, 44, -44]) { const bx = [lx, ly + dy - 14, lx + tw, ly + dy + 4]; if (!placed.some((p) => bx[0] < p[2] && p[0] < bx[2] && bx[1] < p[3] && p[1] < bx[3])) { ly += dy; placed.push(bx); break; } }
-    g.fillStyle = c.card; g.globalAlpha = 0.78; g.fillRect(lx - 3, ly - 15, tw + 6, 20); g.globalAlpha = 1;
-    g.fillStyle = c.text; g.textAlign = "left"; g.fillText(label, lx, ly);
+    mapHits.push({ f, x, y });
   }
   // Colour bar for the speed.
   if (useSpeed) {
@@ -466,8 +465,31 @@ function drawMap() {
     useSpeed ? "<span>WSA-type speed traced from each point of the source surface (2.5 R☉)</span>" : `<span><i class="box" style="background:${th.pos}"></i>open, away <i class="box" style="background:${th.neg}"></i>open, towards (photosphere)</span>`,
     `<span><i style="background:${th.hcs}"></i>current sheet at 2.5 R☉</span>`,
     `<span><i class="dash"></i>central meridian; dotted: Earth's latitude; dimmed: the far side</span>`,
-    "<span>numbers: coronal holes in the table · dots: footpoints</span>",
+    ...D.feet.map((f) => `<span><i class="box" style="background:${color(f.key)};border-radius:50%"></i>${f.name}</span>`),
+    "<span>numbers: coronal holes in the table · dots: footpoints; hover or tap one for its details</span>",
   ].join("");
+}
+// A body's details on hover or tap over its footpoint.
+let mapHits = [];
+function footTip(f) {
+  const kv = (k, v) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`, ll = (p) => `${p[0].toFixed(1)}°, ${p[1] >= 0 ? "+" : ""}${p[1].toFixed(1)}°`;
+  return `<div class="head"><span class="dot" style="background:${color(f.key)}"></span><b style="color:var(--text)">${f.name}</b></div>`
+    + kv("Wind", `${f.v} km/s (self-consistent)`) + kv("Footpoint", ll(f.foot)) + kv("Seen from Earth", M.stonyhurst(f.ston.lon, f.ston.lat))
+    + (f.ss ? kv(`At ${D.rss} R☉`, ll(f.ss)) : "")
+    + (f.fs != null ? kv("f<sub>s</sub> · DCHB · v<sub>WSA</sub>", `${f.fs.toFixed(1)} · ${f.dchb.toFixed(1)}° · ${Math.round(f.vwsa)} km/s`) : "");
+}
+{
+  const cv = $("map");
+  const hitAt = (e) => {
+    const b = cv.getBoundingClientRect(), k = cv.width / b.width, x = (e.clientX - b.left) * k, y = (e.clientY - b.top) * k;
+    let best = null, d0 = Math.max(14, 16 * k);
+    for (const h of mapHits) { const d = Math.hypot(h.x - x, h.y - y); if (d < d0) { d0 = d; best = h; } }
+    return best;
+  };
+  const show = (e) => { const h = D && hitAt(e); cv.style.cursor = h ? "pointer" : ""; h ? showTip(footTip(h.f), e.clientX, e.clientY) : hideTip(); };
+  cv.addEventListener("pointermove", show);
+  cv.addEventListener("click", show);
+  cv.addEventListener("pointerleave", hideTip);
 }
 function drawHoles() {
   const a = D.a, t = $("holes");

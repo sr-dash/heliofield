@@ -353,7 +353,7 @@ export function footpoints(meta) {
     const rows = meta.connect.filter((c) => c.body === k);
     if (!rows.length) continue;
     const v = selfConsistent(rows, 400), c = rows.find((r) => r.v === v);
-    if (c?.foot) out.push({ key: k, name, v, foot: c.foot, ston: { lon: wrap180(c.foot[0] - meta.L0), lat: c.foot[1] }, fs: c.fs, dchb: c.dchb });
+    if (c?.foot) out.push({ key: k, name, v, foot: c.foot, ss: c.ss, ston: { lon: wrap180(c.foot[0] - meta.L0), lat: c.foot[1] }, fs: c.fs, dchb: c.dchb, vwsa: c.vwsa });
   }
   return out;
 }

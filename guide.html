@@ -196,7 +196,7 @@
 
 <section id="model">
   <h3>The Model section</h3>
-  <p>These settings apply to dates computed in your browser, whose source badge reads <b>HMI CR …</b>. Daily products are solved on the server with PFSS at 2.5 R<sub>☉</sub>, so the controls are inactive for them. Each change re-solves the rotation map in a second or two; the map is not downloaded again.</p>
+  <p>A daily product is PFSS at 2.5 R<sub>☉</sub>, solved on the server. Any other height, or the current-sheet model, re-solves the date in your browser: from the day's own map on a day with a daily product (badge <b>HMI 11-19</b> or <b>GONG 11-19</b>), and from the rotation map before that (badge <b>HMI CR …</b>). Each later change takes a second or two; the map is not downloaded again. The setting stays as you step through dates, and returning to 2.5 R<sub>☉</sub> with PFSS alone shows the daily product again.</p>
   <table>
     <tr><th>Control</th><th>What it does</th></tr>
     <tr><td>PFSS</td><td>The potential-field source-surface model alone (the default). Open field lines end at the source surface, and everything beyond it is drawn as a Parker spiral from there. See <a href="#pfss">PFSS model</a>.</td></tr>
@@ -216,7 +216,7 @@
     <tr><td>Footpoint spread</td><td>Off by default. A cloud of dots in each spacecraft's colour on the Sun: its footpoints for wind speeds up to 100 km/s either side of the one used, on source surfaces 0.5 R<sub>☉</sub> below and above the one used (2.0, 2.5 and 3.0 R<sub>☉</sub> by default). A tight cloud means a robust connection; a cloud split between two regions means the source is uncertain. See <a href="#sources">solar-wind sources</a>.</td></tr>
   </table>
   <p><b>Solar wind</b> sets the speed used for the current sheet and the spirals. A faster wind gives a more open spiral and moves footpoints less far from the spacecraft's own longitude.</p>
-  <p><b>Fixed speed</b> connects every spacecraft at that speed. <b>Self-consistent</b> lets each spacecraft find its own: starting from the slider speed, the footpoint's estimated wind speed is fed back into the spiral until it stops changing. The current sheet and extended lines keep the slider speed.</p>
+  <p><b>Self-consistent</b>, the default as on the connectivity and space-weather pages, lets each spacecraft find its own speed; <b>Fixed speed</b> connects every spacecraft at the slider speed. Self-consistent works like this: starting from the slider speed, the footpoint's estimated wind speed is fed back into the spiral until it stops changing. The current sheet and extended lines keep the slider speed.</p>
   <p><b>Log distance</b> keeps the corona at true size and compresses the heliosphere, so the Sun and the fleet fit on one screen. <b>True distance</b> shows real proportions. At true distance the Sun is a speck seen from the fleet.</p>
 </section>
 
@@ -266,7 +266,7 @@ python plot_3d.py heliofield_model-2014-03-12_computed-2026-10-28_scs.nc --theme
     <tr><td><code>v</code></td><td>Solar wind speed: 300, 400 … 800 km/s</td><td>400</td></tr>
     <tr><td><code>layers</code></td><td>Comma list of layers to show: <code>photo, foot, closed, open, ext, ss, pil, hcs, fleet, spiral, cloud</code> (<code>foot</code> is the open-field footprints, <code>ext</code> the extension of open lines, <code>cloud</code> the footpoint spread)</td><td><code>photo, closed, open, pil, fleet, spiral</code></td></tr>
     <tr><td><code>ext</code></td><td><code>radial</code> to extend open lines straight out instead of as Parker spirals</td><td>spiral</td></tr>
-    <tr><td><code>conn</code></td><td><code>sc</code> for self-consistent connection speeds</td><td>fixed</td></tr>
+    <tr><td><code>conn</code></td><td><code>fixed</code> for one connection speed for all; <code>sc</code> for self-consistent speeds</td><td>sc</td></tr>
     <tr><td><code>view</code></td><td><code>earth</code>, <code>north</code> or <code>fleet</code></td><td>oblique</td></tr>
     <tr><td><code>cam</code></td><td>A fixed camera: Carrington longitude, latitude (degrees) and distance (R<sub>☉</sub>)</td><td>none</td></tr>
     <tr><td><code>rmax</code></td><td>Current-sheet extent, 0.1–1.8 au</td><td>1.2</td></tr>
@@ -306,7 +306,7 @@ frame.contentWindow.postMessage(
 addEventListener("message", (e) =&gt; {
   if (e.data?.type === "heliofield:state") console.log(e.data.date, e.data.source);
 });</code></pre>
-  <p>Every field of the <code>set</code> message is optional. <code>layers</code> takes the same comma list as the URL, <code>conn</code> is <code>"sc"</code> or <code>"fixed"</code>, <code>rss</code> sets the source-surface height for computed dates, and <code>scs</code> the outer edge of the current-sheet model (<code>0</code> for PFSS alone). Either one alone re-solves the date on screen. The reply carries <code>date</code>, <code>v</code>, <code>rss</code>, <code>scs</code>, <code>conn</code>, <code>source</code>, <code>computed</code> (true for a date computed in the browser) and <code>obstime</code>. A host showing any date since 2010, such as <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, can pass it directly. Embeds and host messages compute past dates without asking; only the page itself shows the confirmation.</p>
+  <p>Every field of the <code>set</code> message is optional. <code>layers</code> takes the same comma list as the URL, <code>conn</code> is <code>"sc"</code> or <code>"fixed"</code>, <code>rss</code> sets the source-surface height (on any date; a daily product is re-solved in the browser), and <code>scs</code> the outer edge of the current-sheet model (<code>0</code> for PFSS alone). Either one alone re-solves the date on screen. The reply carries <code>date</code>, <code>v</code>, <code>rss</code>, <code>scs</code>, <code>conn</code>, <code>source</code>, <code>computed</code> (true for a date computed in the browser) and <code>obstime</code>. A host showing any date since 2010, such as <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>, can pass it directly. Embeds and host messages compute past dates without asking; only the page itself shows the confirmation.</p>
 </section>
 
 <section id="agents">
@@ -445,7 +445,7 @@ python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet</code>
 
 <section id="connect">
   <h3>Connectivity page</h3>
-  <p>The <a href="connect.html">connectivity page</a> follows the in-situ spacecraft (Parker Solar Probe, Solar Orbiter, BepiColombo, STEREO-A and Earth with the L1 monitors) back to their sources for one date. It combines this model with <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>'s catalogue of observations and its instrument fields. The field is the day's own map where it has a daily product, the same map as the 3D viewer and the space-weather page, and otherwise the HMI rotation map covering the date. Either is solved in the browser with PFSS or PFSS + Schatten current sheet at the chosen source-surface height, as in the viewer. Positions are HelioField's daily positions at 12:00 UTC. Without a date in the link it opens the latest daily product, and each spacecraft connects at its self-consistent speed (below), as on the space-weather page, so the two pages put every footpoint in the same place; <b>Self-consistent speed</b> can be turned off for one speed for all. The speed is written beside each spacecraft on the map.</p>
+  <p>The <a href="connect.html">connectivity page</a> follows the in-situ spacecraft (Parker Solar Probe, Solar Orbiter, BepiColombo, STEREO-A and Earth with the L1 monitors) back to their sources for one date. It combines this model with <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>'s catalogue of observations and its instrument fields. The field is the day's own map where it has a daily product, the same map as the 3D viewer and the space-weather page, and otherwise the HMI rotation map covering the date. Either is solved in the browser with PFSS or PFSS + Schatten current sheet at the chosen source-surface height, as in the viewer. Positions are HelioField's daily positions at 12:00 UTC. Without a date in the link it opens the latest daily product, and each spacecraft connects at its self-consistent speed (below), as on the space-weather page, so the two pages put every footpoint in the same place; <b>Self-consistent speed</b> can be turned off for one speed for all. Hover over or tap a spacecraft's footpoint or its point on the outer boundary for its details: speed, both positions, the source diagnostics, polarity and travel time. A click also follows that spacecraft below. The open-field background is the same map as in the 3D viewer and on the space-weather page.</p>
   <ul>
     <li><b>Connection.</b> Each spacecraft is joined to the model's outer boundary (the source surface, or the outer edge of the current-sheet model) along a ballistic Parker spiral at the chosen speed, or at its footpoint's own WSA-type speed (self-consistent). It then follows a field line down to the photosphere, as described under <a href="#connectivity">spacecraft connectivity</a> and <a href="#sources">solar-wind sources</a>.</li>
     <li><b>Source time.</b> Plasma reaching a spacecraft at distance <i>r</i> left the outer boundary a travel time (<i>r</i> − <i>R</i><sub>edge</sub>) / <i>v</i> earlier: about 4 days for 1 au at 400 km/s, hours for Parker Solar Probe near perihelion. The page gives this <b>source time</b> for each spacecraft.</li>
@@ -526,6 +526,7 @@ python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet</code>
     <li><b>Daily products</b> have their own footprints, made by the nightly job from the same magnetogram (<code>data/&lt;date&gt;/open.png</code>).</li>
     <li><b>Past dates</b>, and days without their own map, use the footprints of the HMI rotation map that covers the date (<code>data/history/open/NNNN.png</code>). The info panel says which one is shown.</li>
   </ul>
+  <p>The viewer, the connectivity page and the space-weather page show the same footprints for a date at the default model (PFSS at 2.5 R<sub>☉</sub>), so the open-field maps look alike on all three. At another height, or with the current-sheet model, each shows the open field of the solution it has just made in your browser.</p>
   <p>For past dates the field lines are solved in your browser from the smoothed map (spherical harmonics up to degree 80, tapered), while the footprints at the default height come from the full sunkit-magex solution of the same map. The two agree to within a cell or two at hole boundaries, so a drawn open line occasionally starts just outside a patch.</p>
 </section>
 
@@ -732,11 +733,11 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
   "./js/connect-geo.js": "./js/connect-geo.js?v=dd41a244eb",
   "./js/connect-model.js": "./js/connect-model.js?v=133ca1d905",
   "./js/connect-worker.js": "./js/connect-worker.js?v=3b3e7acef2",
-  "./js/connect.js": "./js/connect.js?v=99578b869d",
+  "./js/connect.js": "./js/connect.js?v=91758bb2e9",
   "./js/datepicker.js": "./js/datepicker.js?v=46a3c76193",
   "./js/export.js": "./js/export.js?v=33dfedded5",
-  "./js/history.js": "./js/history.js?v=5da3400c36",
-  "./js/main.js": "./js/main.js?v=240602cbb6",
+  "./js/history.js": "./js/history.js?v=ad16b91839",
+  "./js/main.js": "./js/main.js?v=d43acd97cd",
   "./js/netcdf.js": "./js/netcdf.js?v=b9a0a32cc2",
   "./js/observations.js": "./js/observations.js?v=344e8e8ba2",
   "./js/pfss-worker.js": "./js/pfss-worker.js?v=18e7f5af66",
@@ -744,8 +745,8 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
   "./js/preview.js": "./js/preview.js?v=af65d10ef1",
   "./js/series.js": "./js/series.js?v=fd61bb321d",
   "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
-  "./js/spaceweather.js": "./js/spaceweather.js?v=7f29520a20",
-  "./js/sw-model.js": "./js/sw-model.js?v=a74bcf9cca",
+  "./js/spaceweather.js": "./js/spaceweather.js?v=0c51a8149e",
+  "./js/sw-model.js": "./js/sw-model.js?v=abaa739f4e",
   "./js/sw-worker.js": "./js/sw-worker.js?v=d0ff468e6b",
   "./js/theme.js": "./js/theme.js?v=5abd830f82",
   "./js/totop.js": "./js/totop.js?v=825b854a16"

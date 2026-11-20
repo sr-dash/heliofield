@@ -29,6 +29,28 @@ export function rotationFor(idx, day) {
 
 export const sourceUrl = (cr) => `${JSOC}hmi.Synoptic_Mr_small.${cr}.fits`;
 
+// The open-field map of a field at the default model (PFSS at 2.5 R_sun):
+// the server's footprints of the same map, which the 3D viewer shows too, so
+// a date looks the same on every page. The day's open.png, or the rotation
+// map's.
+export const openMapUrl = (field) => (field.kind === "daily" ? `data/${field.day}/open.png` : `data/history/open/${field.rot.cr}.png`);
+// Its classes, 360 x 180, north row first: 1 open outward, -1 open inward,
+// 0 closed (the PNG holds 255, 128 and 0). null when there is none.
+export async function openClasses(url) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const bmp = await createImageBitmap(await r.blob(), { colorSpaceConversion: "none", premultiplyAlpha: "none" });
+    const c = new OffscreenCanvas(bmp.width, bmp.height), g = c.getContext("2d", { willReadFrequently: true });
+    g.drawImage(bmp, 0, 0);
+    const px = g.getImageData(0, 0, bmp.width, bmp.height).data, out = new Int8Array(bmp.width * bmp.height);
+    for (let i = 0; i < out.length; i++) out[i] = px[4 * i] > 192 ? 1 : px[4 * i] > 64 ? -1 : 0;
+    return out;
+  } catch (e) {
+    return null;
+  }
+}
+
 let daily = null;
 export async function dailyIndex() {
   daily ??= fetch("data/index.json").then((r) => (r.ok ? r.json() : { dates: [] })).catch(() => ({ dates: [] }));
