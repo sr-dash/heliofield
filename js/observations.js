@@ -65,7 +65,7 @@ let worker = null, seq = 0;
 const waiting = new Map();
 function call(msg, onProgress) {
   worker ??= (() => {
-    const w = new Worker(new URL("./connect-worker.js?v=3b3e7acef2", import.meta.url), { type: "module" });
+    const w = new Worker(new URL("./connect-worker.js?v=6d3b30d14b", import.meta.url), { type: "module" });
     w.onmessage = (e) => {
       const p = waiting.get(e.data.id);
       if (!p) return;

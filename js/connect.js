@@ -67,7 +67,7 @@ let worker = null, seq = 0;
 const waiting = new Map();
 function call(msg, onProgress) {
   worker ??= (() => {
-    const w = new Worker(new URL("./connect-worker.js?v=3b3e7acef2", import.meta.url), { type: "module" });
+    const w = new Worker(new URL("./connect-worker.js?v=6d3b30d14b", import.meta.url), { type: "module" });
     w.onmessage = (e) => {
       const p = waiting.get(e.data.id);
       if (!p) return;
@@ -139,11 +139,23 @@ async function run() {
   const status = $("status");
   status.className = "status"; status.textContent = `Solving ${S.date}…`;
   try {
-    const field = await fieldFor(S.date), exact = field.exact, pos = await fleetFor(S.date);
+    const field = await fieldFor(S.date), exact = field.exact;
+    let pos = await fleetFor(S.date), product = null, t0 = Date.parse(`${S.date}T12:00:00Z`);
+    // At the default model on a day with a daily product, the product's own
+    // connections and spacecraft positions (at its map time), as on the
+    // space-weather page and in the 3D viewer.
+    if (field.kind === "daily" && exact && S.rss === 2.5 && !S.rout) {
+      const meta = await fetch(`data/${field.day}/meta.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      if (meta?.connect?.length) {
+        product = { connect: meta.connect, ensemble: meta.ensemble, obstime: meta.obstime };
+        pos = { ...pos, fleet: { ...pos.fleet, ...meta.fleet }, L0: meta.L0, B0: meta.B0 };
+        t0 = Date.parse(meta.obstime);
+      }
+    }
     const res = await call({ type: "solve", url: new URL(field.url, location.href).href, key: field.key, scale: field.scale,
-      shape: field.shape, rss: S.rss, rout: S.rout, fleet: pos.fleet },
+      shape: field.shape, rss: S.rss, rout: S.rout, fleet: pos.fleet, product },
     (stage, f) => { status.textContent = `Solving ${S.date}: ${stage} ${Math.round(100 * f)}%`; });
-    sol = { ...res, pos, field, exact };
+    sol = { ...res, pos, field, exact, t0, product: !!product };
     // At the default model, the open-field map is the server's of the same
     // map, as the 3D viewer and the space-weather page show; otherwise this
     // solution's own.
@@ -158,7 +170,8 @@ async function run() {
     status.className = exact ? "status" : "status warn";
     status.textContent = `Field: ${field.label}, solved in your browser`
       + (exact ? "" : `; the nearest map to ${S.date}, which has no map of its own`) + ` · ${res.meta.model.name}`
-      + `${S.rout ? `, cusp ${res.meta.model.rcp} R☉, edge ${S.rout} R☉` : `, source surface ${S.rss.toFixed(1)} R☉`} · positions at 12:00 UTC.`;
+      + `${S.rout ? `, cusp ${res.meta.model.rcp} R☉, edge ${S.rout} R☉` : `, source surface ${S.rss.toFixed(1)} R☉`}`
+      + (product ? ` · connections from the daily product, spacecraft at its map time.` : ` · positions at 12:00 UTC.`);
     stamp(field, res.meta.model, exact);
     await afterSolve(true);
   } catch (err) {
@@ -170,7 +183,7 @@ async function run() {
 // view when the status line has scrolled away.
 function stamp(field, model, exact) {
   const m = model.rout ? `PFSS + SCS, cusp ${model.rcp} R☉, edge ${model.rout} R☉` : `PFSS, source surface ${model.rss} R☉`;
-  const html = `Map: <b>${field.label}</b> · ${m} · for <b>${S.date}</b>, spacecraft at 12:00 UTC`
+  const html = `Map: <b>${field.label}</b> · ${m} · for <b>${S.date}</b>, ${sol?.product ? "connections from the daily product, spacecraft at its map time" : "spacecraft at 12:00 UTC"}`
     + (exact ? "" : ` · <span class="near">the nearest map: ${S.date} has none of its own</span>`);
   for (const e of document.querySelectorAll("[data-stamp]")) e.innerHTML = html;
 }
@@ -198,7 +211,7 @@ function speedFor(key) {
 
 // Everything that follows from the solution: one row per body.
 function connections() {
-  const rEdge = sol.meta.model.rout || sol.meta.model.rss, t = Date.parse(S.date + "T12:00:00Z");
+  const rEdge = sol.meta.model.rout || sol.meta.model.rss, t = sol.t0;
   const sign = (lon, lat) => {             // photospheric B_r of the model at a footpoint
     const i = Math.min(179, Math.max(0, Math.floor(lat + 90))), j = Math.floor(((lon % 360) + 360) % 360) % 360;
     return sol.phot[i * 360 + j] >= 0 ? 1 : -1;

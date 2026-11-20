@@ -44,7 +44,11 @@ self.onmessage = async (e) => {
       const ny = 180, nx = 360;
       const phot = surfaceBr(out.coef, 1, d.rss, ny, nx);          // model photospheric B_r, 1-degree rows
       const pol = Int8Array.from(m.pol);
-      const { rows, ensemble } = annotate(m, meta, meta.connect, meta.ensemble);
+      // A daily product's own connections, where given (the default model on
+      // a day with a product), so this page shows the same footpoints and
+      // source diagnostics as the space-weather page and the 3D viewer; the
+      // browser's model adds what they predict at the spacecraft.
+      const { rows, ensemble } = d.product ? annotate(m, meta, d.product.connect, d.product.ensemble) : annotate(m, meta, meta.connect, meta.ensemble);
       self.postMessage({
         id, type: "solved",
         meta: { model: meta.model, hcs: meta.hcs, hcs_out: meta.hcs_out, hcs_ribs: meta.hcs_ribs, open_flux_Mx: meta.open_flux_Mx,

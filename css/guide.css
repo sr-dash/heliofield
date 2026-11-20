@@ -116,3 +116,9 @@ footer.end { max-width: 1060px; margin: 0 auto; padding: 14px 16px 40px; border-
 
 /* The request for a star, under each page's footer links. */
 footer.end .star-line { display: block; margin-top: 6px; color: var(--text); font-weight: 600; }
+
+/* Update schedule (#updates): scrolls sideways on a phone rather than squeezing. */
+.scroll { overflow-x: auto; margin: 0 0 16px; }
+.scroll table { margin: 0; min-width: 640px; }
+#schedule td { vertical-align: top; }
+.faint { color: var(--muted); font-size: 0.9em; }

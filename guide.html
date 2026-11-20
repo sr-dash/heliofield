@@ -64,7 +64,7 @@
     document.documentElement.dataset.theme = t;
   })();
 </script>
-<link rel="stylesheet" href="css/guide.css?v=2827ec9193">
+<link rel="stylesheet" href="css/guide.css?v=398eaf8da7">
 </head>
 <body>
 <div class="wrap">
@@ -123,6 +123,7 @@
   <a href="#validation">Validation</a>
   <a href="#limits">Limitations</a>
   <a href="#products">Data products</a>
+  <a href="#updates">Update schedule</a>
   <a href="#refs">References</a>
   <a href="#cite">Cite HelioField</a>
 </nav>
@@ -445,7 +446,7 @@ python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet</code>
 
 <section id="connect">
   <h3>Connectivity page</h3>
-  <p>The <a href="connect.html">connectivity page</a> follows the in-situ spacecraft (Parker Solar Probe, Solar Orbiter, BepiColombo, STEREO-A and Earth with the L1 monitors) back to their sources for one date. It combines this model with <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>'s catalogue of observations and its instrument fields. The field is the day's own map where it has a daily product, the same map as the 3D viewer and the space-weather page, and otherwise the HMI rotation map covering the date. Either is solved in the browser with PFSS or PFSS + Schatten current sheet at the chosen source-surface height, as in the viewer. Positions are HelioField's daily positions at 12:00 UTC. Without a date in the link it opens the latest daily product, and each spacecraft connects at its self-consistent speed (below), as on the space-weather page, so the two pages put every footpoint in the same place; <b>Self-consistent speed</b> can be turned off for one speed for all. Hover over or tap a spacecraft's footpoint or its point on the outer boundary for its details: speed, both positions, the source diagnostics, polarity and travel time. A click also follows that spacecraft below. The open-field background is the same map as in the 3D viewer and on the space-weather page.</p>
+  <p>The <a href="connect.html">connectivity page</a> follows the in-situ spacecraft (Parker Solar Probe, Solar Orbiter, BepiColombo, STEREO-A and Earth with the L1 monitors) back to their sources for one date. It combines this model with <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>'s catalogue of observations and its instrument fields. The field is the day's own map where it has a daily product, the same map as the 3D viewer and the space-weather page, and otherwise the HMI rotation map covering the date. Either is solved in the browser with PFSS or PFSS + Schatten current sheet at the chosen source-surface height, as in the viewer. Positions are HelioField's daily positions at 12:00 UTC. Without a date in the link it opens the latest daily product, and each spacecraft connects at its self-consistent speed (below), as on the space-weather page, so the two pages put every footpoint in the same place; <b>Self-consistent speed</b> can be turned off for one speed for all. Hover over or tap a spacecraft's footpoint or its point on the outer boundary for its details: speed, both positions, the source diagnostics, polarity and travel time. A click also follows that spacecraft below. The open-field background is the same map as in the 3D viewer and on the space-weather page. At the default model on a day with a daily product, the connections themselves (footpoints, f<sub>s</sub>, DCHB and the WSA-type speed) are the product's own, with the spacecraft at its map time, so they are identical on all three pages; the browser's solution adds the polarity, the distance to the current sheet, the timeline and the coronagraph views. At another height, with the current-sheet model, or on a date without a daily product, everything comes from the browser's solution, as on the space-weather page for such dates.</p>
   <ul>
     <li><b>Connection.</b> Each spacecraft is joined to the model's outer boundary (the source surface, or the outer edge of the current-sheet model) along a ballistic Parker spiral at the chosen speed, or at its footpoint's own WSA-type speed (self-consistent). It then follows a field line down to the photosphere, as described under <a href="#connectivity">spacecraft connectivity</a> and <a href="#sources">solar-wind sources</a>.</li>
     <li><b>Source time.</b> Plasma reaching a spacecraft at distance <i>r</i> left the outer boundary a travel time (<i>r</i> − <i>R</i><sub>edge</sub>) / <i>v</i> earlier: about 4 days for 1 au at 400 km/s, hours for Parker Solar Probe near perihelion. The page gives this <b>source time</b> for each spacecraft.</li>
@@ -661,6 +662,22 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
   <p>The code that builds them is in the <a href="https://github.com/sr-dash/heliofield">repository</a>.</p>
 </section>
 
+<section id="updates">
+  <h3>Update schedule</h3>
+  <p>Everything is updated by scheduled GitHub Actions workflows. Times are UTC. GitHub often starts a scheduled run late, sometimes by hours, so the daily jobs are tried several times and each try stops at once if its product already exists. <b>Last update</b> and <b>Next run</b> below are read live from the published files when this page opens. The <a href="https://sr-dash.github.io/status/">status page</a> checks every feed each hour.</p>
+  <div class="scroll"><table id="schedule">
+    <tr><th>Product</th><th>How often</th><th>Scheduled (UTC)</th><th>Last update</th><th>Next run</th></tr>
+    <tr><td><b>Daily field product</b><br><code>data/&lt;date&gt;/</code>: field lines, images, input map, open-field footprints</td><td>Daily, from the day's last magnetogram (GONG, or the SDO/HMI daily frame taken about 16:24)</td><td>18:40, 20:40, 23:40, 02:40</td><td data-last="field">–</td><td data-next="daily:18:40,20:40,23:40,02:40">–</td></tr>
+    <tr><td><b>Space-weather record</b><br><code>data/spaceweather/daily.json</code></td><td>With each daily product; the solar wind measured at L1 is added as it arrives</td><td>with the daily product</td><td data-last="sw">–</td><td data-next="daily:18:40,20:40,23:40,02:40">–</td></tr>
+    <tr><td><b>HMI rotation maps, their footprints and the solar-cycle series</b><br><code>data/history/</code>, <code>data/series/</code></td><td>About every 27 days: checked in each daily run, added once JSOC publishes the rotation just ended</td><td>with the daily product</td><td data-last="rotation">–</td><td data-next="rotation">–</td></tr>
+    <tr><td><b>Spacecraft positions and DONKI events</b><br>from <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>: ephemerides, events, observation lists</td><td>Monthly (HelioFleet); copied into <code>data/history/fleet/</code> by each daily run</td><td>1st of the month, 06:17</td><td data-last="fleet">–</td><td data-next="fleet">–</td></tr>
+    <tr><td><b>Observation images</b><br><a href="https://github.com/sr-dash/heliofield-imagery">heliofield-imagery</a>: the last 60 days</td><td>Daily</td><td>18:55, 20:55, 23:55, 02:55</td><td data-last="imagery">–</td><td data-next="daily:18:55,20:55,23:55,02:55">–</td></tr>
+    <tr><td><b>Image archive</b><br><a href="https://github.com/sr-dash/heliofield-imagery-archive">heliofield-imagery-archive</a>: one day per rotation since 2010</td><td>Weekly: days leaving the 60-day site are kept</td><td>Mondays, 07:10</td><td data-last="archive">–</td><td data-next="weekly:1:07:10">–</td></tr>
+    <tr><td><b>Movies</b><br><a href="https://sr-dash.github.io/heliofield-movies/">heliofield-movies</a>: one frame per rotation</td><td>Monthly, when a new rotation has been added</td><td>5th of the month, 06:30</td><td data-last="movies">–</td><td data-next="monthly:5:06:30">–</td></tr>
+    <tr><td><b>Download scripts</b><br>tested against the newest NumPy, SciPy, Matplotlib and xarray</td><td>Monthly</td><td>3rd of the month, 06:17</td><td>–</td><td data-next="monthly:3:06:17">–</td></tr>
+  </table></div>
+</section>
+
 <section id="refs">
   <h3>References</h3>
   <ol class="refs">
@@ -727,19 +744,67 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
   };
   label();
 </script>
+<script type="module">
+  // Update schedule: last updates from the published files, next runs from
+  // the workflows' schedules (UTC).
+  const SITE = "https://sr-dash.github.io/", DAY = 864e5;
+  const fmt = (t) => { const d = new Date(t); return isNaN(d) ? "–" : d.toISOString().slice(0, 16).replace("T", " ") + " UTC"; };
+  const ago = (t) => { const h = (Date.now() - Date.parse(t)) / 36e5; return h < 48 ? `${Math.max(0, h).toFixed(0)} h ago` : `${(h / 24).toFixed(0)} days ago`; };
+  const until = (t) => { const h = (t - Date.now()) / 36e5; return h < 1 ? `in ${Math.max(1, Math.round(60 * h))} min` : h < 48 ? `in ${h.toFixed(0)} h` : `in ${(h / 24).toFixed(0)} days`; };
+  const when = (t) => (t ? `${fmt(t)}<br><span class="faint">${ago(t)}</span>` : "–");
+  const json = (u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const at = (y, mo, d, hm) => { const [h, m] = hm.split(":").map(Number); return Date.UTC(y, mo, d, h, m); };
+  function next(spec, now = Date.now()) {
+    const [kind, ...a] = spec.split(":"), t = new Date(now), y = t.getUTCFullYear(), mo = t.getUTCMonth(), d = t.getUTCDate();
+    if (kind === "daily") {
+      const hms = a.join(":").split(",");
+      for (let k = 0; k < 2; k++) { const c = hms.map((hm) => at(y, mo, d + k, hm)).filter((x) => x > now).sort((p, q) => p - q); if (c.length) return c[0]; }
+    }
+    if (kind === "weekly") { const dow = +a[0], hm = a.slice(1).join(":"); for (let k = 0; k < 8; k++) { const x = at(y, mo, d + k, hm); if (new Date(x).getUTCDay() === dow && x > now) return x; } }
+    if (kind === "monthly") { const day = +a[0], hm = a.slice(1).join(":"); for (let k = 0; k < 2; k++) { const x = at(y, mo + k, day, hm); if (x > now) return x; } }
+    return null;
+  }
+  for (const e of document.querySelectorAll("[data-next]")) {
+    const n = next(e.dataset.next);
+    if (n) e.innerHTML = `${fmt(n)}<br><span class="faint">${until(n)}</span>`;
+  }
+  const set = (k, html) => { const e = document.querySelector(`[data-last="${k}"]`); if (e) e.innerHTML = html; };
+  const setNext = (k, html) => { const e = document.querySelector(`[data-next="${k}"]`); if (e) e.innerHTML = html; };
+  json("data/index.json").then((d) => {
+    if (!d) return;
+    const day = d.dates.at(-1), m = d.maps?.[day];
+    set("field", `${day}${m ? `, map ${m[0]} ${m[1].slice(11, 16)} UTC` : ""}<br><span class="faint">files ${fmt(d.updated)}</span>`);
+  });
+  json("data/spaceweather/daily.json").then((d) => d && set("sw", when(d.updated)));
+  json("data/history/index.json").then((d) => {
+    const r = d?.rotations?.at(-1);
+    if (!r) return;
+    set("rotation", `CR ${r.cr}<br><span class="faint">${r.start.slice(0, 10)} to ${r.stop.slice(0, 10)}</span>`);
+    const end = Date.parse(r.stop) + 27.2753 * DAY;
+    setNext("rotation", `CR ${r.cr + 1} ends ${fmt(end).slice(0, 10)}<br><span class="faint">added once JSOC publishes it</span>`);
+  });
+  json(SITE + "heliofleet/data/manifest.json").then((d) => {
+    if (!d) return;
+    set("fleet", when(d.generated));
+    if (d.next_update) setNext("fleet", `${fmt(d.next_update)}<br><span class="faint">${until(Date.parse(d.next_update))}</span>`);
+  });
+  json(SITE + "heliofield-imagery/index.json").then((d) => d && set("imagery", `${d.dates?.at(-1) || ""}<br><span class="faint">files ${fmt(d.updated)}</span>`));
+  json(SITE + "heliofield-imagery-archive/index.json").then((d) => d && set("archive", when(d.updated)));
+  json(SITE + "heliofield-movies/movies.json").then((d) => d && set("movies", when(d.made)));
+</script>
 <!-- assets:start (written by scripts/stamp_assets.py) -->
 <script type="importmap">
 { "imports": {
   "./js/connect-geo.js": "./js/connect-geo.js?v=dd41a244eb",
   "./js/connect-model.js": "./js/connect-model.js?v=133ca1d905",
-  "./js/connect-worker.js": "./js/connect-worker.js?v=3b3e7acef2",
-  "./js/connect.js": "./js/connect.js?v=91758bb2e9",
+  "./js/connect-worker.js": "./js/connect-worker.js?v=6d3b30d14b",
+  "./js/connect.js": "./js/connect.js?v=2daa1db7dd",
   "./js/datepicker.js": "./js/datepicker.js?v=46a3c76193",
   "./js/export.js": "./js/export.js?v=33dfedded5",
   "./js/history.js": "./js/history.js?v=ad16b91839",
   "./js/main.js": "./js/main.js?v=d43acd97cd",
   "./js/netcdf.js": "./js/netcdf.js?v=b9a0a32cc2",
-  "./js/observations.js": "./js/observations.js?v=344e8e8ba2",
+  "./js/observations.js": "./js/observations.js?v=dbf66ff189",
   "./js/pfss-worker.js": "./js/pfss-worker.js?v=18e7f5af66",
   "./js/pfss.js": "./js/pfss.js?v=3d7963269f",
   "./js/preview.js": "./js/preview.js?v=af65d10ef1",
