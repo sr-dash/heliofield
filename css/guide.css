@@ -117,8 +117,21 @@ footer.end { max-width: 1060px; margin: 0 auto; padding: 14px 16px 40px; border-
 /* The request for a star, under each page's footer links. */
 footer.end .star-line { display: block; margin-top: 6px; color: var(--text); font-weight: 600; }
 
-/* Update schedule (#updates): scrolls sideways on a phone rather than squeezing. */
-.scroll { overflow-x: auto; margin: 0 0 16px; }
-.scroll table { margin: 0; min-width: 640px; }
-#schedule td { vertical-align: top; }
+/* Update schedule (#updates): three columns; on a phone each product is a card. */
+.schedule { table-layout: fixed; }
+.schedule th:first-child { width: 52%; }
+.schedule td { vertical-align: top; white-space: normal; }
+.schedule td:not(:first-child) { font-variant-numeric: tabular-nums; padding-left: 12px; }
+.schedule td:first-child { padding-right: 12px; }
+.schedule .what, .schedule .how { display: block; color: var(--muted); font-size: 0.92em; margin-top: 3px; }
+.schedule .when { color: var(--text); }
 .faint { color: var(--muted); font-size: 0.9em; }
+@media (max-width: 640px) {
+  .schedule thead { display: none; }
+  .schedule, .schedule tbody, .schedule tr, .schedule td { display: block; width: auto !important; }
+  .schedule tr { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 0 0 10px; }
+  .schedule td { border: 0; padding: 2px 0; white-space: normal !important; }
+  .schedule td:not(:first-child) { display: flex; gap: 10px; justify-content: space-between; }
+  .schedule td:not(:first-child)::before { content: attr(data-label); color: var(--muted); }
+  .schedule .v { text-align: right; }
+}

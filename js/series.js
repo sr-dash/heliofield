@@ -354,11 +354,29 @@ $("copyEmbed")?.addEventListener("click", async (e) => {
   try { await navigator.clipboard.writeText(code); e.target.textContent = "Copied"; setTimeout(() => { e.target.textContent = "Copy embed code"; }, 1400); } catch (err) { /* the text is selected for copying */ }
 });
 
+// Where the series stands: its newest rotation, and the next one, which is
+// added the night after JSOC publishes its map (about a week after it ends).
+async function nextRotation(d) {
+  const el = $("nextRot");
+  if (!el || EMBED) return;
+  try {
+    const h = await fetch("data/history/index.json").then((r) => r.json());
+    const last = h.rotations.at(-1), cr = d.cr.at(-1), DAY = 864e5;
+    const end = Date.parse(last.stop) + 27.2753 * DAY, now = Date.now(), day = (t) => new Date(t).toISOString().slice(0, 10);
+    const due = end + 7 * DAY;
+    el.innerHTML = `Newest point: <b>CR ${cr}</b>, the rotation that ended ${day(Date.parse(last.stop))}. `
+      + (now < end ? `CR ${cr + 1} ends ${day(end)}; its map is added the night after JSOC publishes it, usually about a week later.`
+        : now < due + 7 * DAY ? `CR ${cr + 1} ended ${day(end)}; JSOC usually publishes its map about a week after a rotation ends (expected around ${day(due)}), and it is added here the following night.`
+        : `CR ${cr + 1} ended ${day(end)} and its map is later than usual; see the <a href="https://sr-dash.github.io/status/">status page</a>.`);
+  } catch (e) { /* the note is optional */ }
+}
+
 (async () => {
   try {
     const d = await fetch("data/series/rotations.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
     d.t = d.mid.map((s) => Date.parse(s + "T00:00:00Z"));
     state.data = d;
+    nextRotation(d);
     const r = new URLSearchParams(location.search).get("range");
     if (r && RANGES[r]) document.querySelector(`.filters button[data-range="${r}"]`)?.click();
     else render();

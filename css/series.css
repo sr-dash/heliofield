@@ -87,3 +87,6 @@ details.table td { padding-left: 10px; }
 .compact .embed-only { margin: 8px 0 0; font-size: 12.5px; }
 .legend .mark { color: var(--text); gap: 6px; }
 .lkey.dash { height: 0; border-top: 2px dashed var(--text); background: none; }
+
+/* Where the series stands (js/series.js); empty in embeds. */
+#nextRot:empty { display: none; }

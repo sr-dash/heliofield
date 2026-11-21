@@ -64,7 +64,7 @@
     document.documentElement.dataset.theme = t;
   })();
 </script>
-<link rel="stylesheet" href="css/guide.css?v=398eaf8da7">
+<link rel="stylesheet" href="css/guide.css?v=f0d1c5366d">
 </head>
 <body>
 <div class="wrap">
@@ -461,7 +461,7 @@ python compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet</code>
 
 <section id="spaceweather">
   <h3>Space-weather page</h3>
-  <p>The <a href="spaceweather.html">space-weather page</a> turns one day's product into indicators for Earth and the fleet. It covers every date since May 2010. A date with a daily product uses that product, as made on the server. Any other date is solved in your browser from the HMI rotation map covering it, as in the viewer: the PFSS field at 2.5 R<sub>☉</sub>, the WSA-type speed traced from every degree of the source surface, the open-field regions and the spacecraft connections, in about ten seconds. A rotation map is built over about 27 days, so such a date is a hindcast: part of its data was observed after the date. The outlook shades the days whose source longitudes were observed more than 14 days from the date. The browser's tapered solution opens more polar field than the server's (see <a href="#smoothing">smoothing</a>), so speeds above about 40° latitude run higher on computed dates; at the latitudes of Earth and the spacecraft the two agree to about 10–20 km/s on the same map. Every figure is labelled with the map it was drawn from and its date. Everything on it describes the <b>ambient</b> solar wind and the geometry that shapes its effects. Eruptions enter only through NASA's DONKI catalogue, as HelioFleet keeps it (flares of M5 and above, CMEs of 1000 km/s and above, storms of G3 and above).</p>
+  <p>The <a href="spaceweather.html">space-weather page</a> turns one day's product into indicators for Earth and the fleet. It covers every date since May 2010. A date with a daily product uses that product, as made on the server. Any other date is solved in your browser from the HMI rotation map covering it, as in the viewer: the PFSS field at 2.5 R<sub>☉</sub>, the WSA-type speed traced from every degree of the source surface, the open-field regions and the spacecraft connections, in about ten seconds. A rotation map is built over about 27 days, so such a date is a hindcast: part of its data was observed after the date. The outlook shades the days whose source longitudes were observed more than 14 days from the date. The browser's tapered solution opens more polar field than the server's (see <a href="#smoothing">smoothing</a>), so speeds above about 40° latitude run higher on computed dates; at the latitudes of Earth and the spacecraft the two agree to about 10–20 km/s on the same map. Every figure is labelled with the map it was drawn from and its date. Everything on it describes the <b>ambient</b> solar wind and the geometry that shapes its effects. Eruptions enter only through NASA's DONKI catalogue, from HelioFleet's weekly list, of which the page uses the flares of M5 and above, CMEs of 1000 km/s and above and storms of G3 and above: the thresholds its levels are calibrated on.</p>
   <ul>
     <li><b>Speed on the source surface.</b> The daily build traces a field line down from every 1° cell of the source surface and takes the WSA-type speed at its foot, as for the spacecraft connections. The map is stored as <code>wsa.png</code>. Cells whose line closes below the source surface have no value.</li>
     <li><b>Propagation.</b> The ring of speeds at a body's latitude is carried out to its distance with the HUX kinematic model (Riley &amp; Lionello 2011), stepping 1 R<sub>☉</sub> at a time in the corotating frame:
@@ -665,17 +665,20 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
 <section id="updates">
   <h3>Update schedule</h3>
   <p>Everything is updated by scheduled GitHub Actions workflows. Times are UTC. GitHub often starts a scheduled run late, sometimes by hours, so the daily jobs are tried several times and each try stops at once if its product already exists. <b>Last update</b> and <b>Next run</b> below are read live from the published files when this page opens. The <a href="https://sr-dash.github.io/status/">status page</a> checks every feed each hour.</p>
-  <div class="scroll"><table id="schedule">
-    <tr><th>Product</th><th>How often</th><th>Scheduled (UTC)</th><th>Last update</th><th>Next run</th></tr>
-    <tr><td><b>Daily field product</b><br><code>data/&lt;date&gt;/</code>: field lines, images, input map, open-field footprints</td><td>Daily, from the day's last magnetogram (GONG, or the SDO/HMI daily frame taken about 16:24)</td><td>18:40, 20:40, 23:40, 02:40</td><td data-last="field">–</td><td data-next="daily:18:40,20:40,23:40,02:40">–</td></tr>
-    <tr><td><b>Space-weather record</b><br><code>data/spaceweather/daily.json</code></td><td>With each daily product; the solar wind measured at L1 is added as it arrives</td><td>with the daily product</td><td data-last="sw">–</td><td data-next="daily:18:40,20:40,23:40,02:40">–</td></tr>
-    <tr><td><b>HMI rotation maps, their footprints and the solar-cycle series</b><br><code>data/history/</code>, <code>data/series/</code></td><td>About every 27 days: checked in each daily run, added once JSOC publishes the rotation just ended</td><td>with the daily product</td><td data-last="rotation">–</td><td data-next="rotation">–</td></tr>
-    <tr><td><b>Spacecraft positions and DONKI events</b><br>from <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>: ephemerides, events, observation lists</td><td>Monthly (HelioFleet); copied into <code>data/history/fleet/</code> by each daily run</td><td>1st of the month, 06:17</td><td data-last="fleet">–</td><td data-next="fleet">–</td></tr>
-    <tr><td><b>Observation images</b><br><a href="https://github.com/sr-dash/heliofield-imagery">heliofield-imagery</a>: the last 60 days</td><td>Daily</td><td>18:55, 20:55, 23:55, 02:55</td><td data-last="imagery">–</td><td data-next="daily:18:55,20:55,23:55,02:55">–</td></tr>
-    <tr><td><b>Image archive</b><br><a href="https://github.com/sr-dash/heliofield-imagery-archive">heliofield-imagery-archive</a>: one day per rotation since 2010</td><td>Weekly: days leaving the 60-day site are kept</td><td>Mondays, 07:10</td><td data-last="archive">–</td><td data-next="weekly:1:07:10">–</td></tr>
-    <tr><td><b>Movies</b><br><a href="https://sr-dash.github.io/heliofield-movies/">heliofield-movies</a>: one frame per rotation</td><td>Monthly, when a new rotation has been added</td><td>5th of the month, 06:30</td><td data-last="movies">–</td><td data-next="monthly:5:06:30">–</td></tr>
-    <tr><td><b>Download scripts</b><br>tested against the newest NumPy, SciPy, Matplotlib and xarray</td><td>Monthly</td><td>3rd of the month, 06:17</td><td>–</td><td data-next="monthly:3:06:17">–</td></tr>
-  </table></div>
+  <table id="schedule" class="schedule">
+    <thead><tr><th>Product</th><th>Last update</th><th>Next run</th></tr></thead>
+    <tbody>
+    <tr><td data-label="Product"><b>Daily field product</b><span class="what"><code>data/&lt;date&gt;/</code>: field lines, images, input map, open-field footprints</span><span class="how">Daily, from the day's last magnetogram (GONG, or the SDO/HMI daily frame taken about 16:24). <span class="when">Scheduled: 18:40, 20:40, 23:40 and 02:40 UTC.</span></span></td><td data-label="Last update" data-last="field">–</td><td data-label="Next run" data-next="daily:18:40,20:40,23:40,02:40">–</td></tr>
+    <tr><td data-label="Product"><b>Space-weather record</b><span class="what"><code>data/spaceweather/daily.json</code></span><span class="how">With each daily product; the solar wind measured at L1 is added as it arrives. <span class="when">Runs with the daily product.</span></span></td><td data-label="Last update" data-last="sw">–</td><td data-label="Next run" data-next="daily:18:40,20:40,23:40,02:40">–</td></tr>
+    <tr><td data-label="Product"><b>Rotation maps and solar-cycle series</b><span class="what"><code>data/history/</code>, <code>data/series/</code>, footprints</span><span class="how">About every 27 days: JSOC publishes a rotation's map about a week after it ends, and the next daily run adds it. <span class="when">Checked in every daily run.</span></span></td><td data-label="Last update" data-last="rotation">–</td><td data-label="Next run" data-next="rotation">–</td></tr>
+    <tr><td data-label="Product"><b>Spacecraft positions</b><span class="what">from <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>: ephemerides and observation lists</span><span class="how">Monthly at HelioFleet; copied into <code>data/history/fleet/</code> by each daily run. <span class="when">Scheduled: 1st of the month, 06:17 UTC.</span></span></td><td data-label="Last update" data-last="fleet">–</td><td data-label="Next run" data-next="fleet">–</td></tr>
+    <tr><td data-label="Product"><b>DONKI events</b><span class="what">from <a href="https://sr-dash.github.io/heliofleet/">HelioFleet</a>: flares, CMEs and storms from NASA's DONKI, the last 30 days refreshed; the space-weather page uses flares of M5 and above, CMEs of 1000 km/s and above, storms of G3 and above</span><span class="how">Weekly. <span class="when">Scheduled: Mondays, 05:23 UTC.</span></span></td><td data-label="Last update" data-last="events">–</td><td data-label="Next run" data-next="weekly:1:05:23">–</td></tr>
+    <tr><td data-label="Product"><b>Observation images</b><span class="what"><a href="https://github.com/sr-dash/heliofield-imagery">heliofield-imagery</a>: the last 60 days</span><span class="how">Daily. <span class="when">Scheduled: 18:55, 20:55, 23:55 and 02:55 UTC.</span></span></td><td data-label="Last update" data-last="imagery">–</td><td data-label="Next run" data-next="daily:18:55,20:55,23:55,02:55">–</td></tr>
+    <tr><td data-label="Product"><b>Image archive</b><span class="what"><a href="https://github.com/sr-dash/heliofield-imagery-archive">heliofield-imagery-archive</a>: one day per rotation since 2010</span><span class="how">Weekly: days leaving the 60-day site are kept. <span class="when">Scheduled: Mondays, 07:10 UTC.</span></span></td><td data-label="Last update" data-last="archive">–</td><td data-label="Next run" data-next="weekly:1:07:10">–</td></tr>
+    <tr><td data-label="Product"><b>Movies</b><span class="what"><a href="https://sr-dash.github.io/heliofield-movies/">heliofield-movies</a>: one frame per rotation</span><span class="how">Monthly, when a new rotation has been added. <span class="when">Scheduled: 5th of the month, 06:30 UTC.</span></span></td><td data-label="Last update" data-last="movies">–</td><td data-label="Next run" data-next="monthly:5:06:30">–</td></tr>
+    <tr><td data-label="Product"><b>Download scripts</b><span class="what">tested against the newest NumPy, SciPy, Matplotlib and xarray</span><span class="how">Monthly. <span class="when">Scheduled: 3rd of the month, 06:17 UTC.</span></span></td><td data-label="Last update">–</td><td data-label="Next run" data-next="monthly:3:06:17">–</td></tr>
+    </tbody>
+  </table>
 </section>
 
 <section id="refs">
@@ -766,10 +769,10 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
   }
   for (const e of document.querySelectorAll("[data-next]")) {
     const n = next(e.dataset.next);
-    if (n) e.innerHTML = `${fmt(n)}<br><span class="faint">${until(n)}</span>`;
+    if (n) e.innerHTML = `<span class="v">${fmt(n)}<br><span class="faint">${until(n)}</span></span>`;
   }
-  const set = (k, html) => { const e = document.querySelector(`[data-last="${k}"]`); if (e) e.innerHTML = html; };
-  const setNext = (k, html) => { const e = document.querySelector(`[data-next="${k}"]`); if (e) e.innerHTML = html; };
+  const set = (k, html) => { const e = document.querySelector(`[data-last="${k}"]`); if (e) e.innerHTML = `<span class="v">${html}</span>`; };
+  const setNext = (k, html) => { const e = document.querySelector(`[data-next="${k}"]`); if (e) e.innerHTML = `<span class="v">${html}</span>`; };
   json("data/index.json").then((d) => {
     if (!d) return;
     const day = d.dates.at(-1), m = d.maps?.[day];
@@ -780,14 +783,16 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
     const r = d?.rotations?.at(-1);
     if (!r) return;
     set("rotation", `CR ${r.cr}<br><span class="faint">${r.start.slice(0, 10)} to ${r.stop.slice(0, 10)}</span>`);
-    const end = Date.parse(r.stop) + 27.2753 * DAY;
-    setNext("rotation", `CR ${r.cr + 1} ends ${fmt(end).slice(0, 10)}<br><span class="faint">added once JSOC publishes it</span>`);
+    const end = Date.parse(r.stop) + 27.2753 * DAY, d10 = (t) => fmt(t).slice(0, 10);
+    setNext("rotation", Date.now() < end ? `CR ${r.cr + 1} ends ${d10(end)}<br><span class="faint">added about a week later</span>`
+      : `CR ${r.cr + 1}, ended ${d10(end)}<br><span class="faint">expected around ${d10(end + 7 * DAY)}, once JSOC publishes it</span>`);
   });
   json(SITE + "heliofleet/data/manifest.json").then((d) => {
     if (!d) return;
     set("fleet", when(d.generated));
     if (d.next_update) setNext("fleet", `${fmt(d.next_update)}<br><span class="faint">${until(Date.parse(d.next_update))}</span>`);
   });
+  json(SITE + "heliofleet/data/events.json").then((d) => d && set("events", when(d.generated)));
   json(SITE + "heliofield-imagery/index.json").then((d) => d && set("imagery", `${d.dates?.at(-1) || ""}<br><span class="faint">files ${fmt(d.updated)}</span>`));
   json(SITE + "heliofield-imagery-archive/index.json").then((d) => d && set("archive", when(d.updated)));
   json(SITE + "heliofield-movies/movies.json").then((d) => d && set("movies", when(d.made)));
@@ -808,10 +813,10 @@ python -m pytest tests -v -m "not slow"   # exact solutions only, seconds</code>
   "./js/pfss-worker.js": "./js/pfss-worker.js?v=18e7f5af66",
   "./js/pfss.js": "./js/pfss.js?v=3d7963269f",
   "./js/preview.js": "./js/preview.js?v=af65d10ef1",
-  "./js/series.js": "./js/series.js?v=fd61bb321d",
+  "./js/series.js": "./js/series.js?v=582f16be6d",
   "./js/snapshot.js": "./js/snapshot.js?v=975802b414",
   "./js/spaceweather.js": "./js/spaceweather.js?v=0c51a8149e",
-  "./js/sw-model.js": "./js/sw-model.js?v=abaa739f4e",
+  "./js/sw-model.js": "./js/sw-model.js?v=a239a63b4d",
   "./js/sw-worker.js": "./js/sw-worker.js?v=d0ff468e6b",
   "./js/theme.js": "./js/theme.js?v=5abd830f82",
   "./js/totop.js": "./js/totop.js?v=825b854a16"

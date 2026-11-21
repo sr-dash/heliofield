@@ -392,8 +392,22 @@ export const fmtDay = (t) => new Date(t).toLocaleDateString("en-GB", { day: "num
 
 // ------------------------------------------------------------- DONKI events
 const inWeek = (t0) => (x) => { const t = Date.parse(x.t); return t >= t0 - 7 * DAY && t <= t0; };
+// The events this page assesses: flares of M5 and above, CMEs of 1000 km/s
+// and above, storms of G3 and above. HelioFleet's list reaches lower (M1,
+// 500 km/s, G1 since November 2026); the levels and the record are
+// calibrated on these thresholds, so the rest is set aside here.
+export const EVENT_MIN = { flare: 5e-5, cme: 1000, storm: 3 };
+export const flareFlux = (cls) => ({ A: 1e-8, B: 1e-7, C: 1e-6, M: 1e-5, X: 1e-4 })[String(cls || "")[0]?.toUpperCase()] * parseFloat(String(cls).slice(1)) || 0;
+export function strongEvents(events) {
+  if (!events || events._strong) return events;
+  return { ...events, _strong: true,
+    flares: (events.flares || []).filter((f) => flareFlux(f.cls) >= EVENT_MIN.flare - 1e-12),
+    cmes: (events.cmes || []).filter((c) => (c.speed || 0) >= EVENT_MIN.cme),
+    storms: (events.storms || []).filter((x) => (x.g || 0) >= EVENT_MIN.storm) };
+}
 // The days whose products (flares) and positions (CMEs) the analysis needs.
 export function eventDays(events, t0) {
+  events = strongEvents(events);
   return { flares: [...new Set(events.flares.filter(inWeek(t0)).map((f) => f.t.slice(0, 10)))],
     cmes: [...new Set(events.cmes.filter(inWeek(t0)).map((c) => c.t.slice(0, 10)))] };
 }
@@ -402,6 +416,7 @@ export function eventDays(events, t0) {
 // drag-based arrival in the model wind there, and the storms.
 // ctx = { metaFor(day) -> meta or null, fleetAt(day) -> { fleet, L0 } or null }.
 export function eventsAnalysis(events, d, a, ctx) {
+  events = strongEvents(events);
   const within = inWeek(d.t0);
   const flares = events.flares.filter(within).map((f) => {
     const loc = parseLocation(f.loc), t = Date.parse(f.t), meta = ctx.metaFor(f.t.slice(0, 10)) || d.meta, feet = footpoints(meta);
