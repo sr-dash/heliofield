@@ -10,6 +10,7 @@ import { fieldFor, dailyIndex, fleetFor, openMapUrl, openClasses } from "./histo
 import * as geo from "./connect-geo.js";
 import "./totop.js";
 import { enhance as datePicker, setMarked } from "./datepicker.js";
+import "./nudge.js"; // one-time first-visit card: bookmark, install, star
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement, params = new URLSearchParams(location.search);

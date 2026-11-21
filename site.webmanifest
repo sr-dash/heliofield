@@ -9,11 +9,107 @@
   "background_color": "#080b14",
   "theme_color": "#080b14",
   "lang": "en",
-  "categories": ["education", "science"],
+  "categories": [
+    "education",
+    "science"
+  ],
   "icons": [
-    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": [
+      "navigate-existing",
+      "auto"
+    ]
+  },
+  "shortcuts": [
+    {
+      "name": "3D corona",
+      "short_name": "3D viewer",
+      "url": "./",
+      "description": "PFSS field lines, the current sheet and the fleet in 3D",
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Magnetic connectivity",
+      "short_name": "Connectivity",
+      "url": "connect.html",
+      "description": "Where each spacecraft connects to the Sun, with observation footprints",
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Space weather",
+      "short_name": "Space weather",
+      "url": "spaceweather.html",
+      "description": "Model solar wind, sectors and the outlook at Earth",
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Guide",
+      "short_name": "Guide",
+      "url": "guide.html",
+      "description": "How to use HelioField, methods and validation",
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "assets/screenshot-wide.jpg",
+      "sizes": "1280x800",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "HelioField 3D viewer: PFSS field lines and the current sheet, with the solar-cycle series and layer controls"
+    },
+    {
+      "src": "assets/screenshot-narrow.jpg",
+      "sizes": "824x1760",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "HelioField on a phone: the coronal magnetic field in 3D"
+    }
   ]
 }

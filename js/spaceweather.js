@@ -9,6 +9,7 @@ import { fleetFor, fieldFor, historyIndex, openMapUrl, openClasses } from "./his
 import "./totop.js";
 import * as M from "./sw-model.js";
 import { enhance as datePicker } from "./datepicker.js";
+import "./nudge.js"; // one-time first-visit card: bookmark, install, star
 
 const $ = (id) => document.getElementById(id);
 const NS = "http://www.w3.org/2000/svg";

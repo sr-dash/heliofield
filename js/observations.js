@@ -9,6 +9,7 @@ import { THEMES } from "./theme.js";
 import { fieldFor, fleetFor } from "./history.js";
 import "./totop.js";
 import { enhance as datePicker } from "./datepicker.js";
+import "./nudge.js"; // one-time first-visit card: bookmark, install, star
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement, params = new URLSearchParams(location.search);

@@ -15,6 +15,7 @@ import { THEMES, divergingLUT, lutColor, currentTheme } from "./theme.js";
 import { historyIndex, rotationFor, sourceUrl, fleetFor, fieldFor, compute, cancel, unflatten, exportResults } from "./history.js";
 import { compose, savePNG, savePDF } from "./snapshot.js";
 import { enhance as datePicker, setMarked } from "./datepicker.js";
+import "./nudge.js"; // one-time first-visit card: bookmark, install, star
 
 const RSUN_KM = 695700, AU_RS = 149597870.7 / RSUN_KM;
 const OMEGA = 2 * Math.PI / (25.38 * 86400);          // Carrington sidereal [rad/s]
