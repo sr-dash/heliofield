@@ -157,6 +157,14 @@ python download/compute_corona.py --date 2014-03-12 --plot --view earth
 python download/compute_corona.py --date 2020-05-08 --scs 21.5 --plot --view fleet
 ```
 
+For numbers rather than figures, [heliofleet-mcp](https://github.com/sr-dash/heliofleet-mcp)
+([PyPI](https://pypi.org/project/heliofleet-mcp/)) reads the daily products and returns the
+magnetic connection of each spacecraft (footpoint, expansion factor, coronal-hole distance,
+WSA-type speed), the space-weather indicators and the coronal-field summary as JSON, each with a
+HelioField link. It runs as a command line (`uvx heliofleet-mcp connection psp --wind 450`), a
+Python package, or a Model Context Protocol server (`uvx heliofleet-mcp`, listed in the MCP
+Registry as `io.github.sr-dash/heliofleet-mcp`).
+
 [`llms.txt`](llms.txt) describes the site for automated agents (the llms.txt convention): ready-made links,
 the scripts, the data files and the limits to mention. [`api.json`](api.json)
 lists the same parameters, scripts and endpoints as JSON. Both are linked from

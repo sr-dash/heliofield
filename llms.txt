@@ -9,7 +9,7 @@ Source: https://github.com/sr-dash/heliofield · Cite: https://doi.org/10.5281/z
 
 ## How an agent can use it
 
-There are two ways to show a user the 3D corona without writing a model:
+There are three ways to use it without writing a model; the first two show the user the 3D corona:
 
 1. **Give a link, or embed it (needs a browser).** Every view is a URL. Build one from the parameters below and give it to the user, put it in an iframe, or open it in a browser tool and take a screenshot. The page computes any date in the browser (a few seconds; WebGL needed). For a screenshot, add `embed=1` so a past date computes without a confirmation dialog, and wait until the field lines appear.
 2. **Make images with Python (no browser).** Download the HelioField scripts and run one command. It fetches the same inputs as the page, solves the field and writes PNG and PDF figures plus a NetCDF results file.
@@ -35,6 +35,14 @@ Options:
 - `--v <km/s>`: the wind speed used for the spacecraft connections.
 
 `python plot_3d.py FILE.nc --lon L --lat B --dist D` sets the camera freely. PFSS takes a few seconds and SCS 10–20 s. The scripts are tested every month against the newest NumPy, SciPy and Matplotlib, and update themselves if they fail.
+
+3. **Get the numbers as JSON (MCP server, command line or Python).** [heliofleet-mcp](https://github.com/sr-dash/heliofleet-mcp) (MIT, on PyPI) reads the daily products and returns each spacecraft's footpoint, expansion factor, coronal-hole distance and WSA-type speed, the space-weather indicators and the coronal-field summary, each with a HelioField link to the same view. It also gives HelioFleet's positions and alignment windows.
+
+```bash
+uvx heliofleet-mcp connection psp --wind 450   # one answer as JSON
+uvx heliofleet-mcp spaceweather
+uvx heliofleet-mcp                             # Model Context Protocol server (MCP Registry: io.github.sr-dash/heliofleet-mcp)
+```
 
 ## URL recipes
 
