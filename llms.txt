@@ -36,7 +36,7 @@ Options:
 
 `python plot_3d.py FILE.nc --lon L --lat B --dist D` sets the camera freely. PFSS takes a few seconds and SCS 10–20 s. The scripts are tested every month against the newest NumPy, SciPy and Matplotlib, and update themselves if they fail.
 
-3. **Get the numbers as JSON (MCP server, command line or Python).** [heliofleet-mcp](https://github.com/sr-dash/heliofleet-mcp) (MIT, on PyPI) reads the daily products and returns each spacecraft's footpoint, expansion factor, coronal-hole distance and WSA-type speed, the space-weather indicators and the coronal-field summary, each with a HelioField link to the same view. It also gives HelioFleet's positions and alignment windows.
+3. **Get the numbers as JSON (MCP server, command line or Python).** [heliofleet-mcp](https://github.com/sr-dash/heliofleet-mcp) (MIT, on PyPI) reads the daily products and returns each spacecraft's footpoint, expansion factor, coronal-hole distance and WSA-type speed, the space-weather indicators and the coronal-field summary, each with a HelioField link to the same view. It also gives HelioFleet's positions (at one time or over a date range), alignment windows, event calendar, viewing geometry, the IRIS, Hinode/EIS, DKIST, Solar Orbiter and sounding-rocket observation records, and the list of bodies and instruments. The HelioField tools are get_magnetic_connection, get_space_weather, get_coronal_field and build_heliofield_link; the HelioFleet tools are get_position, get_trajectory, get_fleet_state, find_alignments, list_upcoming_events, get_viewing_geometry, search_observations, find_coordinated_observations, list_bodies, build_heliofleet_link and get_data_status (15 in all).
 
 ```bash
 uvx heliofleet-mcp connection psp --wind 450   # one answer as JSON
